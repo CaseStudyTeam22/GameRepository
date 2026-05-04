@@ -1,0 +1,17 @@
+{
+    "name": "GamblingAction.Audio",
+    "rootNamespace": "GamblingAction.Audio",
+    "references": [
+        "GamblingAction.Core",
+        "GamblingAction.Domain"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

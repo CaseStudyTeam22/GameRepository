@@ -104,3 +104,15 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────────
+# Project-specific (GamblingAction)
+# ──────────────────────────────────────────────
+
+# Server (StreamingAssets) — node deps installed on first run via start_server.bat
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node_modules/
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/package-lock.json
