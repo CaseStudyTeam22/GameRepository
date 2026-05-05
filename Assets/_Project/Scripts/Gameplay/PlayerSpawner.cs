@@ -1,81 +1,84 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Gameplay
 {
 	public class PlayerSpawner : MonoBehaviour
 	{
-		[SerializeField] PlayerView playerPrefab;
-		[SerializeField] BoardView board;
+		[FormerlySerializedAs("playerPrefab")]
+		[SerializeField] private PlayerView m_PlayerPrefab;
+		[FormerlySerializedAs("board")]
+		[SerializeField] private BoardView m_Board;
 
-		readonly Dictionary<string, PlayerView> _views = new();
-		IGameState _state;
+		private readonly Dictionary<string, PlayerView> m_Views = new();
+		private IGameState m_State;
 
 		public static PlayerSpawner Instance { get; private set; }
-		public IReadOnlyDictionary<string, PlayerView> Views => _views;
+		public IReadOnlyDictionary<string, PlayerView> Views => m_Views;
 		public PlayerView LocalPlayer =>
-			_state != null && _state.MyId != null && _views.TryGetValue(_state.MyId, out var v) ? v : null;
+			m_State != null && m_State.MyId != null && m_Views.TryGetValue(m_State.MyId, out var v) ? v : null;
 
-		void Awake()
+		private void Awake()
 		{
 			Instance = this;
 		}
 
-		void Start()
+		private void Start()
 		{
-			if (board == null) board = BoardView.Instance;
+			if (m_Board == null) m_Board = BoardView.Instance;
 
-			_state = GameStateLocator.Current;
-			if (_state == null)
+			m_State = GameStateLocator.Current;
+			if (m_State == null)
 			{
 				Debug.LogError("[PlayerSpawner] GameStateLocator.Current is null. Make sure GameInstaller runs before PlayerSpawner (Awake before Start).");
 				return;
 			}
-			_state.OnStateInitialized += SyncSpawns;
-			_state.OnPlayersChanged   += SyncSpawns;
+			m_State.OnStateInitialized += SyncSpawns;
+			m_State.OnPlayersChanged   += SyncSpawns;
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
 			if (Instance == this) Instance = null;
-			if (_state == null) return;
-			_state.OnStateInitialized -= SyncSpawns;
-			_state.OnPlayersChanged   -= SyncSpawns;
+			if (m_State == null) return;
+			m_State.OnStateInitialized -= SyncSpawns;
+			m_State.OnPlayersChanged   -= SyncSpawns;
 		}
 
-		void SyncSpawns()
+		private void SyncSpawns()
 		{
-			foreach (var id in _state.Players.Keys)
-				if (!_views.ContainsKey(id))
+			foreach (var id in m_State.Players.Keys)
+				if (!m_Views.ContainsKey(id))
 					Spawn(id);
 
 			var stale = new List<string>();
-			foreach (var id in _views.Keys)
-				if (!_state.Players.ContainsKey(id))
+			foreach (var id in m_Views.Keys)
+				if (!m_State.Players.ContainsKey(id))
 					stale.Add(id);
 			foreach (var id in stale)
 				Despawn(id);
 		}
 
-		void Spawn(string id)
+		private void Spawn(string id)
 		{
-			if (playerPrefab == null)
+			if (m_PlayerPrefab == null)
 			{
 				Debug.LogError("[PlayerSpawner] playerPrefab not assigned");
 				return;
 			}
-			var view = Instantiate(playerPrefab, transform);
+			var view = Instantiate(m_PlayerPrefab, transform);
 			view.name = $"Player_{id[..6]}";
-			view.Bind(id, _state, board);
-			_views[id] = view;
+			view.Bind(id, m_State, m_Board);
+			m_Views[id] = view;
 			Debug.Log($"[PlayerSpawner] spawned {id}");
 		}
 
-		void Despawn(string id)
+		private void Despawn(string id)
 		{
-			if (!_views.TryGetValue(id, out var view)) return;
-			_views.Remove(id);
+			if (!m_Views.TryGetValue(id, out var view)) return;
+			m_Views.Remove(id);
 			Destroy(view.gameObject);
 			Debug.Log($"[PlayerSpawner] despawned {id}");
 		}

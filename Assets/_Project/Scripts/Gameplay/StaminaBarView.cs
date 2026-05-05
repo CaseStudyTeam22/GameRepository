@@ -1,6 +1,7 @@
-﻿using GamblingAction.Core;
+using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace GamblingAction.Gameplay
@@ -10,57 +11,63 @@ namespace GamblingAction.Gameplay
 	public class StaminaBarView : MonoBehaviour
 	{
 		[Header("References (set in prefab)")]
-		[SerializeField] Image cellTemplate;
-		[SerializeField] Transform cellsRoot;
+		[FormerlySerializedAs("cellTemplate")]
+		[SerializeField] private Image m_CellTemplate;
+		[FormerlySerializedAs("cellsRoot")]
+		[SerializeField] private Transform m_CellsRoot;
 
 		[Header("Colors")]
-		[SerializeField] Color healthyColor = new(0f, 1f, 0f);
-		[SerializeField] Color lowColor = new(1f, 0.27f, 0.27f);
-		[SerializeField] Color emptyColor = new(0.13f, 0.13f, 0.13f, 1f);
-		[SerializeField] int lowThreshold = 1;
+		[FormerlySerializedAs("healthyColor")]
+		[SerializeField] private Color m_HealthyColor = new(0f, 1f, 0f);
+		[FormerlySerializedAs("lowColor")]
+		[SerializeField] private Color m_LowColor = new(1f, 0.27f, 0.27f);
+		[FormerlySerializedAs("emptyColor")]
+		[SerializeField] private Color m_EmptyColor = new(0.13f, 0.13f, 0.13f, 1f);
+		[FormerlySerializedAs("lowThreshold")]
+		[SerializeField] private int m_LowThreshold = 1;
 
-		Image[] _cells;
-		int _lastStamina = -1;
+		private Image[] m_Cells;
+		private int m_LastStamina = -1;
 
-		void Awake()
+		private void Awake()
 		{
 			BuildCellsFromTemplate();
 		}
 
-		void BuildCellsFromTemplate()
+		private void BuildCellsFromTemplate()
 		{
-			if (cellTemplate == null)
+			if (m_CellTemplate == null)
 			{
 				Debug.LogError("[StaminaBar] cellTemplate not assigned");
 				return;
 			}
-			Transform parent = cellsRoot != null ? cellsRoot : cellTemplate.transform.parent;
+			Transform parent = m_CellsRoot != null ? m_CellsRoot : m_CellTemplate.transform.parent;
 
 			int n = GameConfig.MaxStamina;
-			_cells = new Image[n];
+			m_Cells = new Image[n];
 
 			for (int i = 0; i < n; i++)
 			{
-				var clone = Instantiate(cellTemplate, parent);
+				var clone = Instantiate(m_CellTemplate, parent);
 				clone.gameObject.name = $"Cell{i}";
 				clone.gameObject.SetActive(true);
-				_cells[i] = clone;
+				m_Cells[i] = clone;
 			}
 
-			cellTemplate.gameObject.SetActive(false);
+			m_CellTemplate.gameObject.SetActive(false);
 		}
 
 		public void Apply(PlayerDto dto)
 		{
-			if (dto == null || _cells == null) return;
-			if (dto.Stamina == _lastStamina) return;
-			_lastStamina = dto.Stamina;
+			if (dto == null || m_Cells == null) return;
+			if (dto.Stamina == m_LastStamina) return;
+			m_LastStamina = dto.Stamina;
 
-			var fillColor = dto.Stamina <= lowThreshold ? lowColor : healthyColor;
-			for (int i = 0; i < _cells.Length; i++)
+			var fillColor = dto.Stamina <= m_LowThreshold ? m_LowColor : m_HealthyColor;
+			for (int i = 0; i < m_Cells.Length; i++)
 			{
 				bool filled = i < dto.Stamina;
-				_cells[i].color = filled ? fillColor : emptyColor;
+				m_Cells[i].color = filled ? fillColor : m_EmptyColor;
 			}
 		}
 	}

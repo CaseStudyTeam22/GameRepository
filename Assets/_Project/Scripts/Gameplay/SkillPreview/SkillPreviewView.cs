@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using GamblingAction.Core.Dto;
 using GamblingAction.Core.Skills;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Gameplay.SkillPreview
 {
@@ -11,49 +12,55 @@ namespace GamblingAction.Gameplay.SkillPreview
 	public class SkillPreviewView : MonoBehaviour
 	{
 		[Header("Fallback (used when player's SkillSet is null or entry's cellPrefab is null)")]
-		[SerializeField] SkillDefinition fallbackSkillSet;
-		[SerializeField] GameObject fallbackCellPrefab;
+		[FormerlySerializedAs("fallbackSkillSet")]
+		[SerializeField] private SkillDefinition m_FallbackSkillSet;
+		[FormerlySerializedAs("fallbackCellPrefab")]
+		[SerializeField] private GameObject m_FallbackCellPrefab;
 
 		[Header("Layout")]
-		[SerializeField] float yOffset = 0.06f;
-		[SerializeField, Range(0f, 1f)] float opacity = 0.45f;
+		[FormerlySerializedAs("yOffset")]
+		[SerializeField] private float m_YOffset = 0.06f;
+		[FormerlySerializedAs("opacity")]
+		[SerializeField, Range(0f, 1f)] private float m_Opacity = 0.45f;
+		[FormerlySerializedAs("cellTileFraction")]
 		[SerializeField, Tooltip("cell が tile を占める比率（1.0 = 完全に埋める; 0.85 = 隙間を少し残す）")]
-		float cellTileFraction = 0.95f;
+		private float m_CellTileFraction = 0.95f;
+		[FormerlySerializedAs("powerAlphaScale")]
 		[SerializeField, Tooltip("power 段階ごとの不透明度係数（インデックス 0/1/2 が power 1/2/3 に対応）")]
-		float[] powerAlphaScale = { 0.5f, 0.75f, 1f };
+		private float[] m_PowerAlphaScale = { 0.5f, 0.75f, 1f };
 
-		IGameState _state;
-		IBoardCoords _board;
+		private IGameState m_State;
+		private IBoardCoords m_Board;
 
-		readonly Dictionary<GameObject, List<GameObject>> _pools = new();
-		readonly List<GameObject> _activeCells = new();
+		private readonly Dictionary<GameObject, List<GameObject>> m_Pools = new();
+		private readonly List<GameObject> m_ActiveCells = new();
 
-		void Start()
+		private void Start()
 		{
-			_state = GameStateLocator.Current;
-			_board = BoardCoordsLocator.Current;
-			if (_state == null || _board == null)
+			m_State = GameStateLocator.Current;
+			m_Board = BoardCoordsLocator.Current;
+			if (m_State == null || m_Board == null)
 			{
 				Debug.LogError("[SkillPreview] Locator not ready");
 				return;
 			}
 			LocalIntentBus.OnChanged += Refresh;
-			_state.OnPlayersChanged += Refresh;
+			m_State.OnPlayersChanged += Refresh;
 			Refresh();
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
 			LocalIntentBus.OnChanged -= Refresh;
-			if (_state != null) _state.OnPlayersChanged -= Refresh;
+			if (m_State != null) m_State.OnPlayersChanged -= Refresh;
 		}
 
-		void Refresh()
+		private void Refresh()
 		{
 			HideAll();
-			if (_state == null || _board == null) return;
+			if (m_State == null || m_Board == null) return;
 
-			var me = _state.Me;
+			var me = m_State.Me;
 			if (me == null) return;
 
 			var intent = LocalIntentBus.Current;
@@ -65,68 +72,68 @@ namespace GamblingAction.Gameplay.SkillPreview
 			var entry = skillSet.GetEntry(intent.Mode);
 			if (entry == null) return;
 
-			var pattern = SkillPatternRegistry.Get(entry.patternType);
+			var pattern = SkillPatternRegistry.Get(entry.PatternType);
 			if (pattern == null)
 			{
-				Debug.LogWarning($"[SkillPreview] No pattern impl for {entry.patternType}");
+				Debug.LogWarning($"[SkillPreview] No pattern impl for {entry.PatternType}");
 				return;
 			}
 
-			var cellPrefab = entry.cellPrefabOverride != null ? entry.cellPrefabOverride : fallbackCellPrefab;
+			var cellPrefab = entry.CellPrefabOverride != null ? entry.CellPrefabOverride : m_FallbackCellPrefab;
 			if (cellPrefab == null)
 			{
 				Debug.LogWarning("[SkillPreview] No cell prefab (entry override + fallback both null)");
 				return;
 			}
 
-			bool useAlphaScale = entry.patternType == SkillPatternType.LineByPower;
+			bool useAlphaScale = entry.PatternType == ESkillPatternType.LineByPower;
 			var color = ResolveColor(entry, me, intent.Power, useAlphaScale);
 
 			foreach (var (gx, gy) in pattern.ResolveCells(intent, me))
 				Show(gx, gy, color, cellPrefab);
 		}
 
-		SkillDefinition ResolveSkillSet()
+		private SkillDefinition ResolveSkillSet()
 		{
 			var localPlayer = PlayerSpawner.Instance != null ? PlayerSpawner.Instance.LocalPlayer : null;
 			if (localPlayer != null && localPlayer.SkillSet != null) return localPlayer.SkillSet;
-			return fallbackSkillSet;
+			return m_FallbackSkillSet;
 		}
 
-		Color ResolveColor(SkillEntry entry, PlayerDto me, int power, bool useAlphaScale)
+		private Color ResolveColor(SkillEntry entry, PlayerDto me, int power, bool useAlphaScale)
 		{
-			Color baseColor = entry.tintOverride.a > 0.001f
-				? entry.tintOverride
+			Color baseColor = entry.TintOverride.a > 0.001f
+				? entry.TintOverride
 				: ParseColor(me.Color);
 
-			float alpha = useAlphaScale ? opacity * GetPowerAlphaScale(power) : opacity;
+			float alpha = useAlphaScale ? m_Opacity * GetPowerAlphaScale(power) : m_Opacity;
 			return new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
 		}
 
-		float GetPowerAlphaScale(int power)
+		private float GetPowerAlphaScale(int power)
 		{
-			if (powerAlphaScale == null || powerAlphaScale.Length == 0) return 1f;
-			int idx = Mathf.Clamp(power - 1, 0, powerAlphaScale.Length - 1);
-			return powerAlphaScale[idx];
+			if (m_PowerAlphaScale == null || m_PowerAlphaScale.Length == 0) return 1f;
+			int idx = Mathf.Clamp(power - 1, 0, m_PowerAlphaScale.Length - 1);
+			return m_PowerAlphaScale[idx];
 		}
 
-		void Show(int gx, int gy, Color color, GameObject cellPrefab)
+		private void Show(int gx, int gy, Color color, GameObject cellPrefab)
 		{
-			int n = _board.GridSize;
+			int n = m_Board.GridSize;
 			if (gx < 0 || gx >= n || gy < 0 || gy >= n) return;
 
 			var cell = AcquireCell(cellPrefab);
-			cell.transform.position = _board.GridToWorld(gx, gy) + Vector3.up * yOffset;
+			cell.transform.position = m_Board.GridToWorld(gx, gy) + Vector3.up * m_YOffset;
 
-			float targetMeters = _board.TileSize * cellTileFraction;
+			float targetMeters = m_Board.TileSize * m_CellTileFraction;
 			float scale = ResolveAutoScale(cell, targetMeters);
 			cell.transform.localScale = new Vector3(scale, scale, cell.transform.localScale.z);
 
 			ApplyColor(cell, color);
-			_activeCells.Add(cell);
+			m_ActiveCells.Add(cell);
 		}
 
-		static float ResolveAutoScale(GameObject cell, float targetMeters)
+		private static float ResolveAutoScale(GameObject cell, float targetMeters)
 		{
 			var sr = cell.GetComponentInChildren<SpriteRenderer>();
 			if (sr != null && sr.sprite != null)
@@ -143,12 +150,12 @@ namespace GamblingAction.Gameplay.SkillPreview
 			return targetMeters;
 		}
 
-		GameObject AcquireCell(GameObject prefab)
+		private GameObject AcquireCell(GameObject prefab)
 		{
-			if (!_pools.TryGetValue(prefab, out var pool))
+			if (!m_Pools.TryGetValue(prefab, out var pool))
 			{
 				pool = new List<GameObject>();
-				_pools[prefab] = pool;
+				m_Pools[prefab] = pool;
 			}
 			for (int i = 0; i < pool.Count; i++)
 			{
@@ -164,7 +171,7 @@ namespace GamblingAction.Gameplay.SkillPreview
 			return spawned;
 		}
 
-		static void ApplyColor(GameObject cell, Color color)
+		private static void ApplyColor(GameObject cell, Color color)
 		{
 			var sr = cell.GetComponentInChildren<SpriteRenderer>();
 			if (sr != null) { sr.color = color; return; }
@@ -172,13 +179,13 @@ namespace GamblingAction.Gameplay.SkillPreview
 			if (r != null && r.material != null) r.material.color = color;
 		}
 
-		void HideAll()
+		private void HideAll()
 		{
-			for (int i = 0; i < _activeCells.Count; i++) _activeCells[i].SetActive(false);
-			_activeCells.Clear();
+			for (int i = 0; i < m_ActiveCells.Count; i++) m_ActiveCells[i].SetActive(false);
+			m_ActiveCells.Clear();
 		}
 
-		static Color ParseColor(string hex)
+		private static Color ParseColor(string hex)
 		{
 			return ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.white;
 		}

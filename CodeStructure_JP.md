@@ -11,8 +11,10 @@
 - **ネットワーク方針**：NGO は使用せず、既存の Node + Socket.io サーバーをそのまま流用
 - **サーバー本体**：`Assets/StreamingAssets/Server/`（リポジトリ root の `start_server.bat` で起動）
 - **対戦テスト**：Unity 6 標準の **Multiplayer Play Mode** を使用
-  - Main Editor 起動 → Virtual Player 2 を Play する順番（順番が逆だと P1/P2 の割り当てが入れ替わる）
-  - Virtual Player 2 側で「AI Toggle」を ON にすれば AI 相手として動かせる
+  - 初回セットアップ：`Window → Multiplayer → Multiplayer Play Mode` ウィンドウを開き、**Player 2 を有効化**（チェック ON、初回はインスタンス作成に数分かかる）
+  - 起動順：Main Editor を Play → 続けて Virtual Player 2 を Play（順番が逆だと P1/P2 の割り当てが入れ替わる）
+  - Virtual Player 2 側で Lobby の「AI Toggle」を ON にすれば AI 相手として動かせる
+  - 詳しい手順は [`README.md`](./README.md) を参照
 
 ---
 

@@ -1,4 +1,4 @@
-﻿namespace GamblingAction.Domain
+namespace GamblingAction.Domain
 {
 	public static class GameStateLocator
 	{

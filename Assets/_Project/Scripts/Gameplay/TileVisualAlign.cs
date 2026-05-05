@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace GamblingAction.Gameplay
 {
@@ -7,16 +7,16 @@ namespace GamblingAction.Gameplay
 	[ExecuteAlways]
 	public class TileVisualAlign : MonoBehaviour
 	{
-		void OnEnable() => Apply();
+		private void OnEnable() => Apply();
 
-		void Update()
+		private void Update()
 		{
 #if UNITY_EDITOR
 			if (!Application.isPlaying) Apply();
 #endif
 		}
 
-		void Apply()
+		private void Apply()
 		{
 			var p = transform.localPosition;
 			p.y = -transform.localScale.y * 0.5f;

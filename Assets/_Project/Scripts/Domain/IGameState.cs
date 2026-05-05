@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using GamblingAction.Core.Dto;
 
@@ -13,7 +13,7 @@ namespace GamblingAction.Domain
 		int CurrentBeat { get; }
 		int TimeLeft { get; }
 		bool GameActive { get; }
-		GamePhase Phase { get; }
+		EGamePhase Phase { get; }
 		bool IsConnected { get; }
 
 		PlayerDto Me { get; }
@@ -29,7 +29,7 @@ namespace GamblingAction.Domain
 		event Action OnItemsChanged;
 		event Action OnBeatChanged;
 		event Action<EventDto[]> OnGameEvents;
-		event Action<GamePhase> OnPhaseChanged;
+		event Action<EGamePhase> OnPhaseChanged;
 		event Action<string> OnRoundOver;
 		event Action<string> OnGameOver;
 		event Action<string> OnPlayerLeft;

@@ -1,6 +1,7 @@
-﻿using GamblingAction.Core;
+using GamblingAction.Core;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Gameplay
 {
@@ -9,28 +10,32 @@ namespace GamblingAction.Gameplay
 		public static BoardView Instance { get; private set; }
 
 		[Header("Layout")]
-		[SerializeField] float tileSize = 1f;
+		[FormerlySerializedAs("tileSize")]
+		[SerializeField] private float m_TileSize = 1f;
 
 		[Header("Tile Prefabs")]
 		[Tooltip("明色マスの prefab。Pivot は上面中央（厚みは下方向に伸びる）")]
-		[SerializeField] GameObject tilePrefabLight;
+		[FormerlySerializedAs("tilePrefabLight")]
+		[SerializeField] private GameObject m_TilePrefabLight;
 		[Tooltip("暗色マスの prefab。Pivot は同じく上面中央。")]
-		[SerializeField] GameObject tilePrefabDark;
+		[FormerlySerializedAs("tilePrefabDark")]
+		[SerializeField] private GameObject m_TilePrefabDark;
 
 		[Header("Generation")]
-		[SerializeField] bool generateTilesOnAwake = true;
+		[FormerlySerializedAs("generateTilesOnAwake")]
+		[SerializeField] private bool m_GenerateTilesOnAwake = true;
 
-		public float TileSize => tileSize;
+		public float TileSize => m_TileSize;
 		public int GridSize => GameConfig.GridSize;
 
-		void Awake()
+		private void Awake()
 		{
 			Instance = this;
 			BoardCoordsLocator.Set(this);
-			if (generateTilesOnAwake) GenerateTiles();
+			if (m_GenerateTilesOnAwake) GenerateTiles();
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
 			if (Instance == this) Instance = null;
 			if (BoardCoordsLocator.Current == (IBoardCoords)this)
@@ -39,27 +44,27 @@ namespace GamblingAction.Gameplay
 
 		public Vector3 GridToWorld(int x, int y)
 		{
-			float originOffset = (GridSize - 1) * tileSize * 0.5f;
+			float originOffset = (GridSize - 1) * m_TileSize * 0.5f;
 			return transform.position + new Vector3(
-				x * tileSize - originOffset,
+				x * m_TileSize - originOffset,
 				0f,
-				-(y * tileSize - originOffset)
+				-(y * m_TileSize - originOffset)
 			);
 		}
 
 		public bool TryWorldToGrid(Vector3 world, out int x, out int y)
 		{
-			float originOffset = (GridSize - 1) * tileSize * 0.5f;
-			float fx = (world.x - transform.position.x + originOffset) / tileSize;
-			float fy = -(world.z - transform.position.z - originOffset) / tileSize;
+			float originOffset = (GridSize - 1) * m_TileSize * 0.5f;
+			float fx = (world.x - transform.position.x + originOffset) / m_TileSize;
+			float fy = -(world.z - transform.position.z - originOffset) / m_TileSize;
 			x = Mathf.RoundToInt(fx);
 			y = Mathf.RoundToInt(fy);
 			return x >= 0 && x < GridSize && y >= 0 && y < GridSize;
 		}
 
-		void GenerateTiles()
+		private void GenerateTiles()
 		{
-			if (tilePrefabLight == null || tilePrefabDark == null)
+			if (m_TilePrefabLight == null || m_TilePrefabDark == null)
 			{
 				Debug.LogError("[BoardView] tilePrefabLight / tilePrefabDark not assigned");
 				return;
@@ -71,14 +76,14 @@ namespace GamblingAction.Gameplay
 			for (int y = 0; y < GridSize; y++)
 			for (int x = 0; x < GridSize; x++)
 			{
-				var prefab = ((x + y) & 1) == 0 ? tilePrefabLight : tilePrefabDark;
+				var prefab = ((x + y) & 1) == 0 ? m_TilePrefabLight : m_TilePrefabDark;
 				var tile = Instantiate(prefab, root);
 				tile.name = $"Tile_{x}_{y}";
 				tile.transform.position = GridToWorld(x, y);
 			}
 		}
 
-		void OnDrawGizmos()
+		private void OnDrawGizmos()
 		{
 			Gizmos.color = Color.yellow;
 			int n = GameConfig.GridSize;
@@ -86,7 +91,7 @@ namespace GamblingAction.Gameplay
 			for (int x = 0; x < n; x++)
 			{
 				var c = GridToWorld(x, y);
-				Gizmos.DrawWireCube(c, new Vector3(tileSize, 0.02f, tileSize));
+				Gizmos.DrawWireCube(c, new Vector3(m_TileSize, 0.02f, m_TileSize));
 			}
 		}
 	}

@@ -1,6 +1,7 @@
-﻿using GamblingAction.Domain;
+using GamblingAction.Domain;
 using GamblingAction.Net;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Bootstrap
 {
@@ -8,22 +9,30 @@ namespace GamblingAction.Bootstrap
 	{
 		public static GameInstaller Instance { get; private set; }
 
-		[SerializeField] string serverUrl = "http://localhost:3000";
-		[SerializeField] bool verboseProbeLogs = true;
-		[SerializeField] bool autoReady = false;
-		[SerializeField] bool autoReadyAsAI = false;
-		[SerializeField] bool autoExchange = false;
-		[SerializeField] int autoExchangeAmount = 10;
-		[SerializeField] bool autoBuff = false;
-		[SerializeField] string autoBuffId = "low_risk";
+		[FormerlySerializedAs("serverUrl")]
+		[SerializeField] private string m_ServerUrl = "http://localhost:3000";
+		[FormerlySerializedAs("verboseProbeLogs")]
+		[SerializeField] private bool m_VerboseProbeLogs = true;
+		[FormerlySerializedAs("autoReady")]
+		[SerializeField] private bool m_AutoReady = false;
+		[FormerlySerializedAs("autoReadyAsAI")]
+		[SerializeField] private bool m_AutoReadyAsAI = false;
+		[FormerlySerializedAs("autoExchange")]
+		[SerializeField] private bool m_AutoExchange = false;
+		[FormerlySerializedAs("autoExchangeAmount")]
+		[SerializeField] private int m_AutoExchangeAmount = 10;
+		[FormerlySerializedAs("autoBuff")]
+		[SerializeField] private bool m_AutoBuff = false;
+		[FormerlySerializedAs("autoBuffId")]
+		[SerializeField] private string m_AutoBuffId = "low_risk";
 
-		SocketIONetClient _net;
-		GameState _state;
+		private SocketIONetClient m_Net;
+		private GameState m_State;
 
-		public IGameState State => _state;
-		public INetClient Net => _net;
+		public IGameState State => m_State;
+		public INetClient Net => m_Net;
 
-		void Awake()
+		private void Awake()
 		{
 			if (Instance != null && Instance != this)
 			{
@@ -32,51 +41,51 @@ namespace GamblingAction.Bootstrap
 			}
 			Instance = this;
 
-			_net = new SocketIONetClient();
-			_state = new GameState(_net);
-			GameStateLocator.Set(_state);
+			m_Net = new SocketIONetClient();
+			m_State = new GameState(m_Net);
+			GameStateLocator.Set(m_State);
 
-			if (verboseProbeLogs)
+			if (m_VerboseProbeLogs)
 				AttachProbe();
 
-			if (autoReady)
-				_state.OnStateInitialized += () => _state.SubmitReady(isAI: autoReadyAsAI);
+			if (m_AutoReady)
+				m_State.OnStateInitialized += () => m_State.SubmitReady(isAI: m_AutoReadyAsAI);
 
-			_state.OnPhaseChanged += phase =>
+			m_State.OnPhaseChanged += phase =>
 			{
-				if (autoReadyAsAI) return;
+				if (m_AutoReadyAsAI) return;
 
-				if (autoExchange && phase == GamePhase.Exchange)
-					_state.SubmitExchange(autoExchangeAmount);
+				if (m_AutoExchange && phase == EGamePhase.Exchange)
+					m_State.SubmitExchange(m_AutoExchangeAmount);
 
-				if (autoBuff && phase == GamePhase.BuffSelection)
-					_state.SubmitBuff(autoBuffId);
+				if (m_AutoBuff && phase == EGamePhase.BuffSelection)
+					m_State.SubmitBuff(m_AutoBuffId);
 			};
 		}
 
-		void Start()
+		private void Start()
 		{
-			_net.Connect(serverUrl);
+			m_Net.Connect(m_ServerUrl);
 		}
 
-		void AttachProbe()
+		private void AttachProbe()
 		{
-			_state.OnConnectionChanged += c => Debug.Log($"[Probe] connection={c}");
-			_state.OnStateInitialized  += () => Debug.Log($"[Probe] init MyId={_state.MyId} Players={_state.Players.Count}");
-			_state.OnPhaseChanged      += p => Debug.Log($"[Probe] phase={p}");
-			_state.OnBeatChanged       += () => Debug.Log($"[Probe] beat={_state.CurrentBeat} t={_state.TimeLeft} active={_state.GameActive}");
-			_state.OnGameEvents        += e => Debug.Log($"[Probe] events x{e.Length}");
-			_state.OnRoundOver         += w => Debug.Log($"[Probe] round_over winner={w}");
-			_state.OnGameOver          += w => Debug.Log($"[Probe] game_over winner={w}");
-			_state.OnPlayerLeft        += id => Debug.Log($"[Probe] player_left {id}");
+			m_State.OnConnectionChanged += c => Debug.Log($"[Probe] connection={c}");
+			m_State.OnStateInitialized  += () => Debug.Log($"[Probe] init MyId={m_State.MyId} Players={m_State.Players.Count}");
+			m_State.OnPhaseChanged      += p => Debug.Log($"[Probe] phase={p}");
+			m_State.OnBeatChanged       += () => Debug.Log($"[Probe] beat={m_State.CurrentBeat} t={m_State.TimeLeft} active={m_State.GameActive}");
+			m_State.OnGameEvents        += e => Debug.Log($"[Probe] events x{e.Length}");
+			m_State.OnRoundOver         += w => Debug.Log($"[Probe] round_over winner={w}");
+			m_State.OnGameOver          += w => Debug.Log($"[Probe] game_over winner={w}");
+			m_State.OnPlayerLeft        += id => Debug.Log($"[Probe] player_left {id}");
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
 			if (Instance == this) Instance = null;
 			GameStateLocator.Clear();
-			_state?.Dispose();
-			_net?.Dispose();
+			m_State?.Dispose();
+			m_Net?.Dispose();
 		}
 	}
 }

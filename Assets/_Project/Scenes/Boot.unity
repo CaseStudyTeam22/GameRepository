@@ -148,14 +148,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a3868b62e588aa4488380f7ccd7faa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverUrl: http://localhost:3000
-  verboseProbeLogs: 1
-  autoReady: 0
-  autoReadyAsAI: 0
-  autoExchange: 0
-  autoExchangeAmount: 30
-  autoBuff: 0
-  autoBuffId: low_risk
+  m_ServerUrl: http://localhost:3000
+  m_VerboseProbeLogs: 1
+  m_AutoReady: 0
+  m_AutoReadyAsAI: 0
+  m_AutoExchange: 0
+  m_AutoExchangeAmount: 30
+  m_AutoBuff: 0
+  m_AutoBuffId: low_risk
 --- !u!4 &121870174
 Transform:
   m_ObjectHideFlags: 0
@@ -400,7 +400,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 090b1bf8acb6d1c48abc58413354ef93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  worldCamera: {fileID: 961739752}
+  m_WorldCamera: {fileID: 961739752}
 --- !u!4 &743388355
 Transform:
   m_ObjectHideFlags: 0
@@ -582,12 +582,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a85ba24ae8e30da4796df87522ccf008, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fallbackSkillSet: {fileID: 11400000, guid: 800a9a5e033eda043ad6b8f5b091cace, type: 2}
-  fallbackCellPrefab: {fileID: 8003279555942131541, guid: 3ce84721fc6915e4eb2329f7cabd6062, type: 3}
-  yOffset: 0.06
-  opacity: 0.45
-  cellTileFraction: 0.95
-  powerAlphaScale:
+  m_FallbackSkillSet: {fileID: 11400000, guid: 800a9a5e033eda043ad6b8f5b091cace, type: 2}
+  m_FallbackCellPrefab: {fileID: 8003279555942131541, guid: 3ce84721fc6915e4eb2329f7cabd6062, type: 3}
+  m_YOffset: 0.06
+  m_Opacity: 0.45
+  m_CellTileFraction: 0.95
+  m_PowerAlphaScale:
   - 0.5
   - 0.75
   - 1
@@ -635,7 +635,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: feb66324209ee4946998f29260b35533, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemPrefab: {fileID: 4082535574246384717, guid: 4b4fe0f421c8b214f9018bad5296383c, type: 3}
+  m_ItemPrefab: {fileID: 4082535574246384717, guid: 4b4fe0f421c8b214f9018bad5296383c, type: 3}
 --- !u!4 &1722915492
 Transform:
   m_ObjectHideFlags: 0
@@ -680,10 +680,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aef78ce54584b0941aacee30675f64f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tileSize: 1
-  tilePrefabLight: {fileID: 8029973604916602477, guid: a0823cf66cae2f64a80df30cca05d7fd, type: 3}
-  tilePrefabDark: {fileID: 8029973604916602477, guid: 69af20b1d4da24c42839b620478c3665, type: 3}
-  generateTilesOnAwake: 1
+  m_TileSize: 1
+  m_TilePrefabLight: {fileID: 8029973604916602477, guid: a0823cf66cae2f64a80df30cca05d7fd, type: 3}
+  m_TilePrefabDark: {fileID: 8029973604916602477, guid: 69af20b1d4da24c42839b620478c3665, type: 3}
+  m_GenerateTilesOnAwake: 1
 --- !u!4 &1925288801
 Transform:
   m_ObjectHideFlags: 0
@@ -728,8 +728,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d82ec29aaa4780419f865c21ca3f8e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 7189623766787943944, guid: bb01885396d5bc94bba4058c7f9e5fea, type: 3}
-  board: {fileID: 0}
+  m_PlayerPrefab: {fileID: 7189623766787943944, guid: bb01885396d5bc94bba4058c7f9e5fea, type: 3}
+  m_Board: {fileID: 1925288800}
 --- !u!4 &1943859165
 Transform:
   m_ObjectHideFlags: 0

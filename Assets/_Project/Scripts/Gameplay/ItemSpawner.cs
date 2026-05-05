@@ -1,59 +1,61 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Gameplay
 {
 	public class ItemSpawner : MonoBehaviour
 	{
-		[SerializeField] ItemView itemPrefab;
+		[FormerlySerializedAs("itemPrefab")]
+		[SerializeField] private ItemView m_ItemPrefab;
 
-		readonly Dictionary<double, ItemView> _views = new();
-		IGameState _state;
-		IBoardCoords _board;
+		private readonly Dictionary<double, ItemView> m_Views = new();
+		private IGameState m_State;
+		private IBoardCoords m_Board;
 
-		void Start()
+		private void Start()
 		{
-			_state = GameStateLocator.Current;
-			_board = BoardCoordsLocator.Current;
-			if (_state == null || _board == null)
+			m_State = GameStateLocator.Current;
+			m_Board = BoardCoordsLocator.Current;
+			if (m_State == null || m_Board == null)
 			{
 				Debug.LogError("[ItemSpawner] Locator not ready");
 				return;
 			}
-			_state.OnItemsChanged += SyncItems;
+			m_State.OnItemsChanged += SyncItems;
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
-			if (_state != null) _state.OnItemsChanged -= SyncItems;
+			if (m_State != null) m_State.OnItemsChanged -= SyncItems;
 		}
 
-		void SyncItems()
+		private void SyncItems()
 		{
 			var current = new HashSet<double>();
-			foreach (var dto in _state.Items)
+			foreach (var dto in m_State.Items)
 			{
 				current.Add(dto.Id);
-				if (_views.ContainsKey(dto.Id)) continue;
-				if (itemPrefab == null)
+				if (m_Views.ContainsKey(dto.Id)) continue;
+				if (m_ItemPrefab == null)
 				{
 					Debug.LogError("[ItemSpawner] itemPrefab not assigned");
 					return;
 				}
-				var view = Instantiate(itemPrefab, transform);
+				var view = Instantiate(m_ItemPrefab, transform);
 				view.name = $"Item_{dto.Type}_{dto.Id:F0}";
-				view.Bind(dto, _board);
-				_views[dto.Id] = view;
+				view.Bind(dto, m_Board);
+				m_Views[dto.Id] = view;
 			}
 
 			var stale = new List<double>();
-			foreach (var id in _views.Keys)
+			foreach (var id in m_Views.Keys)
 				if (!current.Contains(id)) stale.Add(id);
 			foreach (var id in stale)
 			{
-				Destroy(_views[id].gameObject);
-				_views.Remove(id);
+				Destroy(m_Views[id].gameObject);
+				m_Views.Remove(id);
 			}
 		}
 	}

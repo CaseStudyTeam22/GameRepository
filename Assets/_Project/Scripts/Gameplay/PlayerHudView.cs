@@ -1,5 +1,6 @@
-﻿using GamblingAction.Core.Dto;
+using GamblingAction.Core.Dto;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Gameplay
 {
@@ -8,33 +9,32 @@ namespace GamblingAction.Gameplay
 	public class PlayerHudView : MonoBehaviour
 	{
 		[Header("Sub-views (set in prefab)")]
-		[SerializeField] StaminaBarView staminaBar;
-		// [SerializeField] NameLabelView  nameLabel;
-		// [SerializeField] AITagView       aiTag;
-		// [SerializeField] BuffIconsView   buffIcons;
+		[FormerlySerializedAs("staminaBar")]
+		[SerializeField] private StaminaBarView m_StaminaBar;
 
 		[Header("Camera")]
-		[SerializeField] bool billboardToCamera = true;
+		[FormerlySerializedAs("billboardToCamera")]
+		[SerializeField] private bool m_BillboardToCamera = true;
 
-		Camera _cam;
+		private Camera m_Cam;
 
-		void Awake()
+		private void Awake()
 		{
-			_cam = Camera.main;
+			m_Cam = Camera.main;
 		}
 
 		public void Apply(PlayerDto dto)
 		{
 			if (dto == null) return;
-			if (staminaBar != null) staminaBar.Apply(dto);
+			if (m_StaminaBar != null) m_StaminaBar.Apply(dto);
 		}
 
-		void LateUpdate()
+		private void LateUpdate()
 		{
-			if (!billboardToCamera) return;
-			if (_cam == null) _cam = Camera.main;
-			if (_cam == null) return;
-			transform.rotation = _cam.transform.rotation;
+			if (!m_BillboardToCamera) return;
+			if (m_Cam == null) m_Cam = Camera.main;
+			if (m_Cam == null) return;
+			transform.rotation = m_Cam.transform.rotation;
 		}
 	}
 }

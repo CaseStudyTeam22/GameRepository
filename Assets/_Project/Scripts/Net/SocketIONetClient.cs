@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using SocketIOUnity.Runtime;
@@ -10,35 +10,35 @@ namespace GamblingAction.Net
 {
 	public class SocketIONetClient : INetClient, IDisposable
 	{
-		readonly SocketIOClient _socket;
-		readonly Dictionary<string, Action<string>> _handlers = new();
+		private readonly SocketIOClient m_Socket;
+		private readonly Dictionary<string, Action<string>> m_Handlers = new();
 
-		public bool IsConnected => _socket.IsConnected;
+		public bool IsConnected => m_Socket.IsConnected;
 
 		public event Action OnConnected;
 		public event Action OnDisconnected;
 
 		public SocketIONetClient()
 		{
-			_socket = new SocketIOClient(TransportFactoryHelper.CreateDefault());
-			_socket.OnConnected    += () => UnityMainThreadDispatcher.Enqueue(() => OnConnected?.Invoke());
-			_socket.OnDisconnected += () => UnityMainThreadDispatcher.Enqueue(() => OnDisconnected?.Invoke());
+			m_Socket = new SocketIOClient(TransportFactoryHelper.CreateDefault());
+			m_Socket.OnConnected    += () => UnityMainThreadDispatcher.Enqueue(() => OnConnected?.Invoke());
+			m_Socket.OnDisconnected += () => UnityMainThreadDispatcher.Enqueue(() => OnDisconnected?.Invoke());
 		}
 
 		public void Connect(string url)
 		{
 			Debug.Log($"[Net] Connecting to {url}");
-			_socket.Connect(url);
+			m_Socket.Connect(url);
 		}
 
 		public void Disconnect()
 		{
-			_socket.Disconnect();
+			m_Socket.Disconnect();
 		}
 
 		public void Emit(string eventName, object payload)
 		{
-			_socket.Emit(eventName, payload);
+			m_Socket.Emit(eventName, payload);
 		}
 
 		public void On<T>(string eventName, Action<T> handler)
@@ -69,11 +69,11 @@ namespace GamblingAction.Net
 				}
 				handler(parsed);
 			};
-			_handlers[eventName] = raw;
-			_socket.On(eventName, raw);
+			m_Handlers[eventName] = raw;
+			m_Socket.On(eventName, raw);
 		}
 
-		static bool LooksLikeJson(string s)
+		private static bool LooksLikeJson(string s)
 		{
 			if (string.IsNullOrEmpty(s)) return false;
 			char c = s[0];
@@ -84,22 +84,22 @@ namespace GamblingAction.Net
 		public void On(string eventName, Action handler)
 		{
 			Action<string> raw = _ => handler();
-			_handlers[eventName] = raw;
-			_socket.On(eventName, raw);
+			m_Handlers[eventName] = raw;
+			m_Socket.On(eventName, raw);
 		}
 
 		public void Off(string eventName)
 		{
-			if (_handlers.TryGetValue(eventName, out var raw))
+			if (m_Handlers.TryGetValue(eventName, out var raw))
 			{
-				_socket.Off(eventName, raw);
-				_handlers.Remove(eventName);
+				m_Socket.Off(eventName, raw);
+				m_Handlers.Remove(eventName);
 			}
 		}
 
 		public void Dispose()
 		{
-			_socket.Shutdown();
+			m_Socket.Shutdown();
 		}
 	}
 }

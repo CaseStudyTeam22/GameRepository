@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using GamblingAction.Core.Dto;
@@ -9,32 +9,32 @@ namespace GamblingAction.Domain
 {
 	public class GameState : IGameState, IDisposable
 	{
-		readonly INetClient _net;
-		readonly Dictionary<string, PlayerDto> _players = new();
-		List<ItemDto> _items = new();
+		private readonly INetClient m_Net;
+		private readonly Dictionary<string, PlayerDto> m_Players = new();
+		private List<ItemDto> m_Items = new();
 
 		public string MyId { get; private set; }
 		public int GridSize { get; private set; } = GamblingAction.Core.GameConfig.GridSize;
-		public IReadOnlyDictionary<string, PlayerDto> Players => _players;
-		public IReadOnlyList<ItemDto> Items => _items;
+		public IReadOnlyDictionary<string, PlayerDto> Players => m_Players;
+		public IReadOnlyList<ItemDto> Items => m_Items;
 		public int CurrentBeat { get; private set; }
 		public int TimeLeft { get; private set; }
 		public bool GameActive { get; private set; }
-		public GamePhase Phase { get; private set; } = GamePhase.Lobby;
+		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
 
 		public PlayerDto Me =>
-			MyId != null && _players.TryGetValue(MyId, out var p) ? p : null;
+			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
 
 		public PlayerDto Opponent =>
-			_players.Values.FirstOrDefault(p => p.Id != MyId);
+			m_Players.Values.FirstOrDefault(p => p.Id != MyId);
 
 		public event Action OnStateInitialized;
 		public event Action OnPlayersChanged;
 		public event Action OnItemsChanged;
 		public event Action OnBeatChanged;
 		public event Action<EventDto[]> OnGameEvents;
-		public event Action<GamePhase> OnPhaseChanged;
+		public event Action<EGamePhase> OnPhaseChanged;
 		public event Action<string> OnRoundOver;
 		public event Action<string> OnGameOver;
 		public event Action<string> OnPlayerLeft;
@@ -43,7 +43,7 @@ namespace GamblingAction.Domain
 
 		public GameState(INetClient net)
 		{
-			_net = net;
+			m_Net = net;
 			Subscribe();
 		}
 
@@ -52,77 +52,77 @@ namespace GamblingAction.Domain
 			if (!GameActive || CurrentBeat >= 4) return;
 			var me = Me;
 			if (me == null || me.IsAI) return;
-			_net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
+			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
 		}
 
 		public void SubmitReady(bool isAI)
 		{
-			_net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
+			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
 		}
 
 		public void SubmitExchange(int amount)
 		{
-			_net.Emit(ClientEvents.ExchangeChips, new ExchangeChipsMessage { Amount = amount });
+			m_Net.Emit(ClientEvents.ExchangeChips, new ExchangeChipsMessage { Amount = amount });
 		}
 
 		public void SubmitBuff(string buffId)
 		{
-			_net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
+			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
 		}
 
-		void Subscribe()
+		private void Subscribe()
 		{
-			_net.OnConnected += () =>
+			m_Net.OnConnected += () =>
 			{
 				IsConnected = true;
 				OnConnectionChanged?.Invoke(true);
 			};
-			_net.OnDisconnected += () =>
+			m_Net.OnDisconnected += () =>
 			{
 				IsConnected = false;
 				OnConnectionChanged?.Invoke(false);
 			};
 
-			_net.On<InitMessage>(ServerEvents.Init, HandleInit);
-			_net.On<SyncStateMessage>(ServerEvents.SyncState, HandleSyncState);
-			_net.On<ItemDto[]>(ServerEvents.SyncItems, HandleSyncItems);
-			_net.On<BeatMessage>(ServerEvents.Beat, HandleBeat);
-			_net.On<EventDto[]>(ServerEvents.GameEvents, HandleGameEvents);
-			_net.On<RoundOverMessage>(ServerEvents.RoundOver, HandleRoundOver);
-			_net.On<GameOverMessage>(ServerEvents.GameOver, HandleGameOver);
-			_net.On<WaitingForOthersMessage>(ServerEvents.WaitingForOthers, HandleWaitingForOthers);
-			_net.On<string>(ServerEvents.PlayerLeft, HandlePlayerLeft);
+			m_Net.On<InitMessage>(ServerEvents.Init, HandleInit);
+			m_Net.On<SyncStateMessage>(ServerEvents.SyncState, HandleSyncState);
+			m_Net.On<ItemDto[]>(ServerEvents.SyncItems, HandleSyncItems);
+			m_Net.On<BeatMessage>(ServerEvents.Beat, HandleBeat);
+			m_Net.On<EventDto[]>(ServerEvents.GameEvents, HandleGameEvents);
+			m_Net.On<RoundOverMessage>(ServerEvents.RoundOver, HandleRoundOver);
+			m_Net.On<GameOverMessage>(ServerEvents.GameOver, HandleGameOver);
+			m_Net.On<WaitingForOthersMessage>(ServerEvents.WaitingForOthers, HandleWaitingForOthers);
+			m_Net.On<string>(ServerEvents.PlayerLeft, HandlePlayerLeft);
 
-			_net.On(ServerEvents.StartExchange,       () => SetPhase(GamePhase.Exchange));
-			_net.On(ServerEvents.StartBuffSelection,  () => SetPhase(GamePhase.BuffSelection));
-			_net.On(ServerEvents.StartMatchCountdown, () => SetPhase(GamePhase.Countdown));
-			_net.On(ServerEvents.RoundStart,          () => SetPhase(GamePhase.Battle));
-			_net.On(ServerEvents.CloseAll,            HandleCloseAll);
+			m_Net.On(ServerEvents.StartExchange,       () => SetPhase(EGamePhase.Exchange));
+			m_Net.On(ServerEvents.StartBuffSelection,  () => SetPhase(EGamePhase.BuffSelection));
+			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
+			m_Net.On(ServerEvents.RoundStart,          () => SetPhase(EGamePhase.Battle));
+			m_Net.On(ServerEvents.CloseAll,            HandleCloseAll);
 		}
 
-		void HandleInit(InitMessage msg)
+		private void HandleInit(InitMessage msg)
 		{
 			MyId = msg.Id;
 			GridSize = msg.GridSize;
 			ReplacePlayers(msg.Players);
-			Debug.Log($"[GameState] init: id={MyId} players={_players.Count} grid={GridSize}");
+			Debug.Log($"[GameState] init: id={MyId} players={m_Players.Count} grid={GridSize}");
 			OnStateInitialized?.Invoke();
 			OnPlayersChanged?.Invoke();
 		}
 
-		void HandleSyncState(SyncStateMessage msg)
+		private void HandleSyncState(SyncStateMessage msg)
 		{
 			ReplacePlayers(msg.Players);
 			OnPlayersChanged?.Invoke();
 		}
 
-		void HandleSyncItems(ItemDto[] items)
+		private void HandleSyncItems(ItemDto[] items)
 		{
-			_items = items != null ? new List<ItemDto>(items) : new List<ItemDto>();
+			m_Items = items != null ? new List<ItemDto>(items) : new List<ItemDto>();
 			OnItemsChanged?.Invoke();
 		}
 
-		void HandleBeat(BeatMessage msg)
+		private void HandleBeat(BeatMessage msg)
 		{
 			CurrentBeat = msg.Beat;
 			TimeLeft = msg.TimeLeft;
@@ -130,51 +130,51 @@ namespace GamblingAction.Domain
 			OnBeatChanged?.Invoke();
 		}
 
-		void HandleGameEvents(EventDto[] events)
+		private void HandleGameEvents(EventDto[] events)
 		{
 			if (events == null || events.Length == 0) return;
 			OnGameEvents?.Invoke(events);
 		}
 
-		void HandleRoundOver(RoundOverMessage msg)
+		private void HandleRoundOver(RoundOverMessage msg)
 		{
-			SetPhase(GamePhase.RoundOver);
+			SetPhase(EGamePhase.RoundOver);
 			OnRoundOver?.Invoke(msg.WinnerRole);
 		}
 
-		void HandleGameOver(GameOverMessage msg)
+		private void HandleGameOver(GameOverMessage msg)
 		{
-			SetPhase(GamePhase.GameOver);
+			SetPhase(EGamePhase.GameOver);
 			OnGameOver?.Invoke(msg.WinnerRole);
 		}
 
-		void HandleWaitingForOthers(WaitingForOthersMessage msg)
+		private void HandleWaitingForOthers(WaitingForOthersMessage msg)
 		{
 			OnWaitingForOthers?.Invoke(msg.WaitingFor);
 		}
 
-		void HandlePlayerLeft(string id)
+		private void HandlePlayerLeft(string id)
 		{
-			if (_players.Remove(id))
+			if (m_Players.Remove(id))
 				OnPlayersChanged?.Invoke();
 			OnPlayerLeft?.Invoke(id);
 		}
 
-		void HandleCloseAll()
+		private void HandleCloseAll()
 		{
 			Debug.LogWarning("[GameState] Server requested close_all");
-			_net.Disconnect();
+			m_Net.Disconnect();
 		}
 
-		void ReplacePlayers(Dictionary<string, PlayerDto> incoming)
+		private void ReplacePlayers(Dictionary<string, PlayerDto> incoming)
 		{
-			_players.Clear();
+			m_Players.Clear();
 			if (incoming == null) return;
 			foreach (var kv in incoming)
-				_players[kv.Key] = kv.Value;
+				m_Players[kv.Key] = kv.Value;
 		}
 
-		void SetPhase(GamePhase phase)
+		private void SetPhase(EGamePhase phase)
 		{
 			if (Phase == phase) return;
 			Phase = phase;
@@ -184,20 +184,20 @@ namespace GamblingAction.Domain
 
 		public void Dispose()
 		{
-			_net.Off(ServerEvents.Init);
-			_net.Off(ServerEvents.SyncState);
-			_net.Off(ServerEvents.SyncItems);
-			_net.Off(ServerEvents.Beat);
-			_net.Off(ServerEvents.GameEvents);
-			_net.Off(ServerEvents.RoundOver);
-			_net.Off(ServerEvents.GameOver);
-			_net.Off(ServerEvents.WaitingForOthers);
-			_net.Off(ServerEvents.PlayerLeft);
-			_net.Off(ServerEvents.StartExchange);
-			_net.Off(ServerEvents.StartBuffSelection);
-			_net.Off(ServerEvents.StartMatchCountdown);
-			_net.Off(ServerEvents.RoundStart);
-			_net.Off(ServerEvents.CloseAll);
+			m_Net.Off(ServerEvents.Init);
+			m_Net.Off(ServerEvents.SyncState);
+			m_Net.Off(ServerEvents.SyncItems);
+			m_Net.Off(ServerEvents.Beat);
+			m_Net.Off(ServerEvents.GameEvents);
+			m_Net.Off(ServerEvents.RoundOver);
+			m_Net.Off(ServerEvents.GameOver);
+			m_Net.Off(ServerEvents.WaitingForOthers);
+			m_Net.Off(ServerEvents.PlayerLeft);
+			m_Net.Off(ServerEvents.StartExchange);
+			m_Net.Off(ServerEvents.StartBuffSelection);
+			m_Net.Off(ServerEvents.StartMatchCountdown);
+			m_Net.Off(ServerEvents.RoundStart);
+			m_Net.Off(ServerEvents.CloseAll);
 		}
 	}
 }

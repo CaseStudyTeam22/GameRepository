@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using GamblingAction.Core.Skills;
 
 namespace GamblingAction.Gameplay.SkillPreview
@@ -7,21 +7,21 @@ namespace GamblingAction.Gameplay.SkillPreview
 	/// </summary>
 	public static class SkillPatternRegistry
 	{
-		static readonly Dictionary<SkillPatternType, ISkillPattern> _map = Build();
+		private static readonly Dictionary<ESkillPatternType, ISkillPattern> s_Map = Build();
 
-		static Dictionary<SkillPatternType, ISkillPattern> Build()
+		private static Dictionary<ESkillPatternType, ISkillPattern> Build()
 		{
-			return new Dictionary<SkillPatternType, ISkillPattern>
+			return new Dictionary<ESkillPatternType, ISkillPattern>
 			{
-				{ SkillPatternType.LineByPower, new LineByPowerPattern() },
-				{ SkillPatternType.Self,        new SelfPattern() },
-				{ SkillPatternType.ForwardOne,  new ForwardOnePattern() },
+				{ ESkillPatternType.LineByPower, new LineByPowerPattern() },
+				{ ESkillPatternType.Self,        new SelfPattern() },
+				{ ESkillPatternType.ForwardOne,  new ForwardOnePattern() },
 			};
 		}
 
-		public static ISkillPattern Get(SkillPatternType type)
+		public static ISkillPattern Get(ESkillPatternType type)
 		{
-			return _map.TryGetValue(type, out var p) ? p : null;
+			return s_Map.TryGetValue(type, out var p) ? p : null;
 		}
 	}
 }

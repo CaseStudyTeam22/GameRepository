@@ -1,181 +1,192 @@
-﻿using DG.Tweening;
+using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Core.Skills;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace GamblingAction.Gameplay
 {
 	public class PlayerView : MonoBehaviour
 	{
-		[SerializeField] SpriteRenderer sprite;
-		[SerializeField] Renderer baseRenderer;
-		[SerializeField] Transform billboardTarget;
-		[SerializeField] PlayerHudView hud;
+		[FormerlySerializedAs("sprite")]
+		[SerializeField] private SpriteRenderer m_Sprite;
+		[FormerlySerializedAs("baseRenderer")]
+		[SerializeField] private Renderer m_BaseRenderer;
+		[FormerlySerializedAs("billboardTarget")]
+		[SerializeField] private Transform m_BillboardTarget;
+		[FormerlySerializedAs("hud")]
+		[SerializeField] private PlayerHudView m_Hud;
+		[FormerlySerializedAs("skillSet")]
 		[SerializeField, Tooltip("このキャラクターが使うスキル設定（ビジュアルルール含む）。null = SkillPreviewView の fallbackSkillSet を使用")]
-		SkillDefinition skillSet;
+		private SkillDefinition m_SkillSet;
 
-		public SkillDefinition SkillSet => skillSet;
+		public SkillDefinition SkillSet => m_SkillSet;
 
 		[Header("Movement")]
-		[SerializeField] float moveDuration = 0.22f;
-		[SerializeField] Ease moveEase = Ease.OutQuad;
+		[FormerlySerializedAs("moveDuration")]
+		[SerializeField] private float m_MoveDuration = 0.22f;
+		[FormerlySerializedAs("moveEase")]
+		[SerializeField] private Ease m_MoveEase = Ease.OutQuad;
 
 		[Header("Falling (gravity)")]
-		[SerializeField] float gravity = 18f;
-		[SerializeField] float fallStopY = -20f;
-		[SerializeField] float fallKickoffDuration = 0.18f;
+		[FormerlySerializedAs("gravity")]
+		[SerializeField] private float m_Gravity = 18f;
+		[FormerlySerializedAs("fallStopY")]
+		[SerializeField] private float m_FallStopY = -20f;
+		[FormerlySerializedAs("fallKickoffDuration")]
+		[SerializeField] private float m_FallKickoffDuration = 0.18f;
 
-		IGameState _state;
-		BoardView _board;
-		string _playerId;
-		Camera _cam;
-		Material _baseMaterial;
-		float _baseY;
-		Tween _moveTween;
+		private IGameState m_State;
+		private BoardView m_Board;
+		private string m_PlayerId;
+		private Camera m_Cam;
+		private Material m_BaseMaterial;
+		private float m_BaseY;
+		private Tween m_MoveTween;
 
-		bool _isFalling;
-		float _fallVelocity;
-		bool _kickoffDone;
+		private bool m_IsFalling;
+		private float m_FallVelocity;
+		private bool m_KickoffDone;
 
-		bool _prevFalling;
-		int _lastX = int.MinValue;
-		int _lastY = int.MinValue;
+		private bool m_PrevFalling;
+		private int m_LastX = int.MinValue;
+		private int m_LastY = int.MinValue;
 
-		public string PlayerId => _playerId;
+		public string PlayerId => m_PlayerId;
 
 		public void Bind(string playerId, IGameState state, BoardView board)
 		{
-			_playerId = playerId;
-			_state = state;
-			_board = board;
-			_cam = Camera.main;
+			m_PlayerId = playerId;
+			m_State = state;
+			m_Board = board;
+			m_Cam = Camera.main;
 
-			if (baseRenderer != null && baseRenderer.sharedMaterial != null)
-				_baseMaterial = baseRenderer.material;
+			if (m_BaseRenderer != null && m_BaseRenderer.sharedMaterial != null)
+				m_BaseMaterial = m_BaseRenderer.material;
 
-			_baseY = transform.position.y;
+			m_BaseY = transform.position.y;
 
-			if (_state.Players.TryGetValue(_playerId, out var dto))
+			if (m_State.Players.TryGetValue(m_PlayerId, out var dto))
 			{
 				ApplyColor(dto);
-				if (hud != null) hud.Apply(dto);
+				if (m_Hud != null) m_Hud.Apply(dto);
 				SnapTo(dto);
 			}
 
-			_state.OnPlayersChanged += HandlePlayersChanged;
-			_state.OnPhaseChanged   += HandlePhaseChanged;
+			m_State.OnPlayersChanged += HandlePlayersChanged;
+			m_State.OnPhaseChanged   += HandlePhaseChanged;
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
-			_moveTween?.Kill();
-			if (_state != null)
+			m_MoveTween?.Kill();
+			if (m_State != null)
 			{
-				_state.OnPlayersChanged -= HandlePlayersChanged;
-				_state.OnPhaseChanged   -= HandlePhaseChanged;
+				m_State.OnPlayersChanged -= HandlePlayersChanged;
+				m_State.OnPhaseChanged   -= HandlePhaseChanged;
 			}
 		}
 
-		void HandlePlayersChanged()
+		private void HandlePlayersChanged()
 		{
-			if (!_state.Players.TryGetValue(_playerId, out var dto)) return;
+			if (!m_State.Players.TryGetValue(m_PlayerId, out var dto)) return;
 			ApplyColor(dto);
 			ApplyMovement(dto);
-			if (hud != null) hud.Apply(dto);
+			if (m_Hud != null) m_Hud.Apply(dto);
 		}
 
-		void HandlePhaseChanged(GamePhase phase)
+		private void HandlePhaseChanged(EGamePhase phase)
 		{
-			if (phase == GamePhase.Exchange)
+			if (phase == EGamePhase.Exchange)
 			{
-				if (_state.Players.TryGetValue(_playerId, out var dto))
+				if (m_State.Players.TryGetValue(m_PlayerId, out var dto))
 					SnapTo(dto);
 			}
 		}
 
-		void ApplyMovement(PlayerDto dto)
+		private void ApplyMovement(PlayerDto dto)
 		{
-			if (dto.Falling && !_prevFalling)
+			if (dto.Falling && !m_PrevFalling)
 			{
 				StartFalling(dto);
 			}
-			else if (!dto.Falling && _prevFalling)
+			else if (!dto.Falling && m_PrevFalling)
 			{
-				_isFalling = false;
-				_fallVelocity = 0f;
-				_kickoffDone = false;
+				m_IsFalling = false;
+				m_FallVelocity = 0f;
+				m_KickoffDone = false;
 			}
-			else if (!_isFalling && (dto.X != _lastX || dto.Y != _lastY))
+			else if (!m_IsFalling && (dto.X != m_LastX || dto.Y != m_LastY))
 			{
-				var target = _board.GridToWorld(dto.X, dto.Y);
-				target.y = _baseY;
-				_moveTween?.Kill();
-				_moveTween = transform.DOMove(target, moveDuration).SetEase(moveEase);
+				var target = m_Board.GridToWorld(dto.X, dto.Y);
+				target.y = m_BaseY;
+				m_MoveTween?.Kill();
+				m_MoveTween = transform.DOMove(target, m_MoveDuration).SetEase(m_MoveEase);
 			}
 
-			_prevFalling = dto.Falling;
-			_lastX = dto.X;
-			_lastY = dto.Y;
+			m_PrevFalling = dto.Falling;
+			m_LastX = dto.X;
+			m_LastY = dto.Y;
 		}
 
-		void StartFalling(PlayerDto dto)
+		private void StartFalling(PlayerDto dto)
 		{
-			_moveTween?.Kill();
-			_isFalling = true;
-			_fallVelocity = 0f;
-			_kickoffDone = false;
+			m_MoveTween?.Kill();
+			m_IsFalling = true;
+			m_FallVelocity = 0f;
+			m_KickoffDone = false;
 
-			var kickoffTarget = _board.GridToWorld(dto.X, dto.Y);
-			kickoffTarget.y = _baseY;
-			_moveTween = transform
-				.DOMove(kickoffTarget, fallKickoffDuration)
+			var kickoffTarget = m_Board.GridToWorld(dto.X, dto.Y);
+			kickoffTarget.y = m_BaseY;
+			m_MoveTween = transform
+				.DOMove(kickoffTarget, m_FallKickoffDuration)
 				.SetEase(Ease.OutQuad)
-				.OnComplete(() => _kickoffDone = true);
+				.OnComplete(() => m_KickoffDone = true);
 		}
 
-		void Update()
+		private void Update()
 		{
-			if (_isFalling && _kickoffDone && transform.position.y > fallStopY)
+			if (m_IsFalling && m_KickoffDone && transform.position.y > m_FallStopY)
 			{
-				_fallVelocity += gravity * Time.deltaTime;
+				m_FallVelocity += m_Gravity * Time.deltaTime;
 				var p = transform.position;
-				p.y -= _fallVelocity * Time.deltaTime;
+				p.y -= m_FallVelocity * Time.deltaTime;
 				transform.position = p;
 			}
 		}
 
-		void LateUpdate()
+		private void LateUpdate()
 		{
-			if (billboardTarget == null) return;
-			if (_cam == null) _cam = Camera.main;
-			if (_cam == null) return;
-			billboardTarget.rotation = _cam.transform.rotation;
+			if (m_BillboardTarget == null) return;
+			if (m_Cam == null) m_Cam = Camera.main;
+			if (m_Cam == null) return;
+			m_BillboardTarget.rotation = m_Cam.transform.rotation;
 		}
 
-		void SnapTo(PlayerDto dto)
+		private void SnapTo(PlayerDto dto)
 		{
-			_moveTween?.Kill();
-			_isFalling = false;
-			_fallVelocity = 0f;
-			_kickoffDone = false;
-			_prevFalling = false;
+			m_MoveTween?.Kill();
+			m_IsFalling = false;
+			m_FallVelocity = 0f;
+			m_KickoffDone = false;
+			m_PrevFalling = false;
 
-			var pos = _board.GridToWorld(dto.X, dto.Y);
-			pos.y = _baseY;
+			var pos = m_Board.GridToWorld(dto.X, dto.Y);
+			pos.y = m_BaseY;
 			transform.position = pos;
-			_lastX = dto.X;
-			_lastY = dto.Y;
+			m_LastX = dto.X;
+			m_LastY = dto.Y;
 		}
 
-		void ApplyColor(PlayerDto dto)
+		private void ApplyColor(PlayerDto dto)
 		{
 			var color = ParseColor(dto.Color);
-			if (sprite != null) sprite.color = color;
-			if (_baseMaterial != null) _baseMaterial.color = color;
+			if (m_Sprite != null) m_Sprite.color = color;
+			if (m_BaseMaterial != null) m_BaseMaterial.color = color;
 		}
 
-		static Color ParseColor(string hex)
+		private static Color ParseColor(string hex)
 		{
 			return ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.white;
 		}

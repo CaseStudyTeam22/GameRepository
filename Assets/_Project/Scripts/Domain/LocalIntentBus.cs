@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace GamblingAction.Domain
 {
@@ -6,9 +6,9 @@ namespace GamblingAction.Domain
 	/// </summary>
 	public class LocalIntent
 	{
-		public string Mode;   // null/none/move/push/attack/defense/rest
-		public string Dir;    // up/down/left/right or null
-		public int Power = 1;
+		public string Mode { get; set; }
+		public string Dir { get; set; }
+		public int Power { get; set; } = 1;
 
 		public bool IsActive => !string.IsNullOrEmpty(Mode) && Mode != "none";
 	}

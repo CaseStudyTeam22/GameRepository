@@ -1,6 +1,6 @@
-﻿namespace GamblingAction.Domain
+namespace GamblingAction.Domain
 {
-	public enum GamePhase
+	public enum EGamePhase
 	{
 		Lobby,
 		Exchange,

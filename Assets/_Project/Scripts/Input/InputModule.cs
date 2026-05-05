@@ -1,58 +1,60 @@
-﻿using GamblingAction.Core.Dto;
+using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityInput = UnityEngine.Input;
 
 namespace GamblingAction.Input
 {
 	public class InputModule : MonoBehaviour
 	{
-		[SerializeField] Camera worldCamera;
+		[FormerlySerializedAs("worldCamera")]
+		[SerializeField] private Camera m_WorldCamera;
 
-		IGameState _state;
-		IBoardCoords _board;
-		Plane _groundPlane = new Plane(Vector3.up, Vector3.zero);
+		private IGameState m_State;
+		private IBoardCoords m_Board;
+		private Plane m_GroundPlane = new Plane(Vector3.up, Vector3.zero);
 
-		KeyCode? _activeSkillKey;
-		string _activeMode;          // "push" | "attack" | "defense" | "rest" | null
-		string _lastSentDir;
-		int _power = 1;
+		private KeyCode? m_ActiveSkillKey;
+		private string m_ActiveMode;
+		private string m_LastSentDir;
+		private int m_Power = 1;
 
-		void Start()
+		private void Start()
 		{
-			if (worldCamera == null) worldCamera = Camera.main;
-			_board = BoardCoordsLocator.Current;
-			_state = GameStateLocator.Current;
+			if (m_WorldCamera == null) m_WorldCamera = Camera.main;
+			m_Board = BoardCoordsLocator.Current;
+			m_State = GameStateLocator.Current;
 
-			if (_state == null) Debug.LogError("[Input] GameStateLocator.Current is null");
-			if (_board == null) Debug.LogError("[Input] BoardCoordsLocator.Current is null");
+			if (m_State == null) Debug.LogError("[Input] GameStateLocator.Current is null");
+			if (m_Board == null) Debug.LogError("[Input] BoardCoordsLocator.Current is null");
 
-			if (_state != null) _state.OnBeatChanged += HandleBeatChanged;
+			if (m_State != null) m_State.OnBeatChanged += HandleBeatChanged;
 		}
 
-		void OnDestroy()
+		private void OnDestroy()
 		{
-			if (_state != null) _state.OnBeatChanged -= HandleBeatChanged;
+			if (m_State != null) m_State.OnBeatChanged -= HandleBeatChanged;
 		}
 
-		void HandleBeatChanged()
+		private void HandleBeatChanged()
 		{
-			if (_state.CurrentBeat != 1) return;
+			if (m_State.CurrentBeat != 1) return;
 			ResetIntentState();
 		}
 
-		void ResetIntentState()
+		private void ResetIntentState()
 		{
-			_activeSkillKey = null;
-			_activeMode = null;
-			_lastSentDir = null;
-			_power = 1;
+			m_ActiveSkillKey = null;
+			m_ActiveMode = null;
+			m_LastSentDir = null;
+			m_Power = 1;
 			LocalIntentBus.Clear();
 		}
 
-		void Update()
+		private void Update()
 		{
-			if (_state == null) return;
+			if (m_State == null) return;
 			if (!CanAcceptInput())
 			{
 				if (LocalIntentBus.Current.IsActive) LocalIntentBus.Clear();
@@ -68,17 +70,17 @@ namespace GamblingAction.Input
 			HandleMouseClick();
 		}
 
-		bool CanAcceptInput()
+		private bool CanAcceptInput()
 		{
-			if (!_state.GameActive || _state.CurrentBeat >= 4) return false;
-			var me = _state.Me;
+			if (!m_State.GameActive || m_State.CurrentBeat >= 4) return false;
+			var me = m_State.Me;
 			if (me == null || me.IsAI) return false;
-			foreach (var p in _state.Players.Values)
+			foreach (var p in m_State.Players.Values)
 				if (p.Falling) return false;
 			return true;
 		}
 
-		void HandleSkillKeys()
+		private void HandleSkillKeys()
 		{
 			TrySetSkillMode(KeyCode.Q, IntentTypes.Push);
 			TrySetSkillMode(KeyCode.W, IntentTypes.Attack);
@@ -86,19 +88,19 @@ namespace GamblingAction.Input
 			TrySetSkillMode(KeyCode.R, IntentTypes.Rest);
 		}
 
-		void TrySetSkillMode(KeyCode key, string mode)
+		private void TrySetSkillMode(KeyCode key, string mode)
 		{
 			if (!UnityInput.GetKeyDown(key)) return;
-			if (_activeSkillKey == key) return;
+			if (m_ActiveSkillKey == key) return;
 
-			_activeSkillKey = key;
-			_activeMode = mode;
-			_power = 1;
+			m_ActiveSkillKey = key;
+			m_ActiveMode = mode;
+			m_Power = 1;
 
 			if (mode == IntentTypes.Rest)
 			{
-				_lastSentDir = null;
-				_state.SubmitIntent(IntentTypes.Rest, null, _power);
+				m_LastSentDir = null;
+				m_State.SubmitIntent(IntentTypes.Rest, null, m_Power);
 				PublishLocal();
 				return;
 			}
@@ -106,8 +108,8 @@ namespace GamblingAction.Input
 			string dir = ResolveMouseDir();
 			if (mode == IntentTypes.Defense && dir == null)
 			{
-				_lastSentDir = null;
-				_state.SubmitIntent(mode, null, _power);
+				m_LastSentDir = null;
+				m_State.SubmitIntent(mode, null, m_Power);
 				PublishLocal();
 				return;
 			}
@@ -116,46 +118,46 @@ namespace GamblingAction.Input
 				PublishLocal();
 				return;
 			}
-			_lastSentDir = dir;
-			_state.SubmitIntent(mode, dir, _power);
+			m_LastSentDir = dir;
+			m_State.SubmitIntent(mode, dir, m_Power);
 			PublishLocal();
 		}
 
-		void HandleSkillKeyReleased()
+		private void HandleSkillKeyReleased()
 		{
-			if (!_activeSkillKey.HasValue) return;
-			if (UnityInput.GetKeyUp(_activeSkillKey.Value))
+			if (!m_ActiveSkillKey.HasValue) return;
+			if (UnityInput.GetKeyUp(m_ActiveSkillKey.Value))
 				CancelAll();
 		}
 
-		void HandleEscape()
+		private void HandleEscape()
 		{
 			if (UnityInput.GetKeyDown(KeyCode.Escape)) CancelAll();
 		}
 
-		void CancelAll()
+		private void CancelAll()
 		{
-			_activeSkillKey = null;
-			_activeMode = null;
-			_lastSentDir = null;
-			_power = 1;
-			_state.SubmitIntent(IntentTypes.None, null, 1);
+			m_ActiveSkillKey = null;
+			m_ActiveMode = null;
+			m_LastSentDir = null;
+			m_Power = 1;
+			m_State.SubmitIntent(IntentTypes.None, null, 1);
 			LocalIntentBus.Clear();
 		}
 
-		void HandleWheel()
+		private void HandleWheel()
 		{
 			float scroll = UnityInput.mouseScrollDelta.y;
 			if (Mathf.Approximately(scroll, 0f)) return;
 			if (!HasIntentToCharge()) return;
 
-			int prev = _power;
+			int prev = m_Power;
 			int next = scroll > 0 ? Mathf.Min(3, prev + 1) : Mathf.Max(1, prev - 1);
 			if (next == prev) return;
 			SetPowerAndResend(next);
 		}
 
-		void HandlePowerNumberKeys()
+		private void HandlePowerNumberKeys()
 		{
 			int pick = 0;
 			if (UnityInput.GetKeyDown(KeyCode.Alpha1) || UnityInput.GetKeyDown(KeyCode.Keypad1)) pick = 1;
@@ -163,76 +165,76 @@ namespace GamblingAction.Input
 			else if (UnityInput.GetKeyDown(KeyCode.Alpha3) || UnityInput.GetKeyDown(KeyCode.Keypad3)) pick = 3;
 			if (pick == 0) return;
 			if (!HasIntentToCharge()) return;
-			if (pick == _power) return;
+			if (pick == m_Power) return;
 			SetPowerAndResend(pick);
 		}
 
-		bool HasIntentToCharge()
+		private bool HasIntentToCharge()
 		{
-			if (!string.IsNullOrEmpty(_activeMode) && _activeMode != IntentTypes.None) return true;
-			if (!string.IsNullOrEmpty(_lastSentDir)) return true;
+			if (!string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None) return true;
+			if (!string.IsNullOrEmpty(m_LastSentDir)) return true;
 			return false;
 		}
 
-		void SetPowerAndResend(int newPower)
+		private void SetPowerAndResend(int newPower)
 		{
-			_power = newPower;
-			string type = !string.IsNullOrEmpty(_activeMode) && _activeMode != IntentTypes.None
-				? _activeMode
+			m_Power = newPower;
+			string type = !string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None
+				? m_ActiveMode
 				: IntentTypes.Move;
 			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense;
-			if (!needsDir || !string.IsNullOrEmpty(_lastSentDir))
+			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
 			{
-				_state.SubmitIntent(type, _lastSentDir, _power);
-				LocalIntentBus.Set(type, _lastSentDir, _power);
+				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
+				LocalIntentBus.Set(type, m_LastSentDir, m_Power);
 			}
 		}
 
-		void HandleMouseMove()
+		private void HandleMouseMove()
 		{
-			if (string.IsNullOrEmpty(_activeMode)) return;
-			if (_activeMode == IntentTypes.Rest) return;
+			if (string.IsNullOrEmpty(m_ActiveMode)) return;
+			if (m_ActiveMode == IntentTypes.Rest) return;
 
 			string dir = ResolveMouseDir();
-			if (dir == null || dir == _lastSentDir) return;
-			_lastSentDir = dir;
-			_state.SubmitIntent(_activeMode, dir, _power);
+			if (dir == null || dir == m_LastSentDir) return;
+			m_LastSentDir = dir;
+			m_State.SubmitIntent(m_ActiveMode, dir, m_Power);
 			PublishLocal();
 		}
 
-		void HandleMouseClick()
+		private void HandleMouseClick()
 		{
 			if (!UnityInput.GetMouseButtonDown(0)) return;
 			string dir = ResolveMouseDir();
 			if (dir == null) return;
 
-			string type = string.IsNullOrEmpty(_activeMode) || _activeMode == IntentTypes.None
+			string type = string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode == IntentTypes.None
 				? IntentTypes.Move
-				: _activeMode;
-			_lastSentDir = dir;
-			_state.SubmitIntent(type, dir, _power);
-			LocalIntentBus.Set(type, dir, _power);
+				: m_ActiveMode;
+			m_LastSentDir = dir;
+			m_State.SubmitIntent(type, dir, m_Power);
+			LocalIntentBus.Set(type, dir, m_Power);
 		}
 
-		void PublishLocal()
+		private void PublishLocal()
 		{
-			if (string.IsNullOrEmpty(_activeMode))
+			if (string.IsNullOrEmpty(m_ActiveMode))
 				LocalIntentBus.Clear();
 			else
-				LocalIntentBus.Set(_activeMode, _lastSentDir, _power);
+				LocalIntentBus.Set(m_ActiveMode, m_LastSentDir, m_Power);
 		}
 
-		string ResolveMouseDir()
+		private string ResolveMouseDir()
 		{
-			if (worldCamera == null || _board == null) return null;
-			var me = _state.Me;
+			if (m_WorldCamera == null || m_Board == null) return null;
+			var me = m_State.Me;
 			if (me == null) return null;
 
-			var ray = worldCamera.ScreenPointToRay(UnityInput.mousePosition);
-			if (!_groundPlane.Raycast(ray, out float enter)) return null;
+			var ray = m_WorldCamera.ScreenPointToRay(UnityInput.mousePosition);
+			if (!m_GroundPlane.Raycast(ray, out float enter)) return null;
 			Vector3 hit = ray.GetPoint(enter);
 
-			Vector3 mePos = _board.GridToWorld(me.X, me.Y);
+			Vector3 mePos = m_Board.GridToWorld(me.X, me.Y);
 			float dx = hit.x - mePos.x;
 			float dz = hit.z - mePos.z;
 
