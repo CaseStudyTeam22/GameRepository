@@ -33,7 +33,7 @@ jobs:
             MESSAGE="🐛 Issueが作成されました\n👤 作成者: ${{ github.actor }}\n📌 タイトル: ${{ github.event.issue.title }}"
     
           elif [ "${{ github.event_name }}" = "push" ]; then
-            MESSAGE="🚀 Pushされました\n👤 実行者: ${{ github.actor }}\n🌿 ブランチ: ${GITHUB_REF#refs/heads/}"
+            MESSAGE="🚀 Pushされました\n👤 実行者: ${{ github.actor }}\n🌿 ブランチ: ${GITHUB_REF#refs/heads/}\n📝 Summary: ${{ github.event.head_commit.message }}"
     
           fi
     
