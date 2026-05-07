@@ -15,22 +15,24 @@ namespace GamblingAction.Gameplay.CameraFx
 		[SerializeField] CinemachineImpulseSource clashExplosionImpulse;
 		[SerializeField] CinemachineImpulseSource bumpImpulse;
 
+		IGameState m_State;
+
 		void Awake()
 		{
 			if (Instance != null && Instance != this) { Destroy(gameObject); return; }
 			Instance = this;
 		}
 
-		void OnEnable()
+		void Start()
 		{
-			var state = GameStateLocator.Current;
-			if (state != null) state.OnGameEvents += HandleEvents;
+			m_State = GameStateLocator.Current;
+			if (m_State != null) m_State.OnGameEvents += HandleEvents;
+			else Debug.LogWarning("[CameraDirector] GameStateLocator.Current is null at Start; impulses won't fire.");
 		}
 
-		void OnDisable()
+		void OnDestroy()
 		{
-			var state = GameStateLocator.Current;
-			if (state != null) state.OnGameEvents -= HandleEvents;
+			if (m_State != null) m_State.OnGameEvents -= HandleEvents;
 			if (Instance == this) Instance = null;
 		}
 
