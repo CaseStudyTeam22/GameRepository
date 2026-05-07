@@ -3,7 +3,10 @@
     "rootNamespace": "GamblingAction.Audio",
     "references": [
         "GamblingAction.Core",
-        "GamblingAction.Domain"
+        "GamblingAction.Domain",
+
+        "AK.Wwise.Unity.API",
+        "AK.Wwise.Unity.API.WwiseTypes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

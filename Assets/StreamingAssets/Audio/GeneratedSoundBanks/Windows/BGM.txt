@@ -1,0 +1,6 @@
+Event	ID	Name			Wwise Object Path	Notes
+	398248202	Play_GameBgm			\Default Work Unit\Play_GameBgm	
+
+In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	369985811	GameBgm	.cache\80\{80466A4D-7BD4-D108-B91F-24BE09619098}.wem		\Containers\Default Work Unit\GameBgm\GameBgm		11960016
+
