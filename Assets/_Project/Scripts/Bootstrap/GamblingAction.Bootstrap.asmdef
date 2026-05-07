@@ -1,0 +1,22 @@
+{
+    "name": "GamblingAction.Bootstrap",
+    "rootNamespace": "GamblingAction.Bootstrap",
+    "references": [
+        "GamblingAction.Core",
+        "GamblingAction.Net",
+        "GamblingAction.Domain",
+        "GamblingAction.Gameplay",
+        "GamblingAction.UI",
+        "GamblingAction.Audio",
+        "GamblingAction.Input"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

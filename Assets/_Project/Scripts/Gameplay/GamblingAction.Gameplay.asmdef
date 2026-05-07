@@ -1,0 +1,17 @@
+{
+    "name": "GamblingAction.Gameplay",
+    "rootNamespace": "GamblingAction.Gameplay",
+    "references": [
+        "GamblingAction.Core",
+        "GamblingAction.Domain"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
