@@ -1,0 +1,43 @@
+﻿name: Discord Notify
+
+on:
+  pull_request:
+    types: [opened]
+
+  pull_request_review:
+    types: [submitted]
+
+  issues:
+    types: [opened]
+
+  push:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Discord Notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    
+        run: |
+    
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            MESSAGE="✅ PRが作成されました\n🖊️ タイトル: ${{ github.event.pull_request.title }}\n👤 作成者: ${{ github.actor }}\n🌿 ブランチ: ${{ github.head_ref }}\n📎 ${{ github.event.pull_request.html_url }}"
+    
+          elif [ "${{ github.event_name }}" = "pull_request_review" ]; then
+            MESSAGE="📝 PRレビューが送信されました\n📋 状態: ${{ github.event.review.state }}\n🖊️ タイトル: ${{ github.event.pull_request.title }}\n👤 レビュアー: ${{ github.actor }}\n🌿 ブランチ: ${{ github.event.pull_request.head.ref }}\n📎 ${{ github.event.review.html_url }}"
+    
+          elif [ "${{ github.event_name }}" = "issues" ]; then
+            MESSAGE="🐛 Issueが作成されました\n👤 作成者: ${{ github.actor }}\n📌 タイトル: ${{ github.event.issue.title }}"
+    
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            MESSAGE="🚀 Pushされました\n👤 実行者: ${{ github.actor }}\n🌿 ブランチ: ${GITHUB_REF#refs/heads/}"
+    
+          fi
+    
+          curl -H "Content-Type: application/json" \
+          -d "{\"content\":\"$MESSAGE\"}" \
+          $DISCORD_WEBHOOK
+    
