@@ -12,6 +12,7 @@ State	ID	Name	State Group			Notes
 	2937832959	Battle	GameState			
 
 Game Parameter	ID	Name			Wwise Object Path	Notes
+	78830142	Playback_Speed			\Default Work Unit\Playback_Speed	
 	1419638547	EQ_Gain			\Default Work Unit\EQ_Gain	
 	1687548273	Delay_Mix			\Default Work Unit\Delay_Mix	
 	2204697685	Tremolo_Depth			\Default Work Unit\Tremolo_Depth	
@@ -26,7 +27,7 @@ Effect plug-ins	ID	Name	Type				Notes
 	874017748	Parametric EQ (Custom)	Wwise Parametric EQ			
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
-	187965642	cookingwar	.cache\9B\{9B628F8A-4F7D-E4F7-AFC3-540D0BC9FB47}.wem		\Containers\Default Work Unit\GameBgm\cookingwar		12556896
 	369985811	BGM_SFX	.cache\80\{80466A4D-7BD4-D108-B91F-24BE09619098}.wem		\Containers\Default Work Unit\BGM_SFX		11960016
+	456299405	alban	.cache\9C\{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem		\Containers\Default Work Unit\GameBgm\alban		12437088
 	935905350	dance	.cache\B5\{B5274E40-52F5-00B2-55AF-0BC60B766E8B}.wem		\Containers\Default Work Unit\BGM_System\DanceBgm\dance		69050976
 

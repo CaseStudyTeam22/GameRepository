@@ -16,14 +16,14 @@
 						</Reference>
 					</ReferenceList>
 					<ChildrenList>
-						<MusicTrack Name="cookingwar" ID="{2B6F5B9A-9B50-4A6A-9410-94D4082D595E}" ShortID="755726917">
+						<MusicTrack Name="alban" ID="{B590045D-004B-4A8D-BD3D-5421EE1A9EE4}" ShortID="649985336">
 							<ReferenceList>
 								<Reference Name="OutputBus">
 									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7EE6230C-4B04-4C17-9D02-814BFDAC8DC5}"/>
 								</Reference>
 								<Reference Name="TransitionRoot">
 									<Custom>
-										<MusicTransition Name="Root" ID="{4864FC9A-32C6-4E25-83C2-7CAD1B5E6FDF}">
+										<MusicTransition Name="Root" ID="{7DDC5AE1-EDBB-424E-9700-89B9DE887F20}">
 											<PropertyList>
 												<Property Name="IsFolder" Type="bool" Value="True"/>
 											</PropertyList>
@@ -33,26 +33,26 @@
 								</Reference>
 							</ReferenceList>
 							<ChildrenList>
-								<AudioFileSource Name="cookingwar" ID="{D6DACE9F-6C0D-4883-8AF2-66DE2874D770}">
+								<AudioFileSource Name="alban" ID="{7FE13AF9-9156-48FE-8C57-10AD27DD5EB3}">
 									<Language>SFX</Language>
-									<AudioFile>cookingwar.wav</AudioFile>
+									<AudioFile>alban.wav</AudioFile>
 									<MediaIDList>
-										<MediaID ID="187965642"/>
+										<MediaID ID="456299405"/>
 									</MediaIDList>
 								</AudioFileSource>
 							</ChildrenList>
 							<ObjectLists>
 								<ObjectList Name="Sequences">
-									<MusicTrackSequence Name="" ID="{2D3C23FB-D35D-457E-BCD3-C5F13038DB0D}">
+									<MusicTrackSequence Name="" ID="{BA3C45AE-C7EF-43A6-B959-7CE7200ACF8C}">
 										<ObjectLists>
 											<ObjectList Name="Clips">
-												<MusicClip Name="cookingwar" ID="{7B7819F3-CF2F-4413-9607-4FABC66C72D2}">
+												<MusicClip Name="alban" ID="{B54F3037-D8A5-4661-82EC-EA63C17AC240}">
 													<PropertyList>
-														<Property Name="EndTrimOffset" Type="Real64" Value="71183.6734693878"/>
+														<Property Name="EndTrimOffset" Type="Real64" Value="64776"/>
 														<Property Name="FadeInMode" Type="int16" Value="0"/>
 														<Property Name="FadeOutMode" Type="int16" Value="0"/>
 													</PropertyList>
-													<AudioSourceRef Name="cookingwar" ID="{D6DACE9F-6C0D-4883-8AF2-66DE2874D770}"/>
+													<AudioSourceRef Name="alban" ID="{7FE13AF9-9156-48FE-8C57-10AD27DD5EB3}"/>
 												</MusicClip>
 											</ObjectList>
 										</ObjectLists>
@@ -314,6 +314,44 @@
 									</Reference>
 								</ReferenceList>
 							</EffectSlot>
+						</ObjectList>
+						<ObjectList Name="RTPC">
+							<RTPC Name="" ID="{7A3F7AA5-FD32-4F1D-8F9B-3FC469206339}" ShortID="757516076">
+								<PropertyList>
+									<Property Name="PropertyName" Type="string" Value="PlaybackSpeed"/>
+								</PropertyList>
+								<ReferenceList>
+									<Reference Name="ControlInput">
+										<ObjectRef Name="Playback_Speed" ID="{DBDCCDC1-3AAF-4714-A8F1-58A9B1AB1382}" WorkUnitID="{3C43970B-4742-4578-B588-EBA5B734324D}"/>
+									</Reference>
+									<Reference Name="Curve">
+										<Custom>
+											<Curve Name="" ID="{0BB31EE5-86D2-4CA4-A8F6-36A736DE1B3E}">
+												<PropertyList>
+													<Property Name="Flags" Type="int32" Value="1"/>
+												</PropertyList>
+												<PointList>
+													<Point>
+														<XPos>0.5</XPos>
+														<YPos>0.25</YPos>
+														<Flags>5</Flags>
+													</Point>
+													<Point>
+														<XPos>1</XPos>
+														<YPos>1</YPos>
+														<Flags>0</Flags>
+													</Point>
+													<Point>
+														<XPos>2</XPos>
+														<YPos>2</YPos>
+														<Flags>37</Flags>
+													</Point>
+												</PointList>
+											</Curve>
+										</Custom>
+									</Reference>
+								</ReferenceList>
+							</RTPC>
 						</ObjectList>
 					</ObjectLists>
 				</MusicSegment>

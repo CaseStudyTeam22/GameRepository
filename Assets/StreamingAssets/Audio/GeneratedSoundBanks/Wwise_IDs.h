@@ -41,6 +41,7 @@ namespace AK
         static const AkUniqueID EQ_GAIN = 1419638547U;
         static const AkUniqueID MUSICENERGY = 417812334U;
         static const AkUniqueID PITCHSHIFTER_AMOUNT = 3406715329U;
+        static const AkUniqueID PLAYBACK_SPEED = 78830142U;
         static const AkUniqueID TREMOLO_DEPTH = 2204697685U;
         static const AkUniqueID TREMOLO_FREQUENCY = 2888720168U;
     } // namespace GAME_PARAMETERS

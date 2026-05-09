@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GamblingAction.Audio
 {
-    // Pitch Shifter・EQ・Delay・Tremolo をキー操作で個別にオンオフ・量を調整するスクリプト
+    // Pitch Shifter・EQ・Delay・Tremolo・Playback Speed をキー操作で個別にオンオフ・量を調整するスクリプト
     // 後々ボタンに変更予定
     public class AudioEffectController : MonoBehaviour
     {
@@ -66,6 +66,14 @@ namespace GamblingAction.Audio
         [Tooltip("1回のキー操作で増減する Frequency 量")]
         [SerializeField] private float m_TremoloFrequencyStep = 1f;
 
+        [Header("Playback Speed")]
+        [Tooltip("再生速度を増加するキー")]
+        [SerializeField] private KeyCode m_PlaybackSpeedUpKey = KeyCode.Alpha1;
+        [Tooltip("再生速度を減少するキー")]
+        [SerializeField] private KeyCode m_PlaybackSpeedDownKey = KeyCode.Alpha2;
+        [Tooltip("1回のキー操作で増減する再生速度量")]
+        [SerializeField] private float m_PlaybackSpeedStep = 0.1f;
+
         // 現在のオンオフ状態
         private bool m_IsPitchShifterOn = false;
         private bool m_IsEQOn = false;
@@ -79,6 +87,7 @@ namespace GamblingAction.Audio
         private float m_CurrentDelayFeedback = 50f;
         private float m_CurrentTremoloDepth = 50f;
         private float m_CurrentTremoloFrequency = 5f;
+        private float m_CurrentPlaybackSpeed = 1.0f;
 
         void Start()
         {
@@ -89,6 +98,7 @@ namespace GamblingAction.Audio
             AkUnitySoundEngine.SetRTPCValue("Delay_Feedback", 0f);
             AkUnitySoundEngine.SetRTPCValue("Tremolo_Depth", 0f);
             AkUnitySoundEngine.SetRTPCValue("Tremolo_Frequency", 0f);
+            AkUnitySoundEngine.SetRTPCValue("Playback_Speed", 1.0f);
         }
 
         void Update()
@@ -132,6 +142,12 @@ namespace GamblingAction.Audio
                 AdjustTremoloFrequency(m_TremoloFrequencyStep);
             if (Input.GetKeyDown(m_TremoloFrequencyDownKey))
                 AdjustTremoloFrequency(-m_TremoloFrequencyStep);
+
+            // Playback Speed
+            if (Input.GetKeyDown(m_PlaybackSpeedUpKey))
+                AdjustPlaybackSpeed(m_PlaybackSpeedStep);
+            if (Input.GetKeyDown(m_PlaybackSpeedDownKey))
+                AdjustPlaybackSpeed(-m_PlaybackSpeedStep);
         }
 
         // Pitch Shifter のオンオフを切り替える
@@ -222,10 +238,18 @@ namespace GamblingAction.Audio
         // Tremolo の Frequency を増減する
         private void AdjustTremoloFrequency(float step)
         {
-            m_CurrentTremoloFrequency = Mathf.Clamp(m_CurrentTremoloFrequency + step, 0f, 100f);
+            m_CurrentTremoloFrequency = Mathf.Clamp(m_CurrentTremoloFrequency + step, 0f, 20f);
             if (m_IsTremoloOn)
                 AkUnitySoundEngine.SetRTPCValue("Tremolo_Frequency", m_CurrentTremoloFrequency);
             Debug.Log($"[AudioEffectController] Tremolo Frequency: {m_CurrentTremoloFrequency}");
+        }
+
+        // 再生速度を増減する
+        private void AdjustPlaybackSpeed(float step)
+        {
+            m_CurrentPlaybackSpeed = Mathf.Clamp(m_CurrentPlaybackSpeed + step, 0.5f, 2.0f);
+            AkUnitySoundEngine.SetRTPCValue("Playback_Speed", m_CurrentPlaybackSpeed);
+            Debug.Log($"[AudioEffectController] Playback Speed: {m_CurrentPlaybackSpeed}");
         }
     }
 }

@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{5ECD8721-D0E5-56F3-0258-A79E91D143C3}",
+    "Hash": "{80CA0261-C3CC-4F32-684B-7AF6EA010AAB}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -60,6 +60,12 @@
      }
     ],
     "GameParameters": [
+     {
+      "Id": "78830142",
+      "Name": "Playback_Speed",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Playback_Speed",
+      "GUID": "{DBDCCDC1-3AAF-4714-A8F1-58A9B1AB1382}"
+     },
      {
       "Id": "417812334",
       "Name": "MusicEnergy",
@@ -133,6 +139,6 @@
     ]
    }
   ],
-  "FileHash": "{A07EA97E-7801-82A0-2CE0-A67260564827}"
+  "FileHash": "{ABAF55E0-8F37-26E0-F33A-0098EC0CE5CF}"
  }
 }

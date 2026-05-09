@@ -10,19 +10,11 @@
     "Type": "User",
     "GUID": "{ACEB3A23-6CAB-4CC6-8BF9-386183C07691}",
     "Language": "SFX",
-    "Hash": "{68A58EDD-3176-3D8E-F70D-F1CBE2016600}",
+    "Hash": "{5577DBA3-C736-EB5A-5797-EAE060932EE5}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM",
     "ShortName": "BGM",
     "Path": "BGM.bnk",
     "Media": [
-     {
-      "Id": "187965642",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Memory",
-      "ShortName": "cookingwar.wav",
-      "CachePath": "9B/{9B628F8A-4F7D-E4F7-AFC3-540D0BC9FB47}.wem"
-     },
      {
       "Id": "369985811",
       "Language": "SFX",
@@ -30,6 +22,14 @@
       "Location": "Memory",
       "ShortName": "GameBgm.wav",
       "CachePath": "80/{80466A4D-7BD4-D108-B91F-24BE09619098}.wem"
+     },
+     {
+      "Id": "456299405",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "alban.wav",
+      "CachePath": "9C/{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem"
      },
      {
       "Id": "935905350",
@@ -118,11 +118,11 @@
       "ObjectPath": "\\Events\\Default Work Unit\\Play_GameBgm_Segment",
       "GUID": "{EC81F62E-F136-4E89-8C30-DBD76A16738C}",
       "DurationType": "OneShot",
-      "DurationMin": "71.18367",
-      "DurationMax": "71.18367",
+      "DurationMin": "68",
+      "DurationMax": "68",
       "MediaRefs": [
        {
-        "Id": "187965642"
+        "Id": "456299405"
        }
       ],
       "PluginRefs": {
@@ -156,6 +156,12 @@
      }
     ],
     "GameParameters": [
+     {
+      "Id": "78830142",
+      "Name": "Playback_Speed",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Playback_Speed",
+      "GUID": "{DBDCCDC1-3AAF-4714-A8F1-58A9B1AB1382}"
+     },
      {
       "Id": "1419638547",
       "Name": "EQ_Gain",
@@ -223,6 +229,6 @@
     ]
    }
   ],
-  "FileHash": "{BE3791AC-3E1B-E988-1D33-1CC62B75E3C9}"
+  "FileHash": "{4753EE8D-9E8E-4143-CED0-ACC28C4F0F42}"
  }
 }

@@ -503,7 +503,7 @@ Transform:
   m_GameObject: {fileID: 1680263378}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: -4}
+  m_LocalPosition: {x: 0, y: 0, z: -4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -699,7 +699,7 @@ Transform:
   m_GameObject: {fileID: 1924104096}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.07239801, y: -1.130307, z: 0.56864643}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -717,10 +717,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d100089f351ad9443acc2cc1bb87773e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_MaxBounceHeight: 2.5
-  m_MinScaleMultiplier: 2.5
-  m_MaxScaleMultiplier: 3.5
-  m_RotateAngle: 30
+  m_BounceHeight: 0
+  m_RotateAngleY: 30
+  m_BarMoveX: 1
 --- !u!114 &1924104102
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -776,32 +775,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8020532c0dbd7ec479c6572ed1e5f8d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_PitchShifterToggleKey: 113
-  m_PitchShifterUpKey: 119
-  m_PitchShifterDownKey: 115
+  m_PitchShifterKey: 113
+  m_EQKey: 119
+  m_DelayMixKey: 101
+  m_DelayFeedbackKey: 114
+  m_TremoloDepthKey: 116
+  m_TremoloFrequencyKey: 121
+  m_TimeStretchKey: 117
   m_PitchShifterStep: 100
-  m_PitchShifterMin: -4800
-  m_PitchShifterMax: 4800
-  m_EQToggleKey: 101
-  m_EQUpKey: 114
-  m_EQDownKey: 102
   m_EQStep: 3
-  m_EQMin: -48
-  m_EQMax: 48
-  m_DelayToggleKey: 116
-  m_DelayMixUpKey: 121
-  m_DelayMixDownKey: 104
-  m_DelayFeedbackUpKey: 117
-  m_DelayFeedbackDownKey: 106
   m_DelayMixStep: 10
   m_DelayFeedbackStep: 10
-  m_TremoloToggleKey: 122
-  m_TremoloDepthUpKey: 120
-  m_TremoloDepthDownKey: 99
-  m_TremoloFrequencyUpKey: 118
-  m_TremoloFrequencyDownKey: 98
   m_TremoloDepthStep: 10
-  m_TremoloFrequencyStep: 10
+  m_TremoloFreqStep: 10
+  m_TimeStretchStep: 10
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -44,6 +44,13 @@
 						<Property Name="InitialValue" Type="Real64" Value="0"/>
 					</PropertyList>
 				</GameParameter>
+				<GameParameter Name="Playback_Speed" ID="{DBDCCDC1-3AAF-4714-A8F1-58A9B1AB1382}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="1"/>
+						<Property Name="Max" Type="Real64" Value="2"/>
+						<Property Name="Min" Type="Real64" Value="0.5"/>
+					</PropertyList>
+				</GameParameter>
 			</ChildrenList>
 		</WorkUnit>
 	</GameParameters>
