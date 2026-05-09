@@ -2,6 +2,7 @@ using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Core.Skills;
 using GamblingAction.Domain;
+using GamblingAction.Gameplay.PopupFx;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -76,6 +77,10 @@ namespace GamblingAction.Gameplay
 
 			m_State.OnPlayersChanged += HandlePlayersChanged;
 			m_State.OnPhaseChanged   += HandlePhaseChanged;
+
+			// PopupDirector に自分を登録（popup の発生位置アンカーとして使われる）
+			if (PopupDirector.Instance != null)
+				PopupDirector.Instance.RegisterPlayer(m_PlayerId, transform);
 		}
 
 		private void OnDestroy()
@@ -86,6 +91,8 @@ namespace GamblingAction.Gameplay
 				m_State.OnPlayersChanged -= HandlePlayersChanged;
 				m_State.OnPhaseChanged   -= HandlePhaseChanged;
 			}
+			if (PopupDirector.Instance != null && !string.IsNullOrEmpty(m_PlayerId))
+				PopupDirector.Instance.UnregisterPlayer(m_PlayerId);
 		}
 
 		private void HandlePlayersChanged()
