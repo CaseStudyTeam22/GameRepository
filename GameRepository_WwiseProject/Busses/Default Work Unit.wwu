@@ -9,6 +9,25 @@
 							<ObjectRef Name="System" ID="{BAD9B3DD-9FBD-43F0-8234-F317E89FA3C7}" WorkUnitID="{69E96A84-36FD-4F64-A806-EAB7CC6E751A}"/>
 						</Reference>
 					</ReferenceList>
+					<ObjectLists>
+						<ObjectList Name="Effects">
+							<EffectSlot Name="" ID="{6A55EF06-E0EE-4F30-AE4B-18692336933D}" ShortID="375606557">
+								<ReferenceList>
+									<Reference Name="Effect">
+										<Custom>
+											<Effect Name="Meter (Custom)" ID="{D2C328A1-028A-4B4B-B122-5D2ACB48B01D}" ShortID="675129141" PluginName="Wwise Meter" CompanyID="0" PluginID="129" PluginType="3">
+												<ReferenceList>
+													<Reference Name="GameParameter">
+														<ObjectRef Name="MusicEnergy" ID="{0E95EBEB-CC8B-484E-9058-BBED4ED297EE}" WorkUnitID="{3C43970B-4742-4578-B588-EBA5B734324D}"/>
+													</Reference>
+												</ReferenceList>
+											</Effect>
+										</Custom>
+									</Reference>
+								</ReferenceList>
+							</EffectSlot>
+						</ObjectList>
+					</ObjectLists>
 				</Bus>
 			</ChildrenList>
 		</WorkUnit>

@@ -1,6 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{3C43970B-4742-4578-B588-EBA5B734324D}" SchemaVersion="133">
 	<GameParameters>
-		<WorkUnit Name="Default Work Unit" ID="{3C43970B-4742-4578-B588-EBA5B734324D}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{3C43970B-4742-4578-B588-EBA5B734324D}" PersistMode="Standalone">
+			<ChildrenList>
+				<GameParameter Name="MusicEnergy" ID="{0E95EBEB-CC8B-484E-9058-BBED4ED297EE}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="-48"/>
+						<Property Name="Max" Type="Real64" Value="0"/>
+						<Property Name="Min" Type="Real64" Value="-48"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="PitchShifter_Amount" ID="{2092E089-D7CF-498F-BD1E-00EDA023456F}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+						<Property Name="Max" Type="Real64" Value="2400"/>
+						<Property Name="Min" Type="Real64" Value="-2400"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="EQ_Gain" ID="{4000C0B0-D805-4747-BC69-39D66D7D4C90}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+						<Property Name="Max" Type="Real64" Value="24"/>
+						<Property Name="Min" Type="Real64" Value="-24"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Delay_Feedback" ID="{9452B5A9-E399-4E2F-B796-B87DB4D89DDF}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Delay_Mix" ID="{C47B5445-AB6E-40D0-BBDF-E66BFBB21292}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tremolo_Depth" ID="{35C07B4E-A00E-4704-A379-14FA35CC70B9}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tremolo_Frequency" ID="{D17907F4-ADBD-4E90-8A53-D8BF1C5B78F3}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+			</ChildrenList>
+		</WorkUnit>
 	</GameParameters>
 </WwiseDocument>

@@ -10,11 +10,21 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{CDE9AC3D-2B42-1217-02C1-D64576EB9AF6}",
+    "Hash": "{A321144D-7E85-47C5-9621-A47E7C9543B3}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
     "Plugins": {
+     "Custom": [
+      {
+       "Id": "675129141",
+       "Name": "Meter (Custom)",
+       "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus\\[Effect Slot [0]: (Meter)]\\Meter (Custom)",
+       "GUID": "{D2C328A1-028A-4B4B-B122-5D2ACB48B01D}",
+       "LibName": "Wwise Meter",
+       "LibId": "8454147"
+      }
+     ],
      "AudioDevices": [
       {
        "Id": "2317455096",
@@ -39,11 +49,90 @@
       "Id": "2246998526",
       "Name": "Main Audio Bus",
       "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus",
-      "GUID": "{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}"
+      "GUID": "{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}",
+      "PluginRefs": {
+       "Custom": [
+        {
+         "Id": "675129141"
+        }
+       ]
+      }
+     }
+    ],
+    "GameParameters": [
+     {
+      "Id": "417812334",
+      "Name": "MusicEnergy",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\MusicEnergy",
+      "GUID": "{0E95EBEB-CC8B-484E-9058-BBED4ED297EE}"
+     },
+     {
+      "Id": "1419638547",
+      "Name": "EQ_Gain",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\EQ_Gain",
+      "GUID": "{4000C0B0-D805-4747-BC69-39D66D7D4C90}"
+     },
+     {
+      "Id": "1687548273",
+      "Name": "Delay_Mix",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Delay_Mix",
+      "GUID": "{C47B5445-AB6E-40D0-BBDF-E66BFBB21292}"
+     },
+     {
+      "Id": "2204697685",
+      "Name": "Tremolo_Depth",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tremolo_Depth",
+      "GUID": "{35C07B4E-A00E-4704-A379-14FA35CC70B9}"
+     },
+     {
+      "Id": "2606042280",
+      "Name": "Delay_Feedback",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Delay_Feedback",
+      "GUID": "{9452B5A9-E399-4E2F-B796-B87DB4D89DDF}"
+     },
+     {
+      "Id": "2888720168",
+      "Name": "Tremolo_Frequency",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tremolo_Frequency",
+      "GUID": "{D17907F4-ADBD-4E90-8A53-D8BF1C5B78F3}"
+     },
+     {
+      "Id": "3406715329",
+      "Name": "PitchShifter_Amount",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\PitchShifter_Amount",
+      "GUID": "{2092E089-D7CF-498F-BD1E-00EDA023456F}"
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "4091656514",
+      "Name": "GameState",
+      "ObjectPath": "\\States\\Default Work Unit\\GameState",
+      "GUID": "{87B5A61D-1782-417E-86A2-BAC747CF1095}",
+      "States": [
+       {
+        "Id": "579523862",
+        "Name": "Explore",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Explore",
+        "GUID": "{1650941D-C30C-41F5-95F2-B0EA37CEB11A}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\None",
+        "GUID": "{B4C94D7A-61A1-4AEB-94A0-70E8A5E26F7E}"
+       },
+       {
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Battle",
+        "GUID": "{1E2F50BB-BBDE-430B-B056-A59A136125B2}"
+       }
+      ]
      }
     ]
    }
   ],
-  "FileHash": "{E2AFAF20-3F4E-B7FB-367B-035BB6C0A41E}"
+  "FileHash": "{32AC63A8-068C-1EA8-93B5-EA1A4CF17279}"
  }
 }

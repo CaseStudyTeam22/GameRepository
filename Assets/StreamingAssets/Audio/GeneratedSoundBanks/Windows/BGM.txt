@@ -1,6 +1,32 @@
 Event	ID	Name			Wwise Object Path	Notes
-	398248202	Play_GameBgm			\Default Work Unit\Play_GameBgm	
+	529968271	Play_BGMSystem			\Default Work Unit\Play_BGMSystem	
+	610623786	Play_GameBgm_SFX			\Default Work Unit\Play_GameBgm_SFX	
+	2990911348	Play_GameBgm_Segment			\Default Work Unit\Play_GameBgm_Segment	
+
+State Group	ID	Name			Wwise Object Path	Notes
+	4091656514	GameState			\Default Work Unit\GameState	
+
+State	ID	Name	State Group			Notes
+	579523862	Explore	GameState			
+	748895195	None	GameState			
+	2937832959	Battle	GameState			
+
+Game Parameter	ID	Name			Wwise Object Path	Notes
+	1419638547	EQ_Gain			\Default Work Unit\EQ_Gain	
+	1687548273	Delay_Mix			\Default Work Unit\Delay_Mix	
+	2204697685	Tremolo_Depth			\Default Work Unit\Tremolo_Depth	
+	2606042280	Delay_Feedback			\Default Work Unit\Delay_Feedback	
+	2888720168	Tremolo_Frequency			\Default Work Unit\Tremolo_Frequency	
+	3406715329	PitchShifter_Amount			\Default Work Unit\PitchShifter_Amount	
+
+Effect plug-ins	ID	Name	Type				Notes
+	448531355	Tremolo (Custom)	Wwise Tremolo			
+	530172213	Delay (Custom)	Wwise Delay			
+	748872283	Pitch Shifter (Custom)	Wwise Pitch Shifter			
+	874017748	Parametric EQ (Custom)	Wwise Parametric EQ			
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
-	369985811	GameBgm	.cache\80\{80466A4D-7BD4-D108-B91F-24BE09619098}.wem		\Containers\Default Work Unit\GameBgm\GameBgm		11960016
+	187965642	cookingwar	.cache\9B\{9B628F8A-4F7D-E4F7-AFC3-540D0BC9FB47}.wem		\Containers\Default Work Unit\GameBgm\cookingwar		12556896
+	369985811	BGM_SFX	.cache\80\{80466A4D-7BD4-D108-B91F-24BE09619098}.wem		\Containers\Default Work Unit\BGM_SFX		11960016
+	935905350	dance	.cache\B5\{B5274E40-52F5-00B2-55AF-0BC60B766E8B}.wem		\Containers\Default Work Unit\BGM_System\DanceBgm\dance		69050976
 

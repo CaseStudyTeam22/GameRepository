@@ -10,11 +10,19 @@
     "Type": "User",
     "GUID": "{ACEB3A23-6CAB-4CC6-8BF9-386183C07691}",
     "Language": "SFX",
-    "Hash": "{1D6B5DE9-3DB2-2043-5FC2-8955BF56671B}",
+    "Hash": "{68A58EDD-3176-3D8E-F70D-F1CBE2016600}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM",
     "ShortName": "BGM",
     "Path": "BGM.bnk",
     "Media": [
+     {
+      "Id": "187965642",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "cookingwar.wav",
+      "CachePath": "9B/{9B628F8A-4F7D-E4F7-AFC3-540D0BC9FB47}.wem"
+     },
      {
       "Id": "369985811",
       "Language": "SFX",
@@ -22,26 +30,199 @@
       "Location": "Memory",
       "ShortName": "GameBgm.wav",
       "CachePath": "80/{80466A4D-7BD4-D108-B91F-24BE09619098}.wem"
+     },
+     {
+      "Id": "935905350",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "dance.wav",
+      "CachePath": "B5/{B5274E40-52F5-00B2-55AF-0BC60B766E8B}.wem"
      }
     ],
+    "Plugins": {
+     "Custom": [
+      {
+       "Id": "448531355",
+       "Name": "Tremolo (Custom)",
+       "ObjectPath": "\\Containers\\Default Work Unit\\GameBgm\\[Effect Slot [3]: (Tremolo)]\\Tremolo (Custom)",
+       "GUID": "{A025A574-E12F-4073-A7B4-6994352D81CB}",
+       "LibName": "Wwise Tremolo",
+       "LibId": "8585219"
+      },
+      {
+       "Id": "530172213",
+       "Name": "Delay (Custom)",
+       "ObjectPath": "\\Containers\\Default Work Unit\\GameBgm\\[Effect Slot [2]: (Delay)]\\Delay (Custom)",
+       "GUID": "{D1C5C719-6C74-4F0C-A083-4096BE3816CC}",
+       "LibName": "Wwise Delay",
+       "LibId": "6946819"
+      },
+      {
+       "Id": "748872283",
+       "Name": "Pitch Shifter (Custom)",
+       "ObjectPath": "\\Containers\\Default Work Unit\\GameBgm\\[Effect Slot [0]: (Pitch Shifter)]\\Pitch Shifter (Custom)",
+       "GUID": "{D5595EC7-D66A-48E2-899C-8BABB51CD003}",
+       "LibName": "Wwise Pitch Shifter",
+       "LibId": "8912899"
+      },
+      {
+       "Id": "874017748",
+       "Name": "Parametric EQ (Custom)",
+       "ObjectPath": "\\Containers\\Default Work Unit\\GameBgm\\[Effect Slot [1]: (Parametric EQ)]\\Parametric EQ (Custom)",
+       "GUID": "{8ED6546A-E4B2-46D6-A9B1-9BE9C1ED3004}",
+       "LibName": "Wwise Parametric EQ",
+       "LibId": "6881283"
+      }
+     ]
+    },
     "Events": [
      {
-      "Id": "398248202",
-      "Name": "Play_GameBgm",
-      "ObjectPath": "\\Events\\Default Work Unit\\Play_GameBgm",
-      "GUID": "{101856A4-B446-48BC-AFFF-05F7446850C7}",
+      "Id": "529968271",
+      "Name": "Play_BGMSystem",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_BGMSystem",
+      "GUID": "{CDBC9B97-34BE-4D92-88A6-B9CD17CC92C7}",
+      "DurationType": "Infinite",
+      "SwitchContainers": [
+       {
+        "SwitchValue": {
+         "GroupType": "State",
+         "GroupId": "4091656514",
+         "Id": "2937832959",
+         "GUID": "{1E2F50BB-BBDE-430B-B056-A59A136125B2}"
+        },
+        "MediaRefs": [
+         {
+          "Id": "369985811"
+         }
+        ]
+       },
+       {
+        "SwitchValue": {
+         "GroupType": "State",
+         "GroupId": "4091656514",
+         "Id": "579523862",
+         "GUID": "{1650941D-C30C-41F5-95F2-B0EA37CEB11A}"
+        },
+        "MediaRefs": [
+         {
+          "Id": "935905350"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "Id": "2990911348",
+      "Name": "Play_GameBgm_Segment",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_GameBgm_Segment",
+      "GUID": "{EC81F62E-F136-4E89-8C30-DBD76A16738C}",
       "DurationType": "OneShot",
-      "DurationMin": "67.8",
-      "DurationMax": "67.8",
+      "DurationMin": "71.18367",
+      "DurationMax": "71.18367",
+      "MediaRefs": [
+       {
+        "Id": "187965642"
+       }
+      ],
+      "PluginRefs": {
+       "Custom": [
+        {
+         "Id": "448531355"
+        },
+        {
+         "Id": "530172213"
+        },
+        {
+         "Id": "748872283"
+        },
+        {
+         "Id": "874017748"
+        }
+       ]
+      }
+     },
+     {
+      "Id": "610623786",
+      "Name": "Play_GameBgm_SFX",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_GameBgm_SFX",
+      "GUID": "{101856A4-B446-48BC-AFFF-05F7446850C7}",
+      "DurationType": "Infinite",
       "MediaRefs": [
        {
         "Id": "369985811"
        }
       ]
      }
+    ],
+    "GameParameters": [
+     {
+      "Id": "1419638547",
+      "Name": "EQ_Gain",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\EQ_Gain",
+      "GUID": "{4000C0B0-D805-4747-BC69-39D66D7D4C90}"
+     },
+     {
+      "Id": "1687548273",
+      "Name": "Delay_Mix",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Delay_Mix",
+      "GUID": "{C47B5445-AB6E-40D0-BBDF-E66BFBB21292}"
+     },
+     {
+      "Id": "2204697685",
+      "Name": "Tremolo_Depth",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tremolo_Depth",
+      "GUID": "{35C07B4E-A00E-4704-A379-14FA35CC70B9}"
+     },
+     {
+      "Id": "2606042280",
+      "Name": "Delay_Feedback",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Delay_Feedback",
+      "GUID": "{9452B5A9-E399-4E2F-B796-B87DB4D89DDF}"
+     },
+     {
+      "Id": "2888720168",
+      "Name": "Tremolo_Frequency",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tremolo_Frequency",
+      "GUID": "{D17907F4-ADBD-4E90-8A53-D8BF1C5B78F3}"
+     },
+     {
+      "Id": "3406715329",
+      "Name": "PitchShifter_Amount",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\PitchShifter_Amount",
+      "GUID": "{2092E089-D7CF-498F-BD1E-00EDA023456F}"
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "4091656514",
+      "Name": "GameState",
+      "ObjectPath": "\\States\\Default Work Unit\\GameState",
+      "GUID": "{87B5A61D-1782-417E-86A2-BAC747CF1095}",
+      "States": [
+       {
+        "Id": "579523862",
+        "Name": "Explore",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Explore",
+        "GUID": "{1650941D-C30C-41F5-95F2-B0EA37CEB11A}"
+       },
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\None",
+        "GUID": "{B4C94D7A-61A1-4AEB-94A0-70E8A5E26F7E}"
+       },
+       {
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\GameState\\Battle",
+        "GUID": "{1E2F50BB-BBDE-430B-B056-A59A136125B2}"
+       }
+      ]
+     }
     ]
    }
   ],
-  "FileHash": "{4A95A9BE-1FE7-5C85-E0BD-7E4ABC6FBA57}"
+  "FileHash": "{ADD07A5C-B360-6660-AF35-7DB285487B43}"
  }
 }

@@ -5,7 +5,9 @@
 			<ChildrenList>
 				<SoundBank Name="BGM" ID="{ACEB3A23-6CAB-4CC6-8BF9-386183C07691}">
 					<ObjectInclusionList>
-						<ObjectRef Name="Play_GameBgm" ID="{101856A4-B446-48BC-AFFF-05F7446850C7}" WorkUnitID="{5123D642-D565-47CD-8577-D15D59410A1C}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_GameBgm_SFX" ID="{101856A4-B446-48BC-AFFF-05F7446850C7}" WorkUnitID="{5123D642-D565-47CD-8577-D15D59410A1C}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_BGMSystem" ID="{CDBC9B97-34BE-4D92-88A6-B9CD17CC92C7}" WorkUnitID="{5123D642-D565-47CD-8577-D15D59410A1C}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_GameBgm_Segment" ID="{EC81F62E-F136-4E89-8C30-DBD76A16738C}" WorkUnitID="{5123D642-D565-47CD-8577-D15D59410A1C}" Origin="Manual" Filter="7"/>
 					</ObjectInclusionList>
 					<ObjectExclusionList/>
 					<GameSyncExclusionList/>

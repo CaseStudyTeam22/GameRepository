@@ -3,12 +3,34 @@
 	<Events>
 		<WorkUnit Name="Default Work Unit" ID="{5123D642-D565-47CD-8577-D15D59410A1C}" PersistMode="Standalone">
 			<ChildrenList>
-				<Event Name="Play_GameBgm" ID="{101856A4-B446-48BC-AFFF-05F7446850C7}">
+				<Event Name="Play_GameBgm_SFX" ID="{101856A4-B446-48BC-AFFF-05F7446850C7}">
 					<ChildrenList>
-						<Action Name="" ID="{55824A3D-00E2-4945-9063-672BB21F58DC}" ShortID="947229630">
+						<Action Name="" ID="{C758C1A6-ECBB-4877-BBAB-203B6B8EE583}" ShortID="334409093">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="BGM_SFX" ID="{EEF1AEC8-86E9-4FA7-89D1-5ACFAE978D82}" WorkUnitID="{CD3AEC8C-1B34-4C83-805B-C7327228AE98}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_GameBgm_Segment" ID="{EC81F62E-F136-4E89-8C30-DBD76A16738C}">
+					<ChildrenList>
+						<Action Name="" ID="{A7FF99E2-A24B-4560-B0F1-9F1D8BDF18C6}" ShortID="888699262">
 							<ReferenceList>
 								<Reference Name="Target">
 									<ObjectRef Name="GameBgm" ID="{1396185F-C7E1-463D-A937-1CA8DABE2C35}" WorkUnitID="{CD3AEC8C-1B34-4C83-805B-C7327228AE98}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_BGMSystem" ID="{CDBC9B97-34BE-4D92-88A6-B9CD17CC92C7}">
+					<ChildrenList>
+						<Action Name="" ID="{DBC91261-C8D8-42B0-ADF3-7F9544C1D681}" ShortID="75105133">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="BGM_System" ID="{C77B70B1-11D1-4574-8986-B12FDDA4F7CA}" WorkUnitID="{CD3AEC8C-1B34-4C83-805B-C7327228AE98}"/>
 								</Reference>
 							</ReferenceList>
 						</Action>
