@@ -36,6 +36,28 @@
 						</Action>
 					</ChildrenList>
 				</Event>
+				<Folder Name="BGM" ID="{65EBC863-8ED0-426E-8655-2E31ED2AB367}" ShortID="807837805"/>
+				<Folder Name="SE" ID="{B8212DE1-1D0D-437E-9993-F5C8EC13E4A5}" ShortID="473342838">
+					<ChildrenList>
+						<Folder Name="Bet" ID="{BC65D00B-7198-4C5D-AFC5-72B322C0EA6C}" ShortID="292701629"/>
+						<Folder Name="Beat" ID="{59107EBB-8769-4991-A785-D9F208EFB6B1}" ShortID="1038827385">
+							<ChildrenList>
+								<Event Name="Play_SE_Beat_4" ID="{A6186708-831D-4B49-A7D5-F63913F4FDC9}">
+									<ChildrenList>
+										<Action Name="" ID="{3E03CAE5-0EB3-494D-A0F6-EBD21266118F}" ShortID="728865288">
+											<ReferenceList>
+												<Reference Name="Target">
+													<ObjectRef Name="SE_Beat_4" ID="{82080DC5-7309-404B-9B80-2757A0711071}" WorkUnitID="{CD3AEC8C-1B34-4C83-805B-C7327228AE98}"/>
+												</Reference>
+											</ReferenceList>
+										</Action>
+									</ChildrenList>
+								</Event>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="Battle" ID="{B897659B-514E-4FAF-AB61-526D5CCF3E9F}" ShortID="319209814"/>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</Events>

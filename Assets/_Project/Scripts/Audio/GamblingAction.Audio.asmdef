@@ -6,7 +6,9 @@
         "GamblingAction.Domain",
 
         "AK.Wwise.Unity.API",
-        "AK.Wwise.Unity.API.WwiseTypes"
+        "AK.Wwise.Unity.API.WwiseTypes",
+                "Unity.TextMeshPro"
+
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,0 +1,47 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1190179409",
+    "Type": "User",
+    "GUID": "{99CA6024-FABD-4EEB-83EA-B3C3570EC230}",
+    "Language": "SFX",
+    "Hash": "{47DEE8D7-25BB-6CE7-7E41-4B7C4EE0F32D}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Beat",
+    "ShortName": "Beat",
+    "Path": "Beat.bnk",
+    "Media": [
+     {
+      "Id": "1032311183",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "pi.wav",
+      "CachePath": "3B/{3B7E7592-16A0-93ED-355D-D76B085FBB0B}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "1942691276",
+      "Name": "Play_SE_Beat_4",
+      "ObjectPath": "\\Events\\Default Work Unit\\SE\\Beat\\Play_SE_Beat_4",
+      "GUID": "{A6186708-831D-4B49-A7D5-F63913F4FDC9}",
+      "DurationType": "OneShot",
+      "DurationMin": "0.30212",
+      "DurationMax": "0.30212",
+      "MediaRefs": [
+       {
+        "Id": "1032311183"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{03C4DBD3-0004-A3B2-0BC7-3777A083F1C4}"
+ }
+}

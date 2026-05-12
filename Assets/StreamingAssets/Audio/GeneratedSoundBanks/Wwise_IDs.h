@@ -16,6 +16,7 @@ namespace AK
         static const AkUniqueID PLAY_BGMSYSTEM = 529968271U;
         static const AkUniqueID PLAY_GAMEBGM_SEGMENT = 2990911348U;
         static const AkUniqueID PLAY_GAMEBGM_SFX = 610623786U;
+        static const AkUniqueID PLAY_SE_BEAT_4 = 1942691276U;
     } // namespace EVENTS
 
     namespace STATES
@@ -49,6 +50,7 @@ namespace AK
     namespace BANKS
     {
         static const AkUniqueID INIT = 1355168291U;
+        static const AkUniqueID BEAT = 1190179409U;
         static const AkUniqueID BGM = 412724365U;
     } // namespace BANKS
 

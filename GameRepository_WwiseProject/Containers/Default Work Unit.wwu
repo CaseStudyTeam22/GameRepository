@@ -67,7 +67,7 @@
 							<MusicCue Name="Exit Cue" ID="{512C334E-2CC2-41C4-AB2E-3B501BFDF8CB}">
 								<PropertyList>
 									<Property Name="CueType" Type="int16" Value="1"/>
-									<Property Name="TimeMs" Type="Real64" Value="68000"/>
+									<Property Name="TimeMs" Type="Real64" Value="65767.9011340985"/>
 								</PropertyList>
 							</MusicCue>
 						</ObjectList>
@@ -710,6 +710,53 @@
 						</ObjectList>
 					</ObjectLists>
 				</MusicSwitchContainer>
+				<Folder Name="BGM" ID="{16606DE4-E9D5-4526-9B67-2F36B3A76AD6}" ShortID="889152631"/>
+				<Folder Name="SE" ID="{74DE627A-06A0-47C5-8769-8BBCCC650E4D}" ShortID="918258462">
+					<ChildrenList>
+						<Folder Name="Bet" ID="{8DB648F0-8B96-4F19-B266-0380F36A5AF7}" ShortID="1009104144"/>
+						<Folder Name="Battle" ID="{6DB78F09-D958-4AC6-885D-ACF13912FC15}" ShortID="247823117"/>
+						<Folder Name="Beat" ID="{F33C3D46-A903-4E1E-8BA3-AC16A5080D0F}" ShortID="919754621">
+							<ChildrenList>
+								<Sound Name="SE_Beat_1to3" ID="{B704E25A-3886-462B-8386-D3E2B8224A7C}" ShortID="631837308">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7A857B5C-5518-49A6-B64F-A6CAA9D6B3C9}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7EE6230C-4B04-4C17-9D02-814BFDAC8DC5}"/>
+										</Reference>
+									</ReferenceList>
+								</Sound>
+								<Sound Name="SE_Beat_4" ID="{82080DC5-7309-404B-9B80-2757A0711071}" ShortID="440712869">
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7A857B5C-5518-49A6-B64F-A6CAA9D6B3C9}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7EE6230C-4B04-4C17-9D02-814BFDAC8DC5}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="pi" ID="{4B1624B0-5B62-4B20-AC40-872996F9B530}">
+											<PropertyList>
+												<Property Name="OverrideWavLoop" Type="bool" Value="True"/>
+												<Property Name="TrimEnd" Type="Real64" Value="0.30212"/>
+											</PropertyList>
+											<Language>SFX</Language>
+											<AudioFile>pi.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="1032311183"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ActiveSourceList>
+										<ActiveSource Name="pi" ID="{4B1624B0-5B62-4B20-AC40-872996F9B530}" Platform="Linked"/>
+									</ActiveSourceList>
+								</Sound>
+							</ChildrenList>
+						</Folder>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</Containers>

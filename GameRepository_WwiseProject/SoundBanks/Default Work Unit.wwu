@@ -12,6 +12,17 @@
 					<ObjectExclusionList/>
 					<GameSyncExclusionList/>
 				</SoundBank>
+				<Folder Name="SE" ID="{E08115F1-08AF-435D-891C-9D50DE78D300}" ShortID="1057179794">
+					<ChildrenList>
+						<SoundBank Name="Beat" ID="{99CA6024-FABD-4EEB-83EA-B3C3570EC230}">
+							<ObjectInclusionList>
+								<ObjectRef Name="Play_SE_Beat_4" ID="{A6186708-831D-4B49-A7D5-F63913F4FDC9}" WorkUnitID="{5123D642-D565-47CD-8577-D15D59410A1C}" Origin="Manual" Filter="7"/>
+							</ObjectInclusionList>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</SoundBanks>

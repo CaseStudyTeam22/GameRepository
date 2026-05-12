@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{ACEB3A23-6CAB-4CC6-8BF9-386183C07691}",
     "Language": "SFX",
-    "Hash": "{5577DBA3-C736-EB5A-5797-EAE060932EE5}",
+    "Hash": "{1EE177A1-3DA0-2450-2D2E-D120CDD76D52}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM",
     "ShortName": "BGM",
     "Path": "BGM.bnk",
@@ -118,8 +118,8 @@
       "ObjectPath": "\\Events\\Default Work Unit\\Play_GameBgm_Segment",
       "GUID": "{EC81F62E-F136-4E89-8C30-DBD76A16738C}",
       "DurationType": "OneShot",
-      "DurationMin": "68",
-      "DurationMax": "68",
+      "DurationMin": "65.7679",
+      "DurationMax": "65.7679",
       "MediaRefs": [
        {
         "Id": "456299405"
@@ -229,6 +229,6 @@
     ]
    }
   ],
-  "FileHash": "{4753EE8D-9E8E-4143-CED0-ACC28C4F0F42}"
+  "FileHash": "{85172F12-EF39-F7A4-9F62-9AE4A3A20FF8}"
  }
 }
