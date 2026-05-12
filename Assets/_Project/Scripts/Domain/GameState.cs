@@ -70,6 +70,20 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
 		}
 
+		public int GetCalculatedPower(string playerId)
+		{
+			if (!m_Players.TryGetValue(playerId, out var player)) return 0;
+			int power = player.IntentPower; // 多分これintent.powerじゃないか
+
+			// ここでバフ量計算
+			// foreach (var item in m_Items)
+			// {
+			// 	if (item.TargetPlayerId == playerId)
+			// 		power += item.Power;
+			// }
+			return power;
+		}
+
 		private void Subscribe()
 		{
 			m_Net.OnConnected += () =>
@@ -132,6 +146,8 @@ namespace GamblingAction.Domain
 
 		private void HandleGameEvents(EventDto[] events)
 		{
+			// ここで特定のイベント(動いたならとか)で処理を実行等々
+
 			if (events == null || events.Length == 0) return;
 			OnGameEvents?.Invoke(events);
 		}

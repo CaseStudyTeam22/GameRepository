@@ -21,6 +21,8 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("selectedBuff")] public string SelectedBuff;
 		[JsonProperty("buffReady")]   public bool BuffReady;
 		[JsonProperty("falling")]     public bool Falling;
+
+		[JsonProperty("buffEffects")] public List<BuffEffectDto> BuffEffects;
 	}
 
 	public class IntentDto
@@ -28,5 +30,11 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("type")]  public string Type;
 		[JsonProperty("dir")]   public string Dir;
 		[JsonProperty("power")] public int Power;
+	}
+
+	public class BuffEffectDto
+	{
+		[JsonProperty("type")] public string Type;
+		[JsonProperty("value")] public float Value;
 	}
 }
