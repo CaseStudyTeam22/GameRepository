@@ -11,6 +11,8 @@ namespace GamblingAction.Gameplay
 		[SerializeField] private ItemView m_ItemPrefab;
 
 		private readonly Dictionary<double, ItemView> m_Views = new();
+		// ピックアップ演出再生中の view を Views から外して保持（次の SyncItems で再評価されないため）
+		private readonly HashSet<ItemView> m_DyingViews = new();
 		private IGameState m_State;
 		private IBoardCoords m_Board;
 
@@ -53,10 +55,23 @@ namespace GamblingAction.Gameplay
 			foreach (var id in m_Views.Keys)
 				if (!current.Contains(id)) stale.Add(id);
 			foreach (var id in stale)
-			{
-				Destroy(m_Views[id].gameObject);
-				m_Views.Remove(id);
-			}
+				BeginPickupFx(id);
+		}
+
+		// stale になった item にピックアップ演出を再生してから破棄する。
+		private void BeginPickupFx(double itemId)
+		{
+			if (!m_Views.TryGetValue(itemId, out var view)) return;
+			m_Views.Remove(itemId);
+			m_DyingViews.Add(view);
+
+			view.PlayPickupFx(() => {
+				if (view != null)
+				{
+					m_DyingViews.Remove(view);
+					Destroy(view.gameObject);
+				}
+			});
 		}
 	}
 }
