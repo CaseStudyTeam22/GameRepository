@@ -1,9 +1,10 @@
-using System.Collections;
-using System.Linq;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
+using System.Collections;
+using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
@@ -258,7 +259,8 @@ namespace GamblingAction.UI
 			if (phase == EGamePhase.GameOver)
 			{
 				m_RoundCount = 0;
-			}
+                StartCoroutine(GoToResultSceneAfterDelay(5f));
+            }
 		}
 
 		private void HandlePlayersChanged()
@@ -401,7 +403,13 @@ namespace GamblingAction.UI
 			m_CountdownCo = null;
 		}
 
-		private void UpdateRoundText()
+        private IEnumerator GoToResultSceneAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            SceneManager.LoadScene("ResultScene");
+        }
+
+        private void UpdateRoundText()
 		{
 			if (m_RoundText == null) return;
 			int shown = Mathf.Clamp(m_RoundCount, 1, m_TotalRounds);
