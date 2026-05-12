@@ -73,7 +73,7 @@ namespace GamblingAction.Domain
 		public int GetCalculatedPower(string playerId)
 		{
 			if (!m_Players.TryGetValue(playerId, out var player)) return 0;
-			int power = player.IntentPower; // 多分これintent.powerじゃないか
+			int power = player.Intent.Power; // 多分これintent.powerじゃないか
 
 			// ここでバフ量計算
 			// foreach (var item in m_Items)
