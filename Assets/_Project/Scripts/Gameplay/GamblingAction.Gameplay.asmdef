@@ -4,6 +4,7 @@
     "references": [
         "GamblingAction.Core",
         "GamblingAction.Domain",
+        "Unity.TextMeshPro",
         "Unity.Cinemachine"
     ],
     "includePlatforms": [],
