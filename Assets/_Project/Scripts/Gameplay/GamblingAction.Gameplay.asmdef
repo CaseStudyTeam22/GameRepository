@@ -3,7 +3,8 @@
     "rootNamespace": "GamblingAction.Gameplay",
     "references": [
         "GamblingAction.Core",
-        "GamblingAction.Domain"
+        "GamblingAction.Domain",
+        "Unity.Cinemachine"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
