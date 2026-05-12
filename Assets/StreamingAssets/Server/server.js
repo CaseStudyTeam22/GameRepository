@@ -8,8 +8,11 @@ const Engine = require('./engine');
 
 const app = express();
 const server = http.createServer(app);
-// DEV ONLY: 心跳超时拉到 5 分钟，避免 MPPM 虚拟玩家失焦暂停被踢。
-// 正式发布前改回 pingTimeout: 20000（默认值），并在客户端加断线重连。
+// DEV ONLY: pingTimeout を 5 分まで延長。MPPM の Virtual Player が
+// フォーカスを失うとメインスレッドが止まり SocketIO の heartbeat も停止する。
+// デフォルト 20 秒だと開発中に頻繁にキックされるため一時的に緩和している。
+// 正式リリース前に pingTimeout: 20000（デフォルト値）に戻し、
+// クライアント側（SocketIONetClient）に切断時の自動再接続を実装すること。
 const io = new Server(server, {
     pingTimeout: 300000,
     pingInterval: 25000
@@ -448,7 +451,10 @@ function checkAllBuffsSelected() {
     }
 }
 
-server.listen(3000, '0.0.0.0', () => console.log(`[GamblingAction Server] Running on port 3000...`));
+// IPv6 ワイルドカード '::' でリッスン。Node は IPv4-mapped IPv6 経由で
+// IPv4 接続も同じソケットで受けるため、127.0.0.1 / ::1 / LAN IPv4 / IPv6
+// いずれのアドレスでもクライアントから接続できる。
+server.listen(3000, '::', () => console.log(`[GamblingAction Server] Running on port 3000 (IPv4/IPv6 dual-stack)...`));
 
 function resetMatch() {
     gameActive = false; items = []; currentBeat = 0;
