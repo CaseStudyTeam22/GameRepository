@@ -2,6 +2,7 @@ using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Core.Skills;
 using GamblingAction.Domain;
+using GamblingAction.Gameplay.PopupFx;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -17,6 +18,8 @@ namespace GamblingAction.Gameplay
 		[SerializeField] private Transform m_BillboardTarget;
 		[FormerlySerializedAs("hud")]
 		[SerializeField] private PlayerHudView m_Hud;
+		[SerializeField, Tooltip("プレイヤー sprite に対する視覚効果（シェイク等）の管理コンポーネント。未設定なら演出は再生されない")]
+		private PlayerFxController m_Fx;
 		[FormerlySerializedAs("skillSet")]
 		[SerializeField, Tooltip("このキャラクターが使うスキル設定（ビジュアルルール含む）。null = SkillPreviewView の fallbackSkillSet を使用")]
 		private SkillDefinition m_SkillSet;
@@ -76,6 +79,11 @@ namespace GamblingAction.Gameplay
 
 			m_State.OnPlayersChanged += HandlePlayersChanged;
 			m_State.OnPhaseChanged   += HandlePhaseChanged;
+			m_State.OnGameEvents     += HandleGameEvents;
+
+			// PopupDirector に自分を登録（popup の発生位置アンカーとして使われる）
+			if (PopupDirector.Instance != null)
+				PopupDirector.Instance.RegisterPlayer(m_PlayerId, transform);
 		}
 
 		private void OnDestroy()
@@ -85,7 +93,10 @@ namespace GamblingAction.Gameplay
 			{
 				m_State.OnPlayersChanged -= HandlePlayersChanged;
 				m_State.OnPhaseChanged   -= HandlePhaseChanged;
+				m_State.OnGameEvents     -= HandleGameEvents;
 			}
+			if (PopupDirector.Instance != null && !string.IsNullOrEmpty(m_PlayerId))
+				PopupDirector.Instance.UnregisterPlayer(m_PlayerId);
 		}
 
 		private void HandlePlayersChanged()
@@ -189,6 +200,23 @@ namespace GamblingAction.Gameplay
 		private static Color ParseColor(string hex)
 		{
 			return ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.white;
+		}
+
+		private void HandleGameEvents(EventDto[] events)
+		{
+			if (events == null || m_Fx == null) return;
+			foreach (var ev in events)
+			{
+				if (ev == null) continue;
+				if (ev.TargetId != m_PlayerId) continue;
+
+				if (ev.Type == EventTypes.Hit)
+					m_Fx.PlayHitShake();
+				else if (ev.Type == EventTypes.Pushed)
+					m_Fx.PlayPushedPunch(ev.Dir);
+				else if (ev.Type == EventTypes.Vfx && ev.VfxType == VfxTypes.Bump)
+					m_Fx.PlayBumpPunch(ev.Dir);
+			}
 		}
 	}
 }

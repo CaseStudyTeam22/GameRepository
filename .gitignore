@@ -115,4 +115,6 @@ Thumbs.db
 
 # Server (StreamingAssets) — node deps installed on first run via start_server.bat
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node_modules/
+# metaファイルが追跡されてしまうと、Unityを開いた際にnode_modulesの空フォルダが生成されるため追跡の対象外とする
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node_modules.meta
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/package-lock.json
