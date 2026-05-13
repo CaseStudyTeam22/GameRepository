@@ -3,7 +3,8 @@
     "rootNamespace": "GamblingAction.Input",
     "references": [
         "GamblingAction.Core",
-        "GamblingAction.Domain"
+        "GamblingAction.Domain",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
