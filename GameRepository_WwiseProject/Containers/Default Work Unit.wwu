@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{2BF70021-3C41-427A-850F-013BDDCE65AA}" SchemaVersion="133">
+	<Containers>
+		<WorkUnit Name="Default Work Unit" ID="{2BF70021-3C41-427A-850F-013BDDCE65AA}" PersistMode="Standalone">
+			<ChildrenList>
+				<Folder Name="BGM" ID="{897524B3-549E-4BEB-A57A-8269C6C17676}" ShortID="624807560">
+					<ChildrenList>
+						<MusicSegment Name="Main_Segment" ID="{58951FDD-8F62-4324-8D73-117DDA2185CE}" ShortID="986404029">
+							<PropertyList>
+								<Property Name="EndPosition" Type="Real64" Value="64776"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{1C45A0AB-3F06-4702-893D-39FB1F9A76DD}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<MusicTrack Name="alban" ID="{4C803920-B999-4383-B821-2DB67B764E0B}" ShortID="879378163">
+									<ReferenceList>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{1C45A0AB-3F06-4702-893D-39FB1F9A76DD}"/>
+										</Reference>
+										<Reference Name="TransitionRoot">
+											<Custom>
+												<MusicTransition Name="Root" ID="{32E39054-6FA2-4052-A5AE-045074E39362}">
+													<PropertyList>
+														<Property Name="IsFolder" Type="bool" Value="True"/>
+													</PropertyList>
+													<TransitionInfo/>
+												</MusicTransition>
+											</Custom>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<AudioFileSource Name="alban" ID="{B2E5CA94-FE7B-47F1-BFA4-5BB4DF5B6112}">
+											<Language>SFX</Language>
+											<AudioFile>alban.wav</AudioFile>
+											<MediaIDList>
+												<MediaID ID="567241478"/>
+											</MediaIDList>
+										</AudioFileSource>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="Sequences">
+											<MusicTrackSequence Name="" ID="{A2DA3D87-2E7E-494D-BFCD-070F52F2C26A}">
+												<ObjectLists>
+													<ObjectList Name="Clips">
+														<MusicClip Name="alban" ID="{7163CB86-1B29-4EE3-BC0D-8EE659D9DF73}">
+															<PropertyList>
+																<Property Name="EndTrimOffset" Type="Real64" Value="64776"/>
+																<Property Name="FadeInMode" Type="int16" Value="0"/>
+																<Property Name="FadeOutMode" Type="int16" Value="0"/>
+															</PropertyList>
+															<AudioSourceRef Name="alban" ID="{B2E5CA94-FE7B-47F1-BFA4-5BB4DF5B6112}"/>
+														</MusicClip>
+													</ObjectList>
+												</ObjectLists>
+											</MusicTrackSequence>
+										</ObjectList>
+									</ObjectLists>
+								</MusicTrack>
+							</ChildrenList>
+							<ObjectLists>
+								<ObjectList Name="Cues">
+									<MusicCue Name="Entry Cue" ID="{B6603221-9357-4471-B220-3C1B1BE4FFB2}"/>
+									<MusicCue Name="Exit Cue" ID="{5DCE0E01-67E8-49A8-A980-83B506FE1181}">
+										<PropertyList>
+											<Property Name="CueType" Type="int16" Value="1"/>
+											<Property Name="TimeMs" Type="Real64" Value="1000"/>
+										</PropertyList>
+									</MusicCue>
+								</ObjectList>
+							</ObjectLists>
+						</MusicSegment>
+					</ChildrenList>
+				</Folder>
+			</ChildrenList>
+		</WorkUnit>
+	</Containers>
+</WwiseDocument>

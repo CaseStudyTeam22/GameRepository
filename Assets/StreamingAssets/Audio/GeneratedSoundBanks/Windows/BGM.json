@@ -1,0 +1,47 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "412724365",
+    "Type": "User",
+    "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
+    "Language": "SFX",
+    "Hash": "{3DC4DEDE-E90E-0E18-8B99-15FAB923EAD7}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\BGM",
+    "ShortName": "BGM",
+    "Path": "BGM.bnk",
+    "Media": [
+     {
+      "Id": "567241478",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "alban.wav",
+      "CachePath": "9C/{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "1193902085",
+      "Name": "Play_Main",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Main",
+      "GUID": "{91159A1C-B4A0-487B-84AE-1F62BD19A298}",
+      "DurationType": "OneShot",
+      "DurationMin": "64.776",
+      "DurationMax": "64.776",
+      "MediaRefs": [
+       {
+        "Id": "567241478"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{F66A69E4-D7BF-4860-6CCF-CE15976AB5EC}"
+ }
+}
