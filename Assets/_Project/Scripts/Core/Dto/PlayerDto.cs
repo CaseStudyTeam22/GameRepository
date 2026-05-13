@@ -16,6 +16,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("money")]       public int Money;
 		[JsonProperty("chips")]       public int Chips;
 		[JsonProperty("stamina")]     public int Stamina;
+		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 		[JsonProperty("isAI")]        public bool IsAI;
 		[JsonProperty("personality")] public string Personality;
 		[JsonProperty("color")]       public string Color;
@@ -24,6 +25,8 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("falling")]     public bool Falling;
 
 		[JsonProperty("buffEffects")] public List<BuffEffectDto> BuffEffects;
+		// ここをModifierContainerにして、バフの種類ごとに持たせる形になるんだが、
+		// listは使えそう
 	}
 
 	public class IntentDto
@@ -33,9 +36,30 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("power")] public int Power;
 	}
 
+	// stats乗算
+	// バフごとに持たないといけないため形状は変わるかも
 	public class BuffEffectDto
 	{
 		[JsonProperty("type")] public string Type;
 		[JsonProperty("value")] public float Value;
+	}
+
+	public enum EMissionType
+	{
+		Move,
+		Push,
+		//Attack,
+		Defend,
+		//Heal,
+		GainCoin,
+		GainChip
+	}
+
+	public class MissionDto
+	{
+		public EMissionType Type;
+    	public int TargetCount;
+    	public int CurrentCount;
+    	public bool IsCleared;
 	}
 }
