@@ -40,6 +40,11 @@ namespace GamblingAction.Core
             Modifiers.Remove(tag);
         }
 
+        public void ClearAllModifiers()
+        {
+            Modifiers.Clear();
+        }
+
         // 乗算等を行い補正値を出力
         public float GetModifiedValue(float baseValue)
         {
