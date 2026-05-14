@@ -90,8 +90,6 @@ namespace GamblingAction.Input
 
 		private void TrySetSkillMode(KeyCode key, string mode)
 		{
-			// m_Powerに加えて、バフ込みの値を計算して渡すように変更の必要姓
-
 			if (!UnityInput.GetKeyDown(key)) return;
 			if (m_ActiveSkillKey == key) return;
 

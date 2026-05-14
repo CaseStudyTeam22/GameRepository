@@ -24,9 +24,9 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("buffReady")]   public bool BuffReady;
 		[JsonProperty("falling")]     public bool Falling;
 
-		[JsonProperty("buffEffects")] public List<BuffEffectDto> BuffEffects;
-		// ここをModifierContainerにして、バフの種類ごとに持たせる形になるんだが、
-		// listは使えそう
+		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
+		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
+		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
 	}
 
 	public class IntentDto
@@ -40,8 +40,7 @@ namespace GamblingAction.Core.Dto
 	// バフごとに持たないといけないため形状は変わるかも
 	public class BuffEffectDto
 	{
-		[JsonProperty("type")] public string Type;
-		[JsonProperty("value")] public float Value;
+		[JsonProperty("buff")] public ModifierContainer Buff;
 	}
 
 	public enum EMissionType

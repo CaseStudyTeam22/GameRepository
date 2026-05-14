@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using GamblingAction.Net;
 using UnityEngine;
@@ -52,7 +53,15 @@ namespace GamblingAction.Domain
 			if (!GameActive || CurrentBeat >= 4) return;
 			var me = Me;
 			if (me == null || me.IsAI) return;
-			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
+
+			// テストで4拍ごとに押し出し力+1
+			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
+			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
+
+			// 補正等を考慮した力を持ってくる
+			int finalPower = GetCalculatedPower(MyId, type, power);
+
+			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
 		}
 
 		public void SubmitReady(bool isAI)
@@ -70,18 +79,26 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
 		}
 
-		public int GetCalculatedPower(string playerId)
+		public int GetCalculatedPower(string playerId, string intentType, int basePower)
 		{
-			if (!m_Players.TryGetValue(playerId, out var player)) return 0;
-			int power = player.Intent.Power; // 多分これintent.powerじゃないか
+			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
 
-			// ここでバフ量計算
-			// foreach (var item in m_Items)
-			// {
-			// 	if (item.TargetPlayerId == playerId)
-			// 		power += item.Power;
-			// }
-			return power;
+			float finalPower = basePower;
+
+			// 行動タイプ別に応じてバフを適応
+			// stringで管理してる関係上switchｶﾅｰ
+			switch(intentType)
+			{
+				case IntentTypes.Push:
+					finalPower = player.PushModifier.GetModifiedValue(basePower);
+					break;
+				case IntentTypes.Move:
+					finalPower = player.MoveModifier.GetModifiedValue(basePower);
+					break;
+				// スタミナは一旦まち
+			}
+
+			return Mathf.RoundToInt(finalPower);
 		}
 
 		private void Subscribe()
@@ -187,7 +204,19 @@ namespace GamblingAction.Domain
 			m_Players.Clear();
 			if (incoming == null) return;
 			foreach (var kv in incoming)
+			{
+				var player = kv.Value;
+				// modifierはnullならインスタンス化しておく
+				// (Jsonからデータを読み取った際にデータがないとエラーが出るため)
+				player.PushModifier ??= new ModifierContainer {Modifiers = new()};
+				player.MoveModifier ??= new ModifierContainer {Modifiers = new()};
+				player.StaminaModifier ??= new ModifierContainer {Modifiers = new()};
+				// 問題なければ将来的にjson側には全部の値をきちんと保持しておくようにしたほうが
+				// エラーが起きづらいので安全なのかなと思ったりするなど
+				// ただ余計なデータが入るので一長一短
+
 				m_Players[kv.Key] = kv.Value;
+			}
 		}
 
 		private void SetPhase(EGamePhase phase)
