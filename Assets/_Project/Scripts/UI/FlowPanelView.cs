@@ -41,9 +41,11 @@ namespace GamblingAction.UI
 
 		[Header("Player slot colors")]
 		[SerializeField, Tooltip("P1 の文字色（role 固定。ワールドの P1 と同じ色）")]
-		private Color m_P1SlotColor = new Color(0.088f, 0.376f, 0.887f);
+		// GameConfig.P1Color（#00f2fe）に合わせる
+		private Color m_P1SlotColor = new Color(0f, 242f / 255f, 254f / 255f, 1f);
 		[SerializeField, Tooltip("P2 の文字色（role 固定。ワールドの P2 と同じ色）")]
-		private Color m_P2SlotColor = new Color(0.89f, 0.29f, 0.29f);
+		// GameConfig.P2Color（#ff4444）に合わせる
+		private Color m_P2SlotColor = new Color(1f, 68f / 255f, 68f / 255f, 1f);
 
 		private IGameState m_State;
 
