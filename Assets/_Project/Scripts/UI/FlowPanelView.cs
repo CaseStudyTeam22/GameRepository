@@ -1,7 +1,6 @@
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using System.Collections;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -39,6 +38,14 @@ namespace GamblingAction.UI
 		[SerializeField] private Color m_FinalBeatOnColor = new Color(0.89f, 0.29f, 0.29f);
 		[FormerlySerializedAs("beatOffColor")]
 		[SerializeField] private Color m_BeatOffColor = new Color(0.17f, 0.17f, 0.16f, 1f);
+
+		[Header("Player slot colors")]
+		[SerializeField, Tooltip("P1 の文字色（role 固定。ワールドの P1 と同じ色）")]
+		// GameConfig.P1Color（#00f2fe）に合わせる
+		private Color m_P1SlotColor = new Color(0f, 242f / 255f, 254f / 255f, 1f);
+		[SerializeField, Tooltip("P2 の文字色（role 固定。ワールドの P2 と同じ色）")]
+		// GameConfig.P2Color（#ff4444）に合わせる
+		private Color m_P2SlotColor = new Color(1f, 68f / 255f, 68f / 255f, 1f);
 
 		private IGameState m_State;
 
@@ -267,14 +274,15 @@ namespace GamblingAction.UI
 		{
 			if (m_State == null) return;
 
-			var p1 = m_State.Players.Values.FirstOrDefault(p => p.Role == "P1");
-			var p2 = m_State.Players.Values.FirstOrDefault(p => p.Role == "P2");
+			// 左スロット=自分、右スロット=相手で固定（role に依存しない）
+			var me       = m_State.Me;
+			var opponent = m_State.Opponent;
 
-			ApplyPlayerSlot(p1, m_P1Name, m_P1Money, m_P1Chips, hideChipsIfOpponent: false);
-			ApplyPlayerSlot(p2, m_P2Name, m_P2Money, null,     hideChipsIfOpponent: true);
+			ApplyPlayerSlot(me,       m_P1Name, m_P1Money, m_P1Chips, isSelf: true);
+			ApplyPlayerSlot(opponent, m_P2Name, m_P2Money, null,      isSelf: false);
 		}
 
-		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool hideChipsIfOpponent)
+		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool isSelf)
 		{
 			if (dto == null)
 			{
@@ -284,17 +292,23 @@ namespace GamblingAction.UI
 				return;
 			}
 
+			// 色は role 固定（ワールドのプレイヤー色と一致させる）。スロット位置は self/opponent。
+			Color slotColor = dto.Role == "P2" ? m_P2SlotColor : m_P1SlotColor;
+
 			if (nameText != null)
 			{
-				string label = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
-				nameText.text = label;
+				nameText.text = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
+				nameText.color = slotColor;
 			}
-			if (moneyText != null) moneyText.text = $"¥{dto.Money:N0}";
+			if (moneyText != null)
+			{
+				moneyText.text = $"¥{dto.Money:N0}";
+				moneyText.color = slotColor;
+			}
 			if (chipsText != null)
 			{
-				bool isMe = dto.Id == m_State.MyId;
-				if (hideChipsIfOpponent && !isMe) chipsText.text = "??";
-				else chipsText.text = dto.Chips.ToString();
+				chipsText.text = isSelf ? dto.Chips.ToString() : "??";
+				chipsText.color = slotColor;
 			}
 		}
 
