@@ -1959,17 +1959,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b46f1938806cba47bb9da678645aeed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lobbyPanel: {fileID: 6772688740742411067}
-  exchangePanel: {fileID: 7798984892402857167}
-  buffPanel: {fileID: 1525683385790339096}
-  roundOverPanel: {fileID: 2439205169839477186}
-  gameOverPanel: {fileID: 1793614204653652201}
-  mainGameStage: {fileID: 6967025498251287470}
-  totalRounds: 3
-  executeFlashSeconds: 0.4
-  beatOnColor: {r: 0.94, g: 0.62, b: 0.15, a: 1}
-  finalBeatOnColor: {r: 0.89, g: 0.29, b: 0.29, a: 1}
-  beatOffColor: {r: 0.17, g: 0.17, b: 0.16, a: 1}
+  m_LobbyPanel: {fileID: 6772688740742411067}
+  m_ExchangePanel: {fileID: 7798984892402857167}
+  m_BuffPanel: {fileID: 1525683385790339096}
+  m_RoundOverPanel: {fileID: 2439205169839477186}
+  m_GameOverPanel: {fileID: 1793614204653652201}
+  m_MainGameStage: {fileID: 6967025498251287470}
+  m_TotalRounds: 3
+  m_ExecuteFlashSeconds: 0.4
+  m_BeatOnColor: {r: 0.94, g: 0.62, b: 0.15, a: 1}
+  m_FinalBeatOnColor: {r: 0.89, g: 0.29, b: 0.29, a: 1}
+  m_BeatOffColor: {r: 0.17, g: 0.17, b: 0.16, a: 1}
 --- !u!1 &3396487051593760802
 GameObject:
   m_ObjectHideFlags: 0
@@ -2792,12 +2792,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
