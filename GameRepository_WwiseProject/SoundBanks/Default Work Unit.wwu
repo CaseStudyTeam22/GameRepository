@@ -14,6 +14,18 @@
 						</SoundBank>
 					</ChildrenList>
 				</Folder>
+				<Folder Name="SE" ID="{BB29454B-F62C-4004-B510-7FB86415D18E}" ShortID="266018828">
+					<ChildrenList>
+						<SoundBank Name="SE" ID="{80E7D19C-36CA-4B7F-AB32-510E99BC51BA}">
+							<ObjectInclusionList>
+								<ObjectRef Name="Play_Beat_1_to_3" ID="{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+								<ObjectRef Name="Play_Beat_4" ID="{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+							</ObjectInclusionList>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+					</ChildrenList>
+				</Folder>
 			</ChildrenList>
 		</WorkUnit>
 	</SoundBanks>

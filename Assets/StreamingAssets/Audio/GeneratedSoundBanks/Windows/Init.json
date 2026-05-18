@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{CDE9AC3D-2B42-1217-02C1-D64576EB9AF6}",
+    "Hash": "{5DC8E69C-6FCE-6579-B8E5-01556B46A593}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -41,9 +41,37 @@
       "ObjectPath": "\\Busses\\Default Work Unit\\Main Audio Bus",
       "GUID": "{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}"
      }
+    ],
+    "StateGroups": [
+     {
+      "Id": "762757699",
+      "Name": "Gameplay_State",
+      "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State",
+      "GUID": "{338D5290-DE91-4896-97B4-3147ABCAB62B}",
+      "States": [
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\None",
+        "GUID": "{561120D3-89ED-41E1-8732-9D339D14E845}"
+       },
+       {
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
+        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+       },
+       {
+        "Id": "3041563226",
+        "Name": "Silence",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Silence",
+        "GUID": "{BDF73118-FFF7-4E1F-80C3-819D4EA3BFE7}"
+       }
+      ]
+     }
     ]
    }
   ],
-  "FileHash": "{AE4AE7A5-A8F8-7C54-534F-A3AD01DB7D69}"
+  "FileHash": "{BC6B4B48-56A4-503C-951D-6CF16B2E259E}"
  }
 }

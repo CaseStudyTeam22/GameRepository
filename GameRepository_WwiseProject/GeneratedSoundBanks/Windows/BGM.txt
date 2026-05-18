@@ -1,6 +1,0 @@
-Event	ID	Name			Wwise Object Path	Notes
-	1193902085	Play_Main			\Default Work Unit\Play_Main	
-
-In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
-	567241478	alban	.cache\9C\{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem		\Containers\Default Work Unit\BGM\Main_Segment\alban		12437088
-
