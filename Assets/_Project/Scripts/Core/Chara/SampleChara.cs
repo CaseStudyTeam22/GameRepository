@@ -11,6 +11,7 @@ namespace GamblingAction.Core
         public override int StartMoney => 15000; // 例えばこのキャラは初期所持金が多い
         public override int StartChips => 5;     // 例えばこのキャラは初期チップが少ない
         public override int MaxStamina => 7;     // 例えばこのキャラは最大スタミナが多い
+        public override string CharacterName => "サンプルキャラ1"; // キャラ名のオーバーライド
 
         // スキル発動メソッドのオーバーライド
         public override void SkillEffect()
