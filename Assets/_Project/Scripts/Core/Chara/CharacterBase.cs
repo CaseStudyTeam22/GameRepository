@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GamblingAction.Core
 {
-    public class CharacterBase
+    public class CharacterBase : MonoBehaviour
     {
         public string Id { get; set; }
 
@@ -13,10 +13,14 @@ namespace GamblingAction.Core
         // そのためにキャラ選択イベントを作成し、そのデータを送って初期のdtoと
         // するような構築をする必要あり。
 
-        public int Stamina { get; set; }
-        public int MaxStamina { get; set; }
+        public virtual int StartMoney => 10000;
+        public virtual int StartChips => 10;
+        public virtual int MaxStamina => 5;
 
-        // スタミナに対する補正値を管理するコンテナ
-        public StaminaContainer StaminaModifier { get; private set; } = new StaminaContainer();
+        // スキル発動メソッド
+        public virtual void SkillEffect()
+        {
+            // スキルの効果を記載
+        }
     }
 }
