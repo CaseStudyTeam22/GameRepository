@@ -222,10 +222,20 @@ namespace GamblingAction.Domain
 				player.StaminaModifier.OnChanged += () =>
 				{
 					// スタミナの補正値が変わったときに、dtoのスタミナ値を更新する
+
+					// そもそもGetModifiedValueにplayer.stamina入れてるのおかしくね?->ここがプレイヤーが使用している初期キャラのstamina statsが入る形
 					int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
 
-					player.Stamina = modifiedStamina;
-					// 最大値の補正もする、というか現在スタミナは増加する値を元に計算
+					// 現在との差分を計算
+					int diff = modifiedStamina - player.Stamina;
+					// スタミナの現在値に差分を加算して更新
+					player.MaxStamina += diff; // 最大値更新
+					// 加算値がマイナスの場合は最大スタミナをmaxと取って現在スタミナがそれを超えないようにする
+					if (diff < 0 && player.Stamina > player.MaxStamina)
+					{
+						player.Stamina = player.MaxStamina;
+					}
+					Debug.Log("スタミナの最大値が変更されました。 値: " + player.MaxStamina);
 
 					OnPlayersChanged?.Invoke(); // 順繰りに辿らせてStaminaBarView側に変更を通知
 				};
