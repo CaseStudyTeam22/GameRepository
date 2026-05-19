@@ -2,6 +2,7 @@
 
 // ミッションを達成した時のイベントをそれぞれで発火し、それに応じてバフを加える？
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -29,15 +30,20 @@ namespace GamblingAction.Core
 
         public Dictionary<string, Modifier> Modifiers { get; set; }
 
-        public void AddModifier(string tag, Modifier modifier)
+        // 変更通知用イベント
+        public event Action OnChanged;
+
+        virtual public void AddModifier(string tag, Modifier modifier)
         {
             Modifiers[tag] = modifier;
+            OnChanged?.Invoke(); // 通知
         }
 
         // remove、効率いい方法探したいね
-        public void RemoveModifier(string tag)
+        virtual public void RemoveModifier(string tag)
         {
             Modifiers.Remove(tag);
+            OnChanged?.Invoke(); // 通知
         }
 
         public void ClearAllModifiers()

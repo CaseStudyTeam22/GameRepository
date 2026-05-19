@@ -15,8 +15,6 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("score")]       public int Score;
 		[JsonProperty("money")]       public int Money;
 		[JsonProperty("chips")]       public int Chips;
-		[JsonProperty("stamina")]     public int Stamina;
-		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 		[JsonProperty("isAI")]        public bool IsAI;
 		[JsonProperty("personality")] public string Personality;
 		[JsonProperty("color")]       public string Color;
@@ -25,8 +23,13 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("falling")]     public bool Falling;
 
 		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
+		// 上記の合体値用フィールド
 		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
+		// 上記の合体値用フィールド
 		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("stamina")]     public int Stamina;
+		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 	}
 
 	public class IntentDto

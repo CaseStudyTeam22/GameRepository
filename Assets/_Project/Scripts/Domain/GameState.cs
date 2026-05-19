@@ -58,6 +58,9 @@ namespace GamblingAction.Domain
 			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
 			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
 
+			// スタミナ上限を追加
+			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
+
 			// 補正等を考慮した力を持ってくる
 			int finalPower = GetCalculatedPower(MyId, type, power);
 
@@ -214,6 +217,18 @@ namespace GamblingAction.Domain
 				// 問題なければ将来的にjson側には全部の値をきちんと保持しておくようにしたほうが
 				// エラーが起きづらいので安全なのかなと思ったりするなど
 				// ただ余計なデータが入るので一長一短
+
+				// スタミナに対して監視対象を追加する
+				player.StaminaModifier.OnChanged += () =>
+				{
+					// スタミナの補正値が変わったときに、dtoのスタミナ値を更新する
+					int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
+
+					player.Stamina = modifiedStamina;
+					// 最大値の補正もする、というか現在スタミナは増加する値を元に計算
+
+					OnPlayersChanged?.Invoke(); // 順繰りに辿らせてStaminaBarView側に変更を通知
+				};
 
 				m_Players[kv.Key] = kv.Value;
 			}

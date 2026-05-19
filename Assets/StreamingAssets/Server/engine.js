@@ -26,9 +26,9 @@ const Engine = {
             if (p.chips < chipCost) intent.type = 'none';
             else p.chips -= chipCost;
 
-            const baseMax = Config.MAX_STAMINA || 5;
+            const baseMax = p.maxStamina || 5;
             // Buff: 高风险降低定力上限到 4；低风险 rest 额外 +1
-            const maxStamina = p.selectedBuff === 'high_risk' ? 4 : baseMax;
+            const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
             const restRec = Config.EFFECTS.rest.staminaRec + (p.selectedBuff === 'low_risk' ? 1 : 0);
             if (intent.type === 'rest') p.stamina = Math.min(maxStamina, p.stamina + restRec);
             else if (intent.type === 'none') {
