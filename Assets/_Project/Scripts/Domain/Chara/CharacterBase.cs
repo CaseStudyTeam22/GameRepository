@@ -1,6 +1,7 @@
 using UnityEngine;
+using GamblingAction.Core.Dto;
 
-namespace GamblingAction.Core
+namespace GamblingAction.Domain
 {
     public class CharacterBase
     {
@@ -17,12 +18,19 @@ namespace GamblingAction.Core
 
         public virtual string CharacterName => "サンプルキャラ";
 
+        protected string PlayerId { get; set; }
+
         // 初期化メソッドなどを用意してdtoを受け取るような形を作りたい
 
         // スキル発動メソッド
-        public virtual void SkillEffect()
+        public virtual void SkillEffect(PlayerDto targetDto)
         {
             // スキルの効果を記載
+        }
+
+        public virtual void DelayedEffect(IGameState state)
+        {
+            // 遅延して発動する効果の処理を記載(次ラウンド開始時に発動)
         }
     }
 }
