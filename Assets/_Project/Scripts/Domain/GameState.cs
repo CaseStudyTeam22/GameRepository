@@ -61,6 +61,9 @@ namespace GamblingAction.Domain
 			// スタミナ上限を追加
 			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
 
+			// ステータスを更新
+			RefreshPlayerStats(m_Players[MyId]);
+
 			// 補正等を考慮した力を持ってくる
 			int finalPower = GetCalculatedPower(MyId, type, power);
 
@@ -210,38 +213,36 @@ namespace GamblingAction.Domain
 			{
 				var player = kv.Value;
 				// modifierはnullならインスタンス化しておく
-				// (Jsonからデータを読み取った際にデータがないとエラーが出るため)
 				player.PushModifier ??= new ModifierContainer {Modifiers = new()};
 				player.MoveModifier ??= new ModifierContainer {Modifiers = new()};
 				player.StaminaModifier ??= new ModifierContainer {Modifiers = new()};
-				// 問題なければ将来的にjson側には全部の値をきちんと保持しておくようにしたほうが
-				// エラーが起きづらいので安全なのかなと思ったりするなど
-				// ただ余計なデータが入るので一長一短
-
-				// スタミナに対して監視対象を追加する
-				player.StaminaModifier.OnChanged += () =>
-				{
-					// スタミナの補正値が変わったときに、dtoのスタミナ値を更新する
-
-					// そもそもGetModifiedValueにplayer.stamina入れてるのおかしくね?->ここがプレイヤーが使用している初期キャラのstamina statsが入る形
-					int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
-
-					// 現在との差分を計算
-					int diff = modifiedStamina - player.Stamina;
-					// スタミナの現在値に差分を加算して更新
-					player.MaxStamina += diff; // 最大値更新
-					// 加算値がマイナスの場合は最大スタミナをmaxと取って現在スタミナがそれを超えないようにする
-					if (diff < 0 && player.Stamina > player.MaxStamina)
-					{
-						player.Stamina = player.MaxStamina;
-					}
-					Debug.Log("スタミナの最大値が変更されました。 値: " + player.MaxStamina);
-
-					OnPlayersChanged?.Invoke(); // 順繰りに辿らせてStaminaBarView側に変更を通知
-				};
 
 				m_Players[kv.Key] = kv.Value;
+				
+				// プレイヤーの統計情報を更新
+				RefreshPlayerStats(player);
 			}
+		}
+
+		// プレイヤーのModifierに基づきステータスを再計算
+		private void RefreshPlayerStats(PlayerDto player)
+		{
+			if (player == null) return;
+
+			// スタミナの補正計算
+			int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
+
+			// 現在との差分を計算
+			int diff = modifiedStamina - player.Stamina;
+			player.MaxStamina += diff; // 最大値更新
+			
+			if (diff < 0 && player.Stamina > player.MaxStamina)
+			{
+				player.Stamina = player.MaxStamina;
+			}
+			
+			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
+			OnPlayersChanged?.Invoke();
 		}
 
 		private void SetPhase(EGamePhase phase)
@@ -268,6 +269,34 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.StartMatchCountdown);
 			m_Net.Off(ServerEvents.RoundStart);
 			m_Net.Off(ServerEvents.CloseAll);
+		}
+	}
+
+	// Modifierの拡張メソッド定義
+	public static class ModifierDomainExtensions
+	{
+		public static float GetModifiedValue(this ModifierContainer container, float baseValue)
+		{
+			if (container == null || container.Modifiers == null) return baseValue;
+			float totalRaw = 0.0f;
+			float totalRatio = 0.0f;
+			foreach (var modifier in container.Modifiers.Values)
+			{
+				totalRaw += modifier.RawValue;
+				totalRatio += modifier.RatioValue;
+			}
+			return (baseValue + totalRaw) * (1 + totalRatio);
+		}
+
+		public static void AddModifier(this ModifierContainer container, string tag, Modifier modifier)
+		{
+			if (container.Modifiers == null) container.Modifiers = new Dictionary<string, Modifier>();
+			container.Modifiers[tag] = modifier;
+		}
+
+		public static void RemoveModifier(this ModifierContainer container, string tag)
+		{
+			container.Modifiers?.Remove(tag);
 		}
 	}
 }
