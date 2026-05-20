@@ -39,7 +39,7 @@ namespace GamblingAction.Audio
             m_BeatClock.OnBeat -= HandleBeat;
         }
 
-        // OnBeat‚ğw“ÇB””Ô†‚É‰‚¶‚ÄSE‚ğÄ¶‚·‚é
+        // OnBeat‚©‚ç””Ô†‚É‰‚¶‚ÄÄ¶
         private void HandleBeat(int beat)
         {
             // 4”–Ú‚Æ1`3”–Ú
@@ -49,7 +49,7 @@ namespace GamblingAction.Audio
             }
             else
             {
-                //m_BeatSE.Post(gameObject);
+                m_BeatSE.Post(gameObject);
             }
         }
     }

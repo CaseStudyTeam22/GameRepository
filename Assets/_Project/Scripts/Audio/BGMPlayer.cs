@@ -3,6 +3,7 @@ using GamblingAction.Domain;
 
 namespace GamblingAction.Audio
 {
+    // 
     // フェーズ変化に応じてBGMの再生・停止を管理する
     public class BGMPlayer : MonoBehaviour
     {
@@ -49,8 +50,6 @@ namespace GamblingAction.Audio
 
         private void OnDestroy()
         {
-            Debug.Log("[BGMPlayer] OnDestroy");
-
             if (m_State != null)
             {
                 m_State.OnPhaseChanged -= HandlePhaseChanged;
@@ -62,30 +61,24 @@ namespace GamblingAction.Audio
             }
         }
 
-        // =========================================================
-        // イベントハンドラ
-        // =========================================================
-
         // IGameState.OnPhaseChangedから呼ばれる
         private void HandlePhaseChanged(EGamePhase phase)
         {
+            // State の切り替えは Post 時に Wwise Event 内で行われる
             if (phase == EGamePhase.Battle)
             {
-                // State の切り替えは Post 時に Wwise Event 内で行われる
                 m_IsWaitingForBeat1 = true;
                 Debug.Log("[BGMPlayer] Battle開始。CurrentBeat == 1 を待機中");
             }
             else if (phase == EGamePhase.RoundOver || phase == EGamePhase.GameOver)
             {
-                // State を Silence に切り替える。停止はWwise側のTransitionに委ねる
                 AkUnitySoundEngine.SetState(k_StateGroup, k_StateSilence);
                 m_IsWaitingForBeat1 = false;
                 m_PlayingID = 0u;
-                Debug.Log("[BGMPlayer] BGM停止（Transition委譲）");
+                Debug.Log("[BGMPlayer] BGM停止");
             }
             else
             {
-                // Battle・RoundOver・GameOver 以外のフェーズでは再生しない
                 AkUnitySoundEngine.SetState(k_StateGroup, k_StateSilence);
                 m_IsWaitingForBeat1 = false;
                 m_PlayingID = 0u;
@@ -95,7 +88,6 @@ namespace GamblingAction.Audio
         // IBeatClock.OnBeatから呼ばれる
         private void HandleBeat(int beat)
         {
-            // 待機中かつ1拍目のタイミングでBGMを再生する
             if (!m_IsWaitingForBeat1 || beat != 1)
             {
                 return;
@@ -103,7 +95,7 @@ namespace GamblingAction.Audio
 
             m_PlayingID = m_BGMEvent.Post(gameObject);
             m_IsWaitingForBeat1 = false;
-            Debug.Log("[BGMPlayer] BGM再生開始（CurrentBeat == 1）");
+            Debug.Log("[BGMPlayer] BGM再生命令を発行");
         }
     }
 }

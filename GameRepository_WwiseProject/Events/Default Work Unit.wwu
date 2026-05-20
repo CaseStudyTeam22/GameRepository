@@ -40,6 +40,48 @@
 								</Action>
 							</ChildrenList>
 						</Event>
+						<Event Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}">
+							<ChildrenList>
+								<Action Name="" ID="{2024AFC0-49EF-4D93-AAF5-3B640337163E}" ShortID="1050663688">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich_Cue" ID="{553B4211-45B2-4C00-856A-365EF2079FED}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{B2C17BF0-C103-45E8-AA57-6DF2C813783F}" ShortID="718801195">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}">
+							<ChildrenList>
+								<Action Name="" ID="{5F945C0C-21F1-4EA3-AC82-D60CEB618095}" ShortID="245353968">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich_Offset" ID="{DE67A132-7FB8-474B-A04B-696A2882FAA4}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{D466CDFC-B143-4D3C-B593-37C6C4C29E43}" ShortID="1058742664">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
 					</ChildrenList>
 				</Folder>
 				<Folder Name="SE" ID="{944C5C12-A59F-4F27-8197-672ABB6C637B}" ShortID="954298627">

@@ -1,7 +1,7 @@
 {
  "SoundBanksInfo": {
-  "Platform": "Windows",
-  "BasePlatform": "Windows",
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
   "SchemaVersion": "16",
   "SoundBankVersion": "172",
   "SoundBanks": [
@@ -10,19 +10,11 @@
     "Type": "User",
     "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
     "Language": "SFX",
-    "Hash": "{3AC241E8-A912-D8C6-ECF5-C8910688DBA1}",
+    "Hash": "{0BF46D18-E4EE-0288-45B0-0DE05B9024AB}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\BGM",
     "ShortName": "BGM",
     "Path": "BGM.bnk",
     "Media": [
-     {
-      "Id": "143921451",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Memory",
-      "ShortName": "025_dr_bpm160_4-4_rock.wav",
-      "CachePath": "6B/{6B6BD8F9-555E-8AEE-A9D5-8C2C32F2B9CF}.wem"
-     },
      {
       "Id": "567241478",
       "Language": "SFX",
@@ -30,53 +22,14 @@
       "Location": "Memory",
       "ShortName": "alban.wav",
       "CachePath": "9C/{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem"
-     },
-     {
-      "Id": "778453348",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Memory",
-      "ShortName": "loop_6_beat.wav",
-      "CachePath": "B1/{B1215744-F64F-2902-DE33-CE7DB3A77542}.wem"
      }
     ],
     "Events": [
      {
-      "Id": "1967054745",
-      "Name": "Play_BGM_Swtich_Cue",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_Cue",
+      "Id": "2267075721",
+      "Name": "Play_BGM_Swtich_01",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_01",
       "GUID": "{6A7310ED-DF0C-4989-B030-88FADFA93DFB}",
-      "DurationType": "Infinite",
-      "SwitchContainers": [
-       {
-        "SwitchValue": {
-         "GroupType": "State",
-         "GroupId": "762757699",
-         "Id": "2937832959",
-         "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
-        },
-        "MediaRefs": [
-         {
-          "Id": "778453348"
-         }
-        ]
-       }
-      ],
-      "ActionSetState": [
-       {
-        "GroupId": "762757699",
-        "Id": "2937832959",
-        "Name": "Battle",
-        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
-        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
-       }
-      ]
-     },
-     {
-      "Id": "2188851721",
-      "Name": "Play_BGM_Swtich_Offset",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_Offset",
-      "GUID": "{98D336B6-3990-456B-8FB7-369671D458D1}",
       "DurationType": "Infinite",
       "SwitchContainers": [
        {
@@ -91,15 +44,32 @@
           "Id": "567241478"
          }
         ]
-       }
-      ],
-      "ActionSetState": [
+       },
        {
-        "GroupId": "762757699",
-        "Id": "2937832959",
-        "Name": "Battle",
-        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
-        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+        "SwitchValue": {
+         "GroupType": "State",
+         "GroupId": "762757699",
+         "Id": "748895195",
+         "GUID": "{561120D3-89ED-41E1-8732-9D339D14E845}"
+        },
+        "MediaRefs": [
+         {
+          "Id": "567241478"
+         }
+        ]
+       },
+       {
+        "SwitchValue": {
+         "GroupType": "State",
+         "GroupId": "762757699",
+         "Id": "3041563226",
+         "GUID": "{BDF73118-FFF7-4E1F-80C3-819D4EA3BFE7}"
+        },
+        "MediaRefs": [
+         {
+          "Id": "567241478"
+         }
+        ]
        }
       ]
      },
@@ -119,7 +89,7 @@
         },
         "MediaRefs": [
          {
-          "Id": "143921451"
+          "Id": "567241478"
          }
         ]
        }
@@ -165,6 +135,6 @@
     ]
    }
   ],
-  "FileHash": "{6C540820-349F-FAF5-FF55-342413FFCDF4}"
+  "FileHash": "{23A694C4-4B5F-DFEE-22F2-04CC991C4388}"
  }
 }

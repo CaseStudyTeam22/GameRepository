@@ -77,9 +77,6 @@ namespace GamblingAction.Audio
             }
         }
 
-        // =========================================================
-        // イベントハンドラ
-        // =========================================================
         // 現在の拍の円をハイライトする
         private void HandleBeat(int beat)
         {
@@ -93,10 +90,6 @@ namespace GamblingAction.Audio
                 m_BeatCircles[i].color = (i == beat - 1) ? m_ActiveColor : m_InactiveColor;
             }
         }
-
-        // =========================================================
-        // 内部処理
-        // =========================================================
 
         // BeatsPerBarの数だけ円を生成する
         private void RebuildCircles(int count)

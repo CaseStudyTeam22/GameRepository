@@ -7,7 +7,9 @@
 					<ChildrenList>
 						<SoundBank Name="BGM" ID="{41121AD7-38B7-401C-874C-5C2FAF544D70}">
 							<ObjectInclusionList>
+								<ObjectRef Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
 								<ObjectRef Name="Play_Main" ID="{91159A1C-B4A0-487B-84AE-1F62BD19A298}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+								<ObjectRef Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
 							</ObjectInclusionList>
 							<ObjectExclusionList/>
 							<GameSyncExclusionList/>

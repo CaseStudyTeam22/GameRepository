@@ -5,7 +5,6 @@ using GamblingAction.Domain;
 namespace GamblingAction.Audio
 {
     // IGameStateの拍情報をIBeatClockとして外部に提供する
-    // Wwiseを直接知らない
     public class BeatClock : MonoBehaviour, IBeatClock
     {
         // BeatDurationとBeatsPerBarが確定しているか
@@ -93,7 +92,6 @@ namespace GamblingAction.Audio
                 OnBar?.Invoke();
             }
 
-            // CurrentBeatの更新
             CurrentBeat = m_State.CurrentBeat;
             m_PreviousBeat = CurrentBeat;
 
