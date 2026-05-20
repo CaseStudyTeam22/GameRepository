@@ -22,6 +22,9 @@ namespace GamblingAction.Domain
 
         // 初期化メソッドなどを用意してdtoを受け取るような形を作りたい
 
+        // まだこの辺のメソッド呼び出せてないので、
+        // 4拍目以降にこの関数を呼び出すのとdelayを呼び出すような構造をgamestateやserver.js側に作成の必要あり
+
         // スキル発動メソッド
         public virtual void SkillEffect(PlayerDto targetDto)
         {
