@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace GamblingAction.Core.Dto
 {
@@ -14,13 +15,21 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("score")]       public int Score;
 		[JsonProperty("money")]       public int Money;
 		[JsonProperty("chips")]       public int Chips;
-		[JsonProperty("stamina")]     public int Stamina;
 		[JsonProperty("isAI")]        public bool IsAI;
 		[JsonProperty("personality")] public string Personality;
 		[JsonProperty("color")]       public string Color;
 		[JsonProperty("selectedBuff")] public string SelectedBuff;
 		[JsonProperty("buffReady")]   public bool BuffReady;
 		[JsonProperty("falling")]     public bool Falling;
+
+		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("stamina")]     public int Stamina;
+		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 	}
 
 	public class IntentDto
@@ -28,5 +37,31 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("type")]  public string Type;
 		[JsonProperty("dir")]   public string Dir;
 		[JsonProperty("power")] public int Power;
+	}
+
+	// stats乗算
+	// バフごとに持たないといけないため形状は変わるかも
+	public class BuffEffectDto
+	{
+		[JsonProperty("buff")] public ModifierContainer Buff;
+	}
+
+	public enum EMissionType
+	{
+		Move,
+		Push,
+		//Attack,
+		Defend,
+		//Heal,
+		GainCoin,
+		GainChip
+	}
+
+	public class MissionDto
+	{
+		public EMissionType Type;
+    	public int TargetCount;
+    	public int CurrentCount;
+    	public bool IsCleared;
 	}
 }

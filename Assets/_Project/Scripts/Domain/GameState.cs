@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using GamblingAction.Net;
 using UnityEngine;
@@ -52,7 +53,18 @@ namespace GamblingAction.Domain
 			if (!GameActive || CurrentBeat >= 4) return;
 			var me = Me;
 			if (me == null || me.IsAI) return;
-			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
+
+			// テストで4拍ごとに押し出し力+1
+			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
+			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
+
+			// スタミナ上限を追加
+			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
+
+			// 補正等を考慮した力を持ってくる
+			int finalPower = GetCalculatedPower(MyId, type, power);
+
+			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
 		}
 
 		public void SubmitReady(bool isAI)
@@ -68,6 +80,28 @@ namespace GamblingAction.Domain
 		public void SubmitBuff(string buffId)
 		{
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
+		}
+
+		public int GetCalculatedPower(string playerId, string intentType, int basePower)
+		{
+			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
+
+			float finalPower = basePower;
+
+			// 行動タイプ別に応じてバフを適応
+			// stringで管理してる関係上switchｶﾅｰ
+			switch(intentType)
+			{
+				case IntentTypes.Push:
+					finalPower = player.PushModifier.GetModifiedValue(basePower);
+					break;
+				case IntentTypes.Move:
+					finalPower = player.MoveModifier.GetModifiedValue(basePower);
+					break;
+				// スタミナは一旦まち
+			}
+
+			return Mathf.RoundToInt(finalPower);
 		}
 
 		private void Subscribe()
@@ -132,6 +166,8 @@ namespace GamblingAction.Domain
 
 		private void HandleGameEvents(EventDto[] events)
 		{
+			// ここで特定のイベント(動いたならとか)で処理を実行等々
+
 			if (events == null || events.Length == 0) return;
 			OnGameEvents?.Invoke(events);
 		}
@@ -171,7 +207,41 @@ namespace GamblingAction.Domain
 			m_Players.Clear();
 			if (incoming == null) return;
 			foreach (var kv in incoming)
+			{
+				var player = kv.Value;
+				// modifierはnullならインスタンス化しておく
+				// (Jsonからデータを読み取った際にデータがないとエラーが出るため)
+				player.PushModifier ??= new ModifierContainer {Modifiers = new()};
+				player.MoveModifier ??= new ModifierContainer {Modifiers = new()};
+				player.StaminaModifier ??= new ModifierContainer {Modifiers = new()};
+				// 問題なければ将来的にjson側には全部の値をきちんと保持しておくようにしたほうが
+				// エラーが起きづらいので安全なのかなと思ったりするなど
+				// ただ余計なデータが入るので一長一短
+
+				// スタミナに対して監視対象を追加する
+				player.StaminaModifier.OnChanged += () =>
+				{
+					// スタミナの補正値が変わったときに、dtoのスタミナ値を更新する
+
+					// そもそもGetModifiedValueにplayer.stamina入れてるのおかしくね?->ここがプレイヤーが使用している初期キャラのstamina statsが入る形
+					int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
+
+					// 現在との差分を計算
+					int diff = modifiedStamina - player.Stamina;
+					// スタミナの現在値に差分を加算して更新
+					player.MaxStamina += diff; // 最大値更新
+					// 加算値がマイナスの場合は最大スタミナをmaxと取って現在スタミナがそれを超えないようにする
+					if (diff < 0 && player.Stamina > player.MaxStamina)
+					{
+						player.Stamina = player.MaxStamina;
+					}
+					Debug.Log("スタミナの最大値が変更されました。 値: " + player.MaxStamina);
+
+					OnPlayersChanged?.Invoke(); // 順繰りに辿らせてStaminaBarView側に変更を通知
+				};
+
 				m_Players[kv.Key] = kv.Value;
+			}
 		}
 
 		private void SetPhase(EGamePhase phase)

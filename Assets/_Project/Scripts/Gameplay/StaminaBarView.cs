@@ -28,6 +28,7 @@ namespace GamblingAction.Gameplay
 
 		private Image[] m_Cells;
 		private int m_LastStamina = -1;
+		private int m_LastMaxStamina = -1;
 
 		private void Awake()
 		{
@@ -60,7 +61,19 @@ namespace GamblingAction.Gameplay
 		public void Apply(PlayerDto dto)
 		{
 			if (dto == null || m_Cells == null) return;
-			if (dto.Stamina == m_LastStamina) return;
+
+			// 最大スタミナの確認
+			if(dto.MaxStamina != m_LastMaxStamina)
+			{
+				UpdateMaxStamina(dto.MaxStamina);
+			}
+
+			if (dto.Stamina == m_LastStamina || dto.MaxStamina != m_LastMaxStamina)
+			{
+				UpdateStaminaVisuals(dto.Stamina, dto.MaxStamina);
+			}
+
+
 			m_LastStamina = dto.Stamina;
 
 			var fillColor = dto.Stamina <= m_LowThreshold ? m_LowColor : m_HealthyColor;
@@ -69,6 +82,38 @@ namespace GamblingAction.Gameplay
 				bool filled = i < dto.Stamina;
 				m_Cells[i].color = filled ? fillColor : m_EmptyColor;
 			}
+		}
+
+		// 最大スタミナに応じてセルの数を増減
+		private void UpdateMaxStamina(int newMax)
+		{
+			// m_LastMaxStamina = maxStamina;
+            // Transform parent = m_CellsRoot != null ? m_CellsRoot : m_CellTemplate.transform.parent;
+
+            // // 不足しているセルを生成
+            // while (m_Cells.Count < maxStamina)
+            // {
+            //     var clone = Instantiate(m_CellTemplate, parent);
+            //     clone.gameObject.name = $"Cell{m_Cells.Count}";
+            //     m_Cells.Add(clone);
+            // }
+
+            // // 最大値に合わせて表示/非表示を切り替え
+            // for (int i = 0; i < m_Cells.Count; i++)
+            // {
+            //     m_Cells[i].gameObject.SetActive(i < maxStamina);
+            // }
+		}
+
+		// 見た目の変更
+		private void UpdateStaminaVisuals(int stamina, int maxStamina)
+		{
+			// var fillColor = stamina <= m_LowThreshold ? m_LowColor : m_HealthyColor;
+			// for (int i = 0; i < m_Cells.Length; i++)
+			// {
+			// 	bool filled = i < stamina;
+			// 	m_Cells[i].color = filled ? fillColor : m_EmptyColor;
+			// }
 		}
 	}
 }
