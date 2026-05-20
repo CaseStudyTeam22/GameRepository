@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{E82C2438-602D-467F-80B3-1B402D6559E4}" SchemaVersion="133">
+	<Events>
+		<WorkUnit Name="Default Work Unit" ID="{E82C2438-602D-467F-80B3-1B402D6559E4}" PersistMode="Standalone">
+			<ChildrenList>
+				<Folder Name="BGM" ID="{54D555D7-C39C-4874-8C80-EC7167884C2F}" ShortID="987364767">
+					<ChildrenList>
+						<Event Name="Play_Main" ID="{91159A1C-B4A0-487B-84AE-1F62BD19A298}">
+							<ChildrenList>
+								<Action Name="" ID="{625C81F7-D0B6-4EF9-B14B-187BC1FC9773}" ShortID="504484114">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich" ID="{C89C3003-4061-4C0A-9020-FC6315C39EA1}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{BD26D6D6-C1EC-4CAD-8C47-BE865773441C}" ShortID="925154163">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Stop_Main" ID="{68A092B9-B96D-48CB-A140-960A361DFAF1}">
+							<ChildrenList>
+								<Action Name="" ID="{C015E0A2-48C7-43B6-8E2A-D97C86C54BA8}" ShortID="207523910">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="2"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="MainBgm" ID="{58951FDD-8F62-4324-8D73-117DDA2185CE}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}">
+							<ChildrenList>
+								<Action Name="" ID="{2024AFC0-49EF-4D93-AAF5-3B640337163E}" ShortID="1050663688">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich_Cue" ID="{553B4211-45B2-4C00-856A-365EF2079FED}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{B2C17BF0-C103-45E8-AA57-6DF2C813783F}" ShortID="718801195">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}">
+							<ChildrenList>
+								<Action Name="" ID="{5F945C0C-21F1-4EA3-AC82-D60CEB618095}" ShortID="245353968">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich_Offset" ID="{DE67A132-7FB8-474B-A04B-696A2882FAA4}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{D466CDFC-B143-4D3C-B593-37C6C4C29E43}" ShortID="1058742664">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+					</ChildrenList>
+				</Folder>
+				<Folder Name="SE" ID="{944C5C12-A59F-4F27-8197-672ABB6C637B}" ShortID="954298627">
+					<ChildrenList>
+						<Folder Name="Beat" ID="{7CD0A077-3B54-4D16-B4F2-25FD0B739131}" ShortID="244768117">
+							<ChildrenList>
+								<Event Name="Play_Beat_4" ID="{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}">
+									<ChildrenList>
+										<Action Name="" ID="{0E64E527-8492-4712-A5D5-CF597EC2741A}" ShortID="875132760">
+											<ReferenceList>
+												<Reference Name="Target">
+													<ObjectRef Name="Beat_4" ID="{0D98371A-4812-47C3-A5E4-2AD750048801}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+												</Reference>
+											</ReferenceList>
+										</Action>
+									</ChildrenList>
+								</Event>
+								<Event Name="Play_Beat_1_to_3" ID="{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}">
+									<ChildrenList>
+										<Action Name="" ID="{F7B72F62-5031-4AB5-B6C6-215C2C81A5DA}" ShortID="609758130">
+											<ReferenceList>
+												<Reference Name="Target">
+													<ObjectRef Name="Beat_1_to_3" ID="{AF7807DD-2BBF-477E-A1DA-541D0A3E28AB}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+												</Reference>
+											</ReferenceList>
+										</Action>
+									</ChildrenList>
+								</Event>
+							</ChildrenList>
+						</Folder>
+					</ChildrenList>
+				</Folder>
+			</ChildrenList>
+		</WorkUnit>
+	</Events>
+</WwiseDocument>
