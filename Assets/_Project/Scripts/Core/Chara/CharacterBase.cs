@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace GamblingAction.Core
 {
-    public class CharacterBase : MonoBehaviour
+    public class CharacterBase
     {
         // 各種補正値はこっち側の定数で持っておいて、start時かなんかに
         // dtoに対して登録が走るみたいな処理の方がいいかなぁ
@@ -16,6 +16,8 @@ namespace GamblingAction.Core
         public virtual int MaxStamina => 5;
 
         public virtual string CharacterName => "サンプルキャラ";
+
+        // 初期化メソッドなどを用意してdtoを受け取るような形を作りたい
 
         // スキル発動メソッド
         public virtual void SkillEffect()
