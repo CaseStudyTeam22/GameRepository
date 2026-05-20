@@ -29,6 +29,7 @@ namespace GamblingAction.Core.Dto
 		public const string PlayerReady    = "player_ready";
 		public const string ExchangeChips  = "exchange_chips";
 		public const string BuffSelected   = "buff_selected";
+		public const string MissionCompleted = "mission_completed";
 		public const string SetIntent      = "set_intent";
 		public const string Shutdown       = "shutdown";
 	}

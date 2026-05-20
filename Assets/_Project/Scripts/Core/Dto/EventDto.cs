@@ -6,8 +6,9 @@ namespace GamblingAction.Core.Dto
 	{
 		[JsonProperty("type")]     public string Type;
 
-		[JsonProperty("x")]        public int? X;
-		[JsonProperty("y")]        public int? Y;
+		// サーバは衝突中点などで小数座標（例: 5.5）を送るため float で受ける
+		[JsonProperty("x")]        public float? X;
+		[JsonProperty("y")]        public float? Y;
 
 		[JsonProperty("players")]  public string[] Players;
 
