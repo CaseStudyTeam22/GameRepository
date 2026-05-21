@@ -5,7 +5,7 @@ namespace GamblingAction.Gameplay
 {
 	/// <summary>
 	/// プレイヤー sprite に対する視覚効果を一括管理する。
-	/// 現状は被弾 / 押し出し / 衝突時のシェイク・パンチのみ。
+	/// 登場ディゾルブ、被弾 / 押し出し / 衝突時のシェイク・パンチを持つ。
 	/// 将来的にカラー変化・マテリアル差し替え等もここに集約する想定。
 	///
 	/// PlayerView は server イベントを受け取って本コンポーネントの Play 系メソッドを呼ぶ。
@@ -16,7 +16,13 @@ namespace GamblingAction.Gameplay
 		[SerializeField, Tooltip("シェイク等の演出を作用させる sprite 子ノード（root の移動 tween と分離するため別 transform）")]
 		private Transform m_SpriteRoot;
 
-		[Header("Hit Shake (ランダム方向)")]
+		[SerializeField, Tooltip("ディゾルブを適用する SpriteRenderer。マテリアルは GamblingAction/SpriteDissolve を想定")]
+		private SpriteRenderer m_DissolveSprite;
+		[SerializeField, Tooltip("登場ディゾルブの長さ（秒）")]
+		private float m_AppearDuration = 0.6f;
+		[SerializeField, Tooltip("登場ディゾルブのイージング")]
+		private Ease m_AppearEase = Ease.OutQuad;
+
 		[SerializeField, Tooltip("被弾時シェイクの強さ（ワールド単位の最大ずれ）")]
 		private float m_HitShakeStrength = 0.05f;
 		[SerializeField, Tooltip("被弾時シェイクの長さ（秒）")]
@@ -24,7 +30,6 @@ namespace GamblingAction.Gameplay
 		[SerializeField, Tooltip("被弾時シェイクの振動回数")]
 		private int m_HitShakeVibrato = 18;
 
-		[Header("Pushed Punch (押し出された方向)")]
 		[SerializeField, Tooltip("被push時に押された方向へ突き出す距離")]
 		private float m_PushedPunchStrength = 0.05f;
 		[SerializeField, Tooltip("被push時 punch の長さ（秒）")]
@@ -32,7 +37,6 @@ namespace GamblingAction.Gameplay
 		[SerializeField, Tooltip("被push時 punch の振動回数（戻り方向の小さな揺れ）")]
 		private int m_PushedPunchVibrato = 6;
 
-		[Header("Bump Punch (移動衝突した方向)")]
 		[SerializeField, Tooltip("bump時に衝突方向へ突き出す距離")]
 		private float m_BumpPunchStrength = 0.05f;
 		[SerializeField, Tooltip("bump時 punch の長さ（秒）")]
@@ -43,6 +47,11 @@ namespace GamblingAction.Gameplay
 		private Tween m_SpriteFxTween;
 		private Vector3 m_SpriteRootBaseLocalPos;
 		private bool m_Initialized;
+
+		private static readonly int s_DissolveAmount = Shader.PropertyToID("_DissolveAmount");
+		private static readonly int s_EdgeColor = Shader.PropertyToID("_EdgeColor");
+		private MaterialPropertyBlock m_DissolveBlock;
+		private Tween m_DissolveTween;
 
 		private void Awake()
 		{
@@ -56,6 +65,38 @@ namespace GamblingAction.Gameplay
 		private void OnDestroy()
 		{
 			m_SpriteFxTween?.Kill();
+			m_DissolveTween?.Kill();
+		}
+
+		// 登場時。完全溶解（非表示）から完全表示へアニメーションする。
+		public void PlayAppear()
+		{
+			if (m_DissolveSprite == null) return;
+			m_DissolveTween?.Kill();
+			SetDissolve(0f);
+			float v = 0f;
+			m_DissolveTween = DOTween.To(() => v, x => { v = x; SetDissolve(v); }, 1f, m_AppearDuration)
+				.SetEase(m_AppearEase);
+		}
+
+		// ディゾルブ境界の発光色を設定する。チーム色（赤/青）に合わせるため PlayerView から呼ぶ。
+		public void SetEdgeColor(Color color)
+		{
+			if (m_DissolveSprite == null) return;
+			m_DissolveBlock ??= new MaterialPropertyBlock();
+			m_DissolveSprite.GetPropertyBlock(m_DissolveBlock);
+			m_DissolveBlock.SetColor(s_EdgeColor, color);
+			m_DissolveSprite.SetPropertyBlock(m_DissolveBlock);
+		}
+
+		// SpriteRenderer に MaterialPropertyBlock で _DissolveAmount を書き込む（インスタンスごとに独立）。
+		private void SetDissolve(float amount)
+		{
+			if (m_DissolveSprite == null) return;
+			m_DissolveBlock ??= new MaterialPropertyBlock();
+			m_DissolveSprite.GetPropertyBlock(m_DissolveBlock);
+			m_DissolveBlock.SetFloat(s_DissolveAmount, amount);
+			m_DissolveSprite.SetPropertyBlock(m_DissolveBlock);
 		}
 
 		// 被弾時。sprite 子ノードを X/Y 平面でランダム方向に揺らす
