@@ -34,6 +34,31 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 	}
 
+	// キャラクターの初期データの定義
+	public class InitCharacterDto
+	{
+		[JsonProperty("characterId")] public string CharacterId; // 管理id
+		[JsonProperty("name")]        public string Name; // 表示名
+		[JsonProperty("description")] public string Description;
+		[JsonProperty("initMoney")]    public int InitMoney; // 初期所持金
+		[JsonProperty("initChips")]    public int InitChips; // 初期チップ数
+		[JsonProperty("initStamina")]  public int InitStamina; // 初期最大スタミナ
+	}
+
+	// キャラごとのスキル値管理
+	public class CharacterSkillDto
+	{
+		[JsonProperty("characterId")] public string CharacterId; // 管理id
+		[JsonProperty("skill")]      public string Skill;
+		[JsonProperty("power")]      public int Power; // 強さ
+		[JsonProperty("cost")]       public int Cost; // スタミナコスト
+		[JsonProperty("target")]     public string Target; // 対象 (self, enemy, all)
+		[JsonProperty("damage")] 	public int Damage; // ダメージ量 (攻撃スキルの場合)
+		[JsonProperty("heal")] 		public int Heal; // 回復量 (回復スキルの場合)
+		[JsonProperty("forceAction")] public string ForceAction; // スキルを発動した際に強制行動 (攻撃ならattack, 防御ならdefendなど)
+
+	}
+
 	public class IntentDto
 	{
 		[JsonProperty("type")]  public string Type;
