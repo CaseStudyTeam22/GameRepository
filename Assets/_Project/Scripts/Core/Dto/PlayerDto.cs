@@ -22,6 +22,8 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("buffReady")]   public bool BuffReady;
 		[JsonProperty("falling")]     public bool Falling;
 
+		[JsonProperty("characterId")] public string CharacterId; // キャラクター識別ID
+
 		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
 		// 上記の合体値用フィールド
 		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
