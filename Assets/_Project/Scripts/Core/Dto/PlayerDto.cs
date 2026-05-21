@@ -35,6 +35,7 @@ namespace GamblingAction.Core.Dto
 	}
 
 	// キャラクターの初期データの定義
+	// とりあえず選択キャラに応じてここからデータを引っ張りサーバー側に渡すような処理の構築が必要。
 	public class InitCharacterDto
 	{
 		[JsonProperty("characterId")] public string CharacterId; // 管理id
