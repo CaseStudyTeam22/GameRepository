@@ -84,6 +84,9 @@ namespace GamblingAction.Gameplay
 			// PopupDirector に自分を登録（popup の発生位置アンカーとして使われる）
 			if (PopupDirector.Instance != null)
 				PopupDirector.Instance.RegisterPlayer(m_PlayerId, transform);
+
+			// 登場ディゾルブを再生（m_Fx 未設定なら何もしない）
+			m_Fx?.PlayAppear();
 		}
 
 		private void OnDestroy()
@@ -195,6 +198,8 @@ namespace GamblingAction.Gameplay
 			var color = ParseColor(dto.Color);
 			if (m_Sprite != null) m_Sprite.color = color;
 			if (m_BaseMaterial != null) m_BaseMaterial.color = color;
+			// 登場ディゾルブの境界発光色もチーム色に合わせる
+			m_Fx?.SetEdgeColor(color);
 		}
 
 		private static Color ParseColor(string hex)
