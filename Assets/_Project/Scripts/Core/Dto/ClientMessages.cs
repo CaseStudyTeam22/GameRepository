@@ -46,6 +46,7 @@ namespace GamblingAction.Core.Dto
 		public const string Push    = "push";
 		public const string Attack  = "attack";
 		public const string Defense = "defense";
+		public const string Skill = "skill";
 		public const string Rest    = "rest";
 		public const string None    = "none";
 	}
