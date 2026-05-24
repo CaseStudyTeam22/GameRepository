@@ -26,6 +26,10 @@ let currentBeat = 0;
 let cycleCount = 0; 
 let timeLeft = Config.GAME_DURATION;
 let gameActive = false;
+// 双方準備完了後のカウントダウン中の setTimeout 句柄。取り消し時に clear する。
+let lobbyCountdownTimer = null;
+// カウントダウンの長さ（ミリ秒）。クライアントの 3-2-1-GO 表示に合わせる。
+const LOBBY_COUNTDOWN_MS = 3200;
 
 function resetPlayerPos(id) {
     const p = players[id];
@@ -344,7 +348,7 @@ io.on('connection', (socket) => {
         intent: null, ready: false, exchanged: false, score: 0,
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
-        selectedBuff: null, buffReady: false
+        selectedBuff: null, buffReady: false, inLobby: false
     };
     
     console.log(`[Server] Player joined: ${socket.id} as ${role}`);
@@ -363,10 +367,41 @@ io.on('connection', (socket) => {
 
             const pList = Object.values(players);
             if (pList.length >= 2 && pList.every(pl => pl.ready)) {
-                resetMatch();
+                // すぐに対局へ進めず、カウントダウンを挟む。途中で取り消せるようにする。
+                io.emit('start_countdown');
+                lobbyCountdownTimer = setTimeout(() => {
+                    lobbyCountdownTimer = null;
+                    resetMatch();
+                }, LOBBY_COUNTDOWN_MS);
             } else {
                 socket.emit('waiting_for_others', { waitingFor: p.role === 'P1' ? 'P2' : 'P1' });
             }
+            io.emit('sync_state', { players });
+        }
+    });
+
+    socket.on('player_unready', () => {
+        const p = players[socket.id];
+        // 対局開始前のみ準備を取り消せる。
+        if (p && !gameActive) {
+            p.ready = false;
+            p.isAI = false;
+            console.log(`[Server] Player ${p.role} canceled ready`);
+            // カウントダウン中なら中断し、対局へ進めない。
+            if (lobbyCountdownTimer) {
+                clearTimeout(lobbyCountdownTimer);
+                lobbyCountdownTimer = null;
+                io.emit('countdown_canceled');
+            }
+            io.emit('sync_state', { players });
+        }
+    });
+
+    // クライアントが Lobby シーンに入ったことを通知する。相手の Portrait 滑り込みの起点になる。
+    socket.on('enter_lobby', () => {
+        const p = players[socket.id];
+        if (p) {
+            p.inLobby = true;
             io.emit('sync_state', { players });
         }
     });

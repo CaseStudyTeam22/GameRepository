@@ -40,6 +40,8 @@ namespace GamblingAction.Domain
 		public event Action<string> OnGameOver;
 		public event Action<string> OnPlayerLeft;
 		public event Action<string> OnWaitingForOthers;
+		public event Action OnCountdownStart;
+		public event Action OnCountdownCancel;
 		public event Action<bool> OnConnectionChanged;
 
 		public GameState(INetClient net)
@@ -75,6 +77,16 @@ namespace GamblingAction.Domain
 		public void SubmitReady(bool isAI)
 		{
 			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
+		}
+
+		public void SubmitUnready()
+		{
+			m_Net.Emit(ClientEvents.PlayerUnready, new { });
+		}
+
+		public void SubmitEnterLobby()
+		{
+			m_Net.Emit(ClientEvents.EnterLobby, new { });
 		}
 
 		public void SubmitExchange(int amount)
@@ -132,6 +144,8 @@ namespace GamblingAction.Domain
 			m_Net.On<WaitingForOthersMessage>(ServerEvents.WaitingForOthers, HandleWaitingForOthers);
 			m_Net.On<string>(ServerEvents.PlayerLeft, HandlePlayerLeft);
 
+			m_Net.On(ServerEvents.StartCountdown,      () => OnCountdownStart?.Invoke());
+			m_Net.On(ServerEvents.CountdownCanceled,   () => OnCountdownCancel?.Invoke());
 			m_Net.On(ServerEvents.StartExchange,       () => SetPhase(EGamePhase.Exchange));
 			m_Net.On(ServerEvents.StartBuffSelection,  () => SetPhase(EGamePhase.BuffSelection));
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
@@ -265,6 +279,8 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.GameOver);
 			m_Net.Off(ServerEvents.WaitingForOthers);
 			m_Net.Off(ServerEvents.PlayerLeft);
+			m_Net.Off(ServerEvents.StartCountdown);
+			m_Net.Off(ServerEvents.CountdownCanceled);
 			m_Net.Off(ServerEvents.StartExchange);
 			m_Net.Off(ServerEvents.StartBuffSelection);
 			m_Net.Off(ServerEvents.StartMatchCountdown);

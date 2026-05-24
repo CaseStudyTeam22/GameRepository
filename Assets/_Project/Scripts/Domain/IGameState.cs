@@ -21,6 +21,8 @@ namespace GamblingAction.Domain
 
 		void SubmitIntent(string type, string dir, int power);
 		void SubmitReady(bool isAI);
+		void SubmitUnready();
+		void SubmitEnterLobby();
 		void SubmitExchange(int amount);
 		void SubmitBuff(string buffId);
 
@@ -34,6 +36,8 @@ namespace GamblingAction.Domain
 		event Action<string> OnGameOver;
 		event Action<string> OnPlayerLeft;
 		event Action<string> OnWaitingForOthers;
+		event Action OnCountdownStart;
+		event Action OnCountdownCancel;
 		event Action<bool> OnConnectionChanged;
 	}
 }

@@ -53,5 +53,8 @@ namespace GamblingAction.Core.Dto
 		public const string WaitingForOthers     = "waiting_for_others";
 		public const string PlayerLeft           = "player_left";
 		public const string CloseAll             = "close_all";
+		// Lobby で双方準備完了後のカウントダウン開始 / 中断。
+		public const string StartCountdown       = "start_countdown";
+		public const string CountdownCanceled    = "countdown_canceled";
 	}
 }

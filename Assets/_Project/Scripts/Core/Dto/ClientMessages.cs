@@ -27,6 +27,8 @@ namespace GamblingAction.Core.Dto
 	public static class ClientEvents
 	{
 		public const string PlayerReady    = "player_ready";
+		public const string PlayerUnready  = "player_unready";
+		public const string EnterLobby     = "enter_lobby";
 		public const string ExchangeChips  = "exchange_chips";
 		public const string BuffSelected   = "buff_selected";
 		public const string MissionCompleted = "mission_completed";
