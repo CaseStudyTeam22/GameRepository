@@ -12,8 +12,6 @@ namespace GamblingAction.UI
 	public class FlowPanelView : MonoBehaviour
 	{
 		[Header("Existing flow panels")]
-		[FormerlySerializedAs("lobbyPanel")]
-		[SerializeField] private GameObject m_LobbyPanel;
 		[FormerlySerializedAs("exchangePanel")]
 		[SerializeField] private GameObject m_ExchangePanel;
 		[FormerlySerializedAs("buffPanel")]
@@ -49,8 +47,6 @@ namespace GamblingAction.UI
 
 		private IGameState m_State;
 
-		private Button m_ReadyButton;
-		private Toggle m_ReadyAsAIToggle;
 		private Slider m_ExchangeSlider;
 		private TMP_Text m_ExchangeAmountText;
 		private Button m_ExchangeConfirmButton;
@@ -107,9 +103,6 @@ namespace GamblingAction.UI
 
 		private void FindFlowControls()
 		{
-			m_ReadyButton           = FindIn<Button>(m_LobbyPanel,    "ReadyButton");
-			m_ReadyAsAIToggle       = FindIn<Toggle>(m_LobbyPanel,    "ReadyAsAIToggle");
-
 			m_ExchangeSlider        = FindIn<Slider>(m_ExchangePanel, "ExchangeSlider");
 			m_ExchangeAmountText    = FindIn<TMP_Text>(m_ExchangePanel, "ExchangeAmountText");
 			m_ExchangeConfirmButton = FindIn<Button>(m_ExchangePanel, "ExchangeConfirmButton");
@@ -183,14 +176,6 @@ namespace GamblingAction.UI
 
 		private void WireButtons()
 		{
-			if (m_ReadyButton != null)
-				m_ReadyButton.onClick.AddListener(() =>
-				{
-					bool isAI = m_ReadyAsAIToggle != null && m_ReadyAsAIToggle.isOn;
-					m_State.SubmitReady(isAI);
-					m_ReadyButton.interactable = false;
-				});
-
 			if (m_ExchangeSlider != null)
 				m_ExchangeSlider.onValueChanged.AddListener(v =>
 				{
@@ -221,7 +206,6 @@ namespace GamblingAction.UI
 
 		private void HandlePhase(EGamePhase phase)
 		{
-			SetActive(m_LobbyPanel,     phase == EGamePhase.Lobby);
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
 			SetActive(m_BuffPanel,      phase == EGamePhase.BuffSelection);
 			SetActive(m_RoundOverPanel, phase == EGamePhase.RoundOver);
@@ -229,9 +213,6 @@ namespace GamblingAction.UI
 
 			bool stageVisible = phase == EGamePhase.Countdown || phase == EGamePhase.Battle;
 			SetActive(m_MainGameStage, stageVisible);
-
-			if (phase == EGamePhase.Lobby && m_ReadyButton != null)
-				m_ReadyButton.interactable = true;
 
 			if (phase == EGamePhase.Exchange)
 			{

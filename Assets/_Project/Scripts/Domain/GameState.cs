@@ -63,6 +63,8 @@ namespace GamblingAction.Domain
 
 			// ステータスを更新
 			RefreshPlayerStats(m_Players[MyId]);
+			// 自分の stats 変化を UI に反映する。
+			OnPlayersChanged?.Invoke();
 
 			// 補正等を考慮した力を持ってくる
 			int finalPower = GetCalculatedPower(MyId, type, power);
@@ -242,7 +244,6 @@ namespace GamblingAction.Domain
 			}
 			
 			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
-			OnPlayersChanged?.Invoke();
 		}
 
 		private void SetPhase(EGamePhase phase)

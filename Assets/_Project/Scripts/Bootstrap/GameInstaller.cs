@@ -9,6 +9,10 @@ namespace GamblingAction.Bootstrap
 	{
 		public static GameInstaller Instance { get; private set; }
 
+		// Bootstrap を経由せず単一シーンを直接 Play したときのデバッグ用。
+		// DebugBootstrapper が true にすると、接続後に自動で AI 準備する。
+		public static bool DebugAutoAIReady = false;
+
 		[FormerlySerializedAs("serverUrl")]
 		[SerializeField] private string m_ServerUrl = "http://localhost:3000";
 		[FormerlySerializedAs("verboseProbeLogs")]
@@ -40,6 +44,8 @@ namespace GamblingAction.Bootstrap
 				return;
 			}
 			Instance = this;
+			// シーン遷移後も接続と状態を保持するため常駐させる。
+			DontDestroyOnLoad(gameObject);
 
 			m_Net = new SocketIONetClient();
 			m_State = new GameState(m_Net);
@@ -48,12 +54,16 @@ namespace GamblingAction.Bootstrap
 			if (m_VerboseProbeLogs)
 				AttachProbe();
 
-			if (m_AutoReady)
-				m_State.OnStateInitialized += () => m_State.SubmitReady(isAI: m_AutoReadyAsAI);
+			// デバッグ直起動時は強制的に AI 準備する。
+			bool autoReady = m_AutoReady || DebugAutoAIReady;
+			bool autoReadyAsAI = m_AutoReadyAsAI || DebugAutoAIReady;
+
+			if (autoReady)
+				m_State.OnStateInitialized += () => m_State.SubmitReady(isAI: autoReadyAsAI);
 
 			m_State.OnPhaseChanged += phase =>
 			{
-				if (m_AutoReadyAsAI) return;
+				if (autoReadyAsAI) return;
 
 				if (m_AutoExchange && phase == EGamePhase.Exchange)
 					m_State.SubmitExchange(m_AutoExchangeAmount);
@@ -82,7 +92,10 @@ namespace GamblingAction.Bootstrap
 
 		private void OnDestroy()
 		{
-			if (Instance == this) Instance = null;
+			// 自分が常駐インスタンスのときだけ後始末する。
+			// 重複生成された側が自滅するときに、生きている方の状態と接続を壊さないため。
+			if (Instance != this) return;
+			Instance = null;
 			GameStateLocator.Clear();
 			m_State?.Dispose();
 			m_Net?.Dispose();
