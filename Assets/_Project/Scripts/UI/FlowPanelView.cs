@@ -425,6 +425,15 @@ namespace GamblingAction.UI
 
 		private IEnumerator PrepareCountdownSequence()
 		{
+			if (m_PrepareSeconds <= 0f)
+			{
+				if (m_PrepareTimebar != null) m_PrepareTimebar.fillAmount = 0f;
+				if (m_PrepareTimeText != null) m_PrepareTimeText.text = "0";
+				SetActive(m_PreparingCountdownPanel, false);
+				m_PrepareCountdownCo = null;
+				yield break;
+			}
+
 			float remaining = m_PrepareSeconds;
 			while (remaining > 0f)
 			{
