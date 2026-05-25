@@ -258,6 +258,8 @@ namespace GamblingAction.UI
 		{
 			var me = m_State.Me;
 			var opponent = m_State.Opponent;
+			m_IsReady = me != null && me.Ready;
+			UpdateReadyButtonText();
 
 			// 自分は Lobby に入った時点で滑り込ませる。
 			if (me != null && !m_SelfJoined)
