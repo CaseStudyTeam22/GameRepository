@@ -32,6 +32,8 @@ namespace GamblingAction.Core.Dto
 		public const string ExchangeChips  = "exchange_chips";
 		public const string BuffSelected   = "buff_selected";
 		public const string MissionCompleted = "mission_completed";
+		// 盤面・キャラ生成を終え、本轮を始められる状態になったことを通知する。
+		public const string RoundReady     = "round_ready";
 		public const string SetIntent      = "set_intent";
 		public const string Shutdown       = "shutdown";
 	}

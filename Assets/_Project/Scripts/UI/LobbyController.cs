@@ -54,6 +54,18 @@ namespace GamblingAction.UI
 		[SerializeField, Tooltip("滑り込みのイージング")]
 		private Ease m_SlideEase = Ease.OutQuad;
 
+		[Header("キャラ切替（自分側 Portrait）")]
+		[SerializeField, Tooltip("キャラ立ち絵。index 0=ランダム（初期表示）, 1=A, 2=B, 3=C")]
+		private Sprite[] m_CharaSprites;
+		[SerializeField, Tooltip("退場時に旧絵が外側（左）へ退く距離（px）")]
+		private float m_CharaExitOffset = 60f;
+		[SerializeField, Tooltip("入場時に新絵が内側（右）から滑り込む距離（px）")]
+		private float m_CharaEnterOffset = 120f;
+		[SerializeField, Tooltip("切替アニメの長さ（秒）")]
+		private float m_CharaSwapDuration = 0.3f;
+		[SerializeField, Tooltip("切替のイージング")]
+		private Ease m_CharaSwapEase = Ease.OutQuad;
+
 		private IGameState m_State;
 
 		// ブロック内から名前で取得した要素。
@@ -67,6 +79,17 @@ namespace GamblingAction.UI
 		private TMP_Text m_ReadyButtonText;
 		private Toggle m_ReadyAsAIToggle;
 		private Button[] m_CharaButtons;
+		// ランダム選択ボタン。立ち絵 index 0 に対応する。
+		private Button m_RandomButton;
+
+		// 自分側 Portrait のキャラ切替用の 2 枚スロット。旧絵を退場させつつ新絵を入場させる。
+		private Image m_SelfPortraitSlotA, m_SelfPortraitSlotB;
+		// 現在表示中のスロット。切替のたびにもう一方と入れ替える。
+		private Image m_SelfActiveSlot, m_SelfIdleSlot;
+		// スロットの定位置（中心）。退場・入場はここを基準に左右へずらす。
+		private float m_SelfSlotHomeX;
+		// 現在選択中のキャラ index。0=ランダム。同じボタンの連打を無視するのにも使う。
+		private int m_SelfCharaIndex;
 
 		// 各サイドの滑り込み対象。順序 = 名札 → BG(Portrait) → 準備状態。
 		private RectTransform[] m_SelfSlideItems, m_OpponentSlideItems;
@@ -104,6 +127,10 @@ namespace GamblingAction.UI
 
 		private void OnDestroy()
 		{
+			// 切替アニメが残っていると破棄済み Image を触って例外になるため止める。
+			if (m_SelfPortraitSlotA != null) m_SelfPortraitSlotA.DOKill();
+			if (m_SelfPortraitSlotB != null) m_SelfPortraitSlotB.DOKill();
+
 			if (m_State == null) return;
 			m_State.OnStateInitialized -= Refresh;
 			m_State.OnPlayersChanged   -= Refresh;
@@ -138,6 +165,12 @@ namespace GamblingAction.UI
 				Find<Button>(m_PreparingPanel, "CharaOption/Chara_B"),
 				Find<Button>(m_PreparingPanel, "CharaOption/Chara_C"),
 			};
+			m_RandomButton = Find<Button>(m_PreparingPanel, "CharaOption/Chara_Random");
+
+			// 自分側 Portrait の 2 枚スロットを取得し、初期状態（ランダム絵）を作る。
+			m_SelfPortraitSlotA = Find<Image>(m_SelfPanel, "Portrait/SlotA");
+			m_SelfPortraitSlotB = Find<Image>(m_SelfPanel, "Portrait/SlotB");
+			InitCharaSlots();
 
 			// 滑り込み対象を順序どおり集める：名札 → BG(Portrait) → 準備状態。
 			m_SelfSlideItems = CollectSlideItems(m_SelfPanel);
@@ -335,24 +368,119 @@ namespace GamblingAction.UI
 
 		private void WireCharaButtons()
 		{
-			if (m_CharaButtons == null) return;
-			for (int i = 0; i < m_CharaButtons.Length; i++)
+			if (m_CharaButtons != null)
 			{
-				int index = i;
-				if (m_CharaButtons[i] != null)
-					m_CharaButtons[i].onClick.AddListener(() => SelectChara(index));
+				for (int i = 0; i < m_CharaButtons.Length; i++)
+				{
+					// ボタン index 0/1/2（A/B/C）は立ち絵 index 1/2/3 に対応。
+					int spriteIndex = i + 1;
+					if (m_CharaButtons[i] != null)
+						m_CharaButtons[i].onClick.AddListener(() => SelectChara(spriteIndex));
+				}
 			}
+			// ランダムボタンは立ち絵 index 0。
+			if (m_RandomButton != null)
+				m_RandomButton.onClick.AddListener(() => SelectChara(0));
 		}
 
-		// キャラ選択は視覚のみ。選択中を 1 つだけ拡大表示する。
-		private void SelectChara(int selectedIndex)
+		// キャラ選択。選択中ボタンを拡大し、自分側 Portrait の立ち絵を切り替える。
+		// 引数は立ち絵 index：0=ランダム, 1=A, 2=B, 3=C。
+		private void SelectChara(int spriteIndex)
 		{
+			// ランダム + A/B/C を 1 グループとして、選択中だけ拡大する。
+			SetButtonScale(m_RandomButton, spriteIndex == 0);
 			for (int i = 0; i < m_CharaButtons.Length; i++)
+				SetButtonScale(m_CharaButtons[i], i + 1 == spriteIndex);
+
+			SwapCharaSprite(spriteIndex);
+		}
+
+		private void SetButtonScale(Button button, bool selected)
+		{
+			if (button == null) return;
+			float scale = selected ? m_CharaSelectedScale : 1f;
+			button.transform.localScale = new Vector3(scale, scale, 1f);
+		}
+
+		// 自分側 Portrait の 2 枚スロットの初期状態を作る。活動スロットにランダム絵を置き、
+		// 待機スロットは透明にしておく。スロットが無い（prefab 未改修）場合は何もしない。
+		private void InitCharaSlots()
+		{
+			if (m_SelfPortraitSlotA == null || m_SelfPortraitSlotB == null) return;
+
+			m_SelfActiveSlot = m_SelfPortraitSlotA;
+			m_SelfIdleSlot = m_SelfPortraitSlotB;
+			m_SelfSlotHomeX = m_SelfPortraitSlotA.rectTransform.localPosition.x;
+			m_SelfCharaIndex = 0;
+
+			SetSlotSprite(m_SelfActiveSlot, 0, 1f);
+			SetSlotSprite(m_SelfIdleSlot, -1, 0f);
+
+			// 初期はランダム選択中。ボタンの拡大表示も合わせる。
+			SetButtonScale(m_RandomButton, true);
+			for (int i = 0; i < m_CharaButtons.Length; i++)
+				SetButtonScale(m_CharaButtons[i], false);
+		}
+
+		// 活動スロットの旧絵を外側（左）へ退場させつつ、待機スロットに新絵を入れて内側（右）から入場させる。
+		private void SwapCharaSprite(int spriteIndex)
+		{
+			if (m_SelfActiveSlot == null || m_SelfIdleSlot == null) return;
+			// 同じキャラの連打は無視する。
+			if (spriteIndex == m_SelfCharaIndex) return;
+			m_SelfCharaIndex = spriteIndex;
+
+			var outgoing = m_SelfActiveSlot;
+			var incoming = m_SelfIdleSlot;
+
+			// 進行中のアニメを止めてから組み直す（連続切替で値が壊れないように）。
+			outgoing.DOKill();
+			incoming.DOKill();
+
+			// 退場：左へずらしつつフェードアウト。
+			MoveSlotX(outgoing, m_SelfSlotHomeX - m_CharaExitOffset);
+			FadeSlot(outgoing, 0f);
+
+			// 入場：新絵をセットし、右の開始位置・透明から定位置・不透明へ。
+			SetSlotSprite(incoming, spriteIndex, 0f);
+			incoming.rectTransform.localPosition =
+				new Vector3(m_SelfSlotHomeX + m_CharaEnterOffset,
+					incoming.rectTransform.localPosition.y,
+					incoming.rectTransform.localPosition.z);
+			MoveSlotX(incoming, m_SelfSlotHomeX);
+			FadeSlot(incoming, 1f);
+
+			// 役割を入れ替える。
+			m_SelfActiveSlot = incoming;
+			m_SelfIdleSlot = outgoing;
+		}
+
+		// スロットに立ち絵を設定し、alpha を即時反映する。
+		// 対応する立ち絵が用意されていない場合は prefab に置いた仮絵をそのまま残し、
+		// 位置とフェードのアニメだけ動かせるようにする（絵が揃う前でも動作確認できる）。
+		private void SetSlotSprite(Image slot, int spriteIndex, float alpha)
+		{
+			if (slot == null) return;
+			if (m_CharaSprites != null && spriteIndex >= 0 && spriteIndex < m_CharaSprites.Length
+				&& m_CharaSprites[spriteIndex] != null)
+				slot.sprite = m_CharaSprites[spriteIndex];
+			var c = slot.color;
+			slot.color = new Color(c.r, c.g, c.b, alpha);
+		}
+
+		private void MoveSlotX(Image slot, float targetX)
+		{
+			slot.rectTransform.DOLocalMoveX(targetX, m_CharaSwapDuration).SetEase(m_CharaSwapEase);
+		}
+
+		// DOTween 無料版で確実に使える DOTween.To で alpha をアニメする（Image.DOFade に依存しない）。
+		private void FadeSlot(Image slot, float targetAlpha)
+		{
+			DOTween.To(() => slot.color.a, a =>
 			{
-				if (m_CharaButtons[i] == null) continue;
-				float scale = i == selectedIndex ? m_CharaSelectedScale : 1f;
-				m_CharaButtons[i].transform.localScale = new Vector3(scale, scale, 1f);
-			}
+				var c = slot.color;
+				slot.color = new Color(c.r, c.g, c.b, a);
+			}, targetAlpha, m_CharaSwapDuration).SetEase(m_CharaSwapEase);
 		}
 
 	}

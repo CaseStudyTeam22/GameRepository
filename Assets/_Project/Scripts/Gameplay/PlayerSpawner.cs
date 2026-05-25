@@ -22,6 +22,8 @@ namespace GamblingAction.Gameplay
 
 		public static PlayerSpawner Instance { get; private set; }
 		public IReadOnlyDictionary<string, PlayerView> Views => m_Views;
+		// 一括生成で全員のキャラを出し終えたときに発火する。本轮開始の同期に使う。
+		public event System.Action OnAllSpawned;
 		public PlayerView LocalPlayer =>
 			m_State != null && m_State.MyId != null && m_Views.TryGetValue(m_State.MyId, out var v) ? v : null;
 
@@ -77,6 +79,25 @@ namespace GamblingAction.Gameplay
 				Despawn(id);
 		}
 
+		// 本轮のキャラ生成を明示的に起動する。RoundStartSequencer から呼ぶ。
+		// プレイヤーデータは常駐 GameState に既にあるため、sync_state を待たずに生成できる。
+		// 盤面がまだなら登場演出の完了を待ち、完了済みなら即生成する。
+		public void BeginRoundSpawn()
+		{
+			if (m_State == null) m_State = GameStateLocator.Current;
+			if (m_State == null)
+			{
+				Debug.LogError("[PlayerSpawner] BeginRoundSpawn: GameStateLocator.Current is null.");
+				return;
+			}
+			if (m_Board == null) m_Board = BoardView.Instance;
+
+			if (m_Board != null && !m_Board.IsBoardReady)
+				ArmBatchSpawn();
+			else
+				SpawnAllMissing();
+		}
+
 		// 盤面完成 → 待ち時間 → 全員同時生成、の流れを一度だけ仕掛ける。
 		private void ArmBatchSpawn()
 		{
@@ -94,9 +115,17 @@ namespace GamblingAction.Gameplay
 		private void SpawnAllMissing()
 		{
 			if (m_State == null) return;
+			bool spawnedAny = false;
 			foreach (var id in m_State.Players.Keys)
 				if (!m_Views.ContainsKey(id))
+				{
 					Spawn(id);
+					spawnedAny = true;
+				}
+
+			// 実際に生成し、かつ全員が揃ったときだけ通知する。
+			if (spawnedAny && m_Views.Count >= m_State.Players.Count)
+				OnAllSpawned?.Invoke();
 		}
 
 		private void Spawn(string id)

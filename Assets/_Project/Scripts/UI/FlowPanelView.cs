@@ -25,6 +25,12 @@ namespace GamblingAction.UI
 		[FormerlySerializedAs("mainGameStage")]
 		[SerializeField] private GameObject m_MainGameStage;
 
+		[Header("Preparing countdown (Exchange / BuffSelection)")]
+		[Tooltip("兑换 / 选卡フェーズの制限時間パネル。Timebar(Image filled radial) と TimeText を子に持つ")]
+		[SerializeField] private GameObject m_PreparingCountdownPanel;
+		[Tooltip("兑换 / 选卡の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
+		[SerializeField] private float m_PrepareSeconds = 20f;
+
 		[Header("Tuning")]
 		[FormerlySerializedAs("totalRounds")]
 		[SerializeField] private int m_TotalRounds = 3;
@@ -63,9 +69,13 @@ namespace GamblingAction.UI
 		private RectTransform m_TimeBarFill;
 		private TMP_Text m_RoundText;
 
+		private Image m_PrepareTimebar;
+		private TMP_Text m_PrepareTimeText;
+
 		private int m_RoundCount;
 		private Coroutine m_CountdownCo;
 		private Coroutine m_ExecuteFlashCo;
+		private Coroutine m_PrepareCountdownCo;
 		private Vector2 m_TimeBarFillFullSize;
 
 		private void Start()
@@ -110,6 +120,9 @@ namespace GamblingAction.UI
 			m_HighRiskButton        = FindIn<Button>(m_BuffPanel, "HighRiskButton");
 			m_LowRiskButton         = FindIn<Button>(m_BuffPanel, "LowRiskButton");
 			m_SkipBuffButton        = FindIn<Button>(m_BuffPanel, "SkipBuffButton");
+
+			m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
+			m_PrepareTimeText = FindIn<TMP_Text>(m_PreparingCountdownPanel, "TimeText");
 		}
 
 		private void FindStageControls()
@@ -213,6 +226,12 @@ namespace GamblingAction.UI
 
 			bool stageVisible = phase == EGamePhase.Countdown || phase == EGamePhase.Battle;
 			SetActive(m_MainGameStage, stageVisible);
+
+			// 兑换 / 选卡フェーズだけ制限時間パネルを出してカウントダウンする。
+			if (phase == EGamePhase.Exchange || phase == EGamePhase.BuffSelection)
+				StartPrepareCountdown();
+			else
+				StopPrepareCountdown();
 
 			if (phase == EGamePhase.Exchange)
 			{
@@ -348,6 +367,41 @@ namespace GamblingAction.UI
 			yield return new WaitForSeconds(m_ExecuteFlashSeconds);
 			m_ExecuteText.gameObject.SetActive(false);
 			m_ExecuteFlashCo = null;
+		}
+
+		// 兑换 / 选卡フェーズの制限時間カウントダウンを開始する。
+		// サーバ側の制限時間と同じ秒数をクライアントでも独立に数えて表示する（表示専用）。
+		private void StartPrepareCountdown()
+		{
+			if (m_PreparingCountdownPanel == null) return;
+			SetActive(m_PreparingCountdownPanel, true);
+			if (m_PrepareCountdownCo != null) StopCoroutine(m_PrepareCountdownCo);
+			m_PrepareCountdownCo = StartCoroutine(PrepareCountdownSequence());
+		}
+
+		private void StopPrepareCountdown()
+		{
+			if (m_PrepareCountdownCo != null)
+			{
+				StopCoroutine(m_PrepareCountdownCo);
+				m_PrepareCountdownCo = null;
+			}
+			SetActive(m_PreparingCountdownPanel, false);
+		}
+
+		private IEnumerator PrepareCountdownSequence()
+		{
+			float remaining = m_PrepareSeconds;
+			while (remaining > 0f)
+			{
+				if (m_PrepareTimebar != null) m_PrepareTimebar.fillAmount = remaining / m_PrepareSeconds;
+				if (m_PrepareTimeText != null) m_PrepareTimeText.text = Mathf.CeilToInt(remaining).ToString();
+				remaining -= Time.deltaTime;
+				yield return null;
+			}
+			if (m_PrepareTimebar != null) m_PrepareTimebar.fillAmount = 0f;
+			if (m_PrepareTimeText != null) m_PrepareTimeText.text = "0";
+			m_PrepareCountdownCo = null;
 		}
 
 		private void StartCountdown()

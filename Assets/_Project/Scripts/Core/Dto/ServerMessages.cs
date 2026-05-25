@@ -56,5 +56,7 @@ namespace GamblingAction.Core.Dto
 		// Lobby で双方準備完了後のカウントダウン開始 / 中断。
 		public const string StartCountdown       = "start_countdown";
 		public const string CountdownCanceled    = "countdown_canceled";
+		// 本轮の開始要求。クライアントは盤面・キャラ生成を終えてから round_ready を返す。
+		public const string PrepareRound         = "prepare_round";
 	}
 }

@@ -31,6 +31,12 @@ let lobbyCountdownTimer = null;
 // カウントダウンの長さ（ミリ秒）。クライアントの 3-2-1-GO 表示に合わせる。
 const LOBBY_COUNTDOWN_MS = 3200;
 
+// 兑换 / 选卡フェーズの制限時間（ミリ秒）。超過時は自動処理する。
+const PREPARE_PHASE_MS = 20000;
+// 兑换 / 选卡の制限時間タイマー句柄。全員完了時 / フェーズ離脱時に clear する。
+let exchangeTimer = null;
+let buffTimer = null;
+
 function resetPlayerPos(id) {
     const p = players[id];
     if (!p) return;
@@ -40,6 +46,21 @@ function resetPlayerPos(id) {
     p.stamina = Config.INITIAL_STAMINA;
     p.falling = false; p.intent = null; p.chips = Config.INITIAL_CHIPS;
     p.selectedBuff = null; p.buffReady = false;
+}
+
+// 本轮の開始要求。クライアントの盤面・キャラ生成が終わるのを待ってから兑换へ進む。
+// resetMatch / round_over の直後にここを通し、双方の round_ready を待つ。
+function beginRound() {
+    for (let id in players) players[id].roundReady = false;
+    io.emit('prepare_round');
+}
+
+// 双方のクライアントが盤面・キャラ生成を終えたら兑换フェーズへ進む。
+function checkAllRoundReady() {
+    const pList = Object.values(players);
+    if (pList.length >= 2 && pList.every(pl => pl.roundReady)) {
+        prepareExchangePhase();
+    }
 }
 
 function prepareExchangePhase() {
@@ -52,6 +73,26 @@ function prepareExchangePhase() {
     io.emit('sync_state', { players });
     io.emit('sync_items', items);
     io.emit('start_exchange');
+
+    // 制限時間：超過したら未兑换のプレイヤーを自動兑换する。
+    if (exchangeTimer) clearTimeout(exchangeTimer);
+    exchangeTimer = setTimeout(autoExchangeTimedOut, PREPARE_PHASE_MS);
+}
+
+// 兑换の制限時間超過。未兑换のプレイヤーは所持金の 1/3 を筹码に替える。
+function autoExchangeTimedOut() {
+    exchangeTimer = null;
+    let changed = false;
+    for (let id in players) {
+        const p = players[id];
+        if (p.exchanged || p.isAI) continue;
+        const amount = Math.floor(p.money / 3 / 100);
+        const cost = amount * 100;
+        p.money -= cost; p.chips += amount; p.exchanged = true;
+        changed = true;
+    }
+    if (changed) io.emit('sync_state', { players });
+    checkAllExchanged();
 }
 
 function handleAIExchange(id) {
@@ -65,24 +106,16 @@ function handleAIExchange(id) {
     }, 1000 + Math.random() * 1000);
 }
 
-function checkAllExchanged() {
-    const pList = Object.values(players);
-    if (pList.length >= 2 && pList.every(pl => pl.exchanged)) {
-        // 进入 BUFF 选择环节
-        io.emit('start_buff_selection');
-        // AI 逻辑：等待玩家选择后再自动选择 (由客户端逻辑或服务器延迟触发)
-    }
-}
-
 setInterval(() => {
-    if (!gameActive) return; 
+    if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
     
     // 时间到，判定平局或结束
     if (timeLeft <= 0) {
         gameActive = false;
         io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
-        setTimeout(prepareExchangePhase, 3000);
+        // 次轮も門控を通す：盤面・キャラ生成を待ってから兑换へ。
+        setTimeout(beginRound, 3000);
         return;
     }
 
@@ -117,7 +150,7 @@ setInterval(() => {
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
                             if (players[winnerId].score >= 2) io.emit('game_over', { winnerRole: players[winnerId].role });
-                            else { io.emit('round_over', { winnerRole: players[winnerId].role }); setTimeout(prepareExchangePhase, 3000); }
+                            else { io.emit('round_over', { winnerRole: players[winnerId].role }); setTimeout(beginRound, 3000); }
                         }
                     }, 1500);
                 }
@@ -348,7 +381,7 @@ io.on('connection', (socket) => {
         intent: null, ready: false, exchanged: false, score: 0,
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
-        selectedBuff: null, buffReady: false, inLobby: false
+        selectedBuff: null, buffReady: false, inLobby: false, roundReady: false
     };
     
     console.log(`[Server] Player joined: ${socket.id} as ${role}`);
@@ -406,6 +439,15 @@ io.on('connection', (socket) => {
         }
     });
 
+    // クライアントが盤面・キャラ生成を終え、本轮を始められる状態になったことを通知する。
+    socket.on('round_ready', () => {
+        const p = players[socket.id];
+        if (p) {
+            p.roundReady = true;
+            checkAllRoundReady();
+        }
+    });
+
     socket.on('exchange_chips', (data) => {
         const p = players[socket.id];
         if (p && !gameActive && !p.isAI) {
@@ -448,10 +490,37 @@ io.on('connection', (socket) => {
 function checkAllExchanged() {
     const pList = Object.values(players);
     if (pList.length >= 2 && pList.every(pl => pl.exchanged)) {
+        // 兑换フェーズを抜けるので制限時間タイマーを止める。
+        if (exchangeTimer) { clearTimeout(exchangeTimer); exchangeTimer = null; }
         io.emit('start_buff_selection');
+        // 选卡フェーズの制限時間。超過したら未选卡のプレイヤーを自動选卡する。
+        if (buffTimer) clearTimeout(buffTimer);
+        buffTimer = setTimeout(autoBuffTimedOut, PREPARE_PHASE_MS);
         // 如果全是 AI，或者需要 AI 自动选卡，触发检查
         setTimeout(checkAllBuffsSelected, 1500);
     }
+}
+
+// 选卡の制限時間超過。未选卡のプレイヤーは买得起范围内でランダムに选ぶ。
+function autoBuffTimedOut() {
+    buffTimer = null;
+    let changed = false;
+    for (let id in players) {
+        const p = players[id];
+        if (p.buffReady || p.isAI) continue;
+        let pick = null;
+        if (p.chips >= 15 && Math.random() < 0.5) pick = 'high_risk';
+        else if (p.chips >= 5) pick = 'low_risk';
+        if (pick) {
+            const c = pick === 'high_risk' ? 15 : 5;
+            p.chips -= c;
+            p.selectedBuff = pick;
+        }
+        p.buffReady = true;
+        changed = true;
+    }
+    if (changed) io.emit('sync_state', { players });
+    checkAllBuffsSelected();
 }
 
 function checkAllBuffsSelected() {
@@ -480,6 +549,8 @@ function checkAllBuffsSelected() {
 
         // 如果全员（包括 AI）都选好了，开始倒计时
         if (pList.every(pl => pl.buffReady)) {
+            // 选卡フェーズを抜けるので制限時間タイマーを止める。
+            if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
             io.emit('start_match_countdown');
             setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
         }
@@ -494,5 +565,6 @@ server.listen(3000, '::', () => console.log(`[GamblingAction Server] Running on 
 function resetMatch() {
     gameActive = false; items = []; currentBeat = 0;
     for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; resetPlayerPos(id); players[id].exchanged = false; }
-    prepareExchangePhase();
+    // 直接兑换へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
+    beginRound();
 }

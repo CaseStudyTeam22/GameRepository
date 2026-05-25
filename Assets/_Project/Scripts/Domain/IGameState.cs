@@ -25,6 +25,7 @@ namespace GamblingAction.Domain
 		void SubmitEnterLobby();
 		void SubmitExchange(int amount);
 		void SubmitBuff(string buffId);
+		void SubmitRoundReady();
 
 		event Action OnStateInitialized;
 		event Action OnPlayersChanged;
@@ -38,6 +39,8 @@ namespace GamblingAction.Domain
 		event Action<string> OnWaitingForOthers;
 		event Action OnCountdownStart;
 		event Action OnCountdownCancel;
+		// サーバが本轮の開始を要求。盤面・キャラ生成のトリガに使う。
+		event Action OnPrepareRound;
 		event Action<bool> OnConnectionChanged;
 	}
 }
