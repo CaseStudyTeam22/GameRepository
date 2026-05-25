@@ -357,7 +357,7 @@ namespace GamblingAction.UI
 			yield return new WaitForSeconds(m_CountdownStep);
 			m_CountdownCo = null;
 			// カウントダウン完走後に遷移する。
-			if (m_SceneLoader != null) m_SceneLoader.LoadScene("Boot");
+			if (m_SceneLoader != null) m_SceneLoader.Load();
 		}
 
 		private void StopCountdown()
