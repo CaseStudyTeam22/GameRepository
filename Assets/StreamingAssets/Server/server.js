@@ -414,11 +414,14 @@ io.on('connection', (socket) => {
             const pList = Object.values(players);
             if (pList.length >= 2 && pList.every(pl => pl.ready)) {
                 // すぐに対局へ進めず、カウントダウンを挟む。途中で取り消せるようにする。
-                io.emit('start_countdown');
-                lobbyCountdownTimer = setTimeout(() => {
-                    lobbyCountdownTimer = null;
-                    resetMatch();
-                }, LOBBY_COUNTDOWN_MS);
+                // 重複した ready 通知では既存のカウントダウンを再作成しない。
+                if (!lobbyCountdownTimer) {
+                    io.emit('start_countdown');
+                    lobbyCountdownTimer = setTimeout(() => {
+                        lobbyCountdownTimer = null;
+                        resetMatch();
+                    }, LOBBY_COUNTDOWN_MS);
+                }
             } else {
                 socket.emit('waiting_for_others', { waitingFor: p.role === 'P1' ? 'P2' : 'P1' });
             }
