@@ -539,6 +539,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e13c2424036f2424e8089f85d10c717f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_BoardGenerateTime: 0.5
+  m_CharaSpawnTime: 1.5
 --- !u!4 &940113455
 Transform:
   m_ObjectHideFlags: 0
@@ -738,7 +740,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PlayerPrefab: {fileID: 7189623766787943944, guid: bb01885396d5bc94bba4058c7f9e5fea, type: 3}
   m_Board: {fileID: 1925288800}
-  m_SpawnDelayAfterBoard: 1
 --- !u!4 &1943859165
 Transform:
   m_ObjectHideFlags: 0
@@ -869,7 +870,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4646181563703324139, guid: 7fa2cf700273af742991ea83815db014, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5089725073465099020, guid: 7fa2cf700273af742991ea83815db014, type: 3}
       propertyPath: m_AnchorMax.y

@@ -26,14 +26,16 @@ namespace GamblingAction.UI
 		[SerializeField] private GameObject m_MainGameStage;
 
 		[Header("Preparing countdown (Exchange / BuffSelection)")]
-		[Tooltip("兑换 / 选卡フェーズの制限時間パネル。Timebar(Image filled radial) と TimeText を子に持つ")]
+		[Tooltip("チップ交換 / カード選択フェーズの制限時間パネル。Timebar(Image filled radial) と TimeText を子に持つ")]
 		[SerializeField] private GameObject m_PreparingCountdownPanel;
-		[Tooltip("兑换 / 选卡の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
+		[Tooltip("チップ交換 / カード選択の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
 		[SerializeField] private float m_PrepareSeconds = 20f;
 
 		[Header("Tuning")]
 		[FormerlySerializedAs("totalRounds")]
 		[SerializeField] private int m_TotalRounds = 3;
+		[Tooltip("決着パネル（RoundOver）を表示しておく秒数。経過後に自動で隠す。サーバの次ラウンド開始待ち（3 秒）に合わせる")]
+		[SerializeField] private float m_RoundOverDisplaySeconds = 3f;
 		[FormerlySerializedAs("executeFlashSeconds")]
 		[SerializeField] private float m_ExecuteFlashSeconds = 0.4f;
 		[FormerlySerializedAs("beatOnColor")]
@@ -75,6 +77,7 @@ namespace GamblingAction.UI
 		private int m_RoundCount;
 		private Coroutine m_CountdownCo;
 		private Coroutine m_ExecuteFlashCo;
+		private Coroutine m_RoundOverHideCo;
 		private Coroutine m_PrepareCountdownCo;
 		private Vector2 m_TimeBarFillFullSize;
 
@@ -221,13 +224,19 @@ namespace GamblingAction.UI
 		{
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
 			SetActive(m_BuffPanel,      phase == EGamePhase.BuffSelection);
-			SetActive(m_RoundOverPanel, phase == EGamePhase.RoundOver);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
+
+			// 決着パネルは固定秒数だけ表示して自動で隠す（次ラウンドの生成より前に消す）。
+			// それ以外のフェーズに入ったら取りこぼし防止で即座に隠す。
+			if (phase == EGamePhase.RoundOver)
+				ShowRoundOverThenHide();
+			else
+				HideRoundOverPanel();
 
 			bool stageVisible = phase == EGamePhase.Countdown || phase == EGamePhase.Battle;
 			SetActive(m_MainGameStage, stageVisible);
 
-			// 兑换 / 选卡フェーズだけ制限時間パネルを出してカウントダウンする。
+			// チップ交換 / カード選択フェーズだけ制限時間パネルを出してカウントダウンする。
 			if (phase == EGamePhase.Exchange || phase == EGamePhase.BuffSelection)
 				StartPrepareCountdown();
 			else
@@ -369,7 +378,32 @@ namespace GamblingAction.UI
 			m_ExecuteFlashCo = null;
 		}
 
-		// 兑换 / 选卡フェーズの制限時間カウントダウンを開始する。
+		// 決着パネルを表示し、固定秒数後に自動で隠す。
+		private void ShowRoundOverThenHide()
+		{
+			SetActive(m_RoundOverPanel, true);
+			if (m_RoundOverHideCo != null) StopCoroutine(m_RoundOverHideCo);
+			m_RoundOverHideCo = StartCoroutine(HideRoundOverAfterDelay());
+		}
+
+		private IEnumerator HideRoundOverAfterDelay()
+		{
+			yield return new WaitForSeconds(m_RoundOverDisplaySeconds);
+			SetActive(m_RoundOverPanel, false);
+			m_RoundOverHideCo = null;
+		}
+
+		private void HideRoundOverPanel()
+		{
+			if (m_RoundOverHideCo != null)
+			{
+				StopCoroutine(m_RoundOverHideCo);
+				m_RoundOverHideCo = null;
+			}
+			SetActive(m_RoundOverPanel, false);
+		}
+
+		// チップ交換 / カード選択フェーズの制限時間カウントダウンを開始する。
 		// サーバ側の制限時間と同じ秒数をクライアントでも独立に数えて表示する（表示専用）。
 		private void StartPrepareCountdown()
 		{

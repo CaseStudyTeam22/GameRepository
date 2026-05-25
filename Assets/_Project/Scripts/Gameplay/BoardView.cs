@@ -57,6 +57,8 @@ namespace GamblingAction.Gameplay
 
 		private Sequence m_IntroSeq;
 		private bool m_Generated;
+		// 生成したマス全体の親。ClearBoard で破棄するために保持する。
+		private Transform m_TilesRoot;
 
 		private void Awake()
 		{
@@ -75,6 +77,20 @@ namespace GamblingAction.Gameplay
 			if (m_Generated) return;
 			m_Generated = true;
 			GenerateTiles();
+		}
+
+		// 生成済みのマスを破棄し、再生成できる状態へ戻す。ラウンド間で地形を作り直すために使う。
+		public void ClearBoard()
+		{
+			m_IntroSeq?.Kill();
+			m_IntroSeq = null;
+			if (m_TilesRoot != null)
+			{
+				Destroy(m_TilesRoot.gameObject);
+				m_TilesRoot = null;
+			}
+			m_Generated = false;
+			IsBoardReady = false;
 		}
 
 		private void OnDestroy()
@@ -130,6 +146,7 @@ namespace GamblingAction.Gameplay
 
 			var root = new GameObject("Tiles").transform;
 			root.SetParent(transform, false);
+			m_TilesRoot = root;
 
 			bool animate = m_PlayIntro && Application.isPlaying;
 			if (animate) m_IntroSeq = DOTween.Sequence();

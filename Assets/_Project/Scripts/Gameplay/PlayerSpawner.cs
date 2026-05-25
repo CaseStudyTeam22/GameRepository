@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using DG.Tweening;
 using GamblingAction.Domain;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -12,17 +11,13 @@ namespace GamblingAction.Gameplay
 		[SerializeField] private PlayerView m_PlayerPrefab;
 		[FormerlySerializedAs("board")]
 		[SerializeField] private BoardView m_Board;
-		[Tooltip("盤面の登場演出が終わってからキャラを出すまでの待ち時間（秒）")]
-		[SerializeField] private float m_SpawnDelayAfterBoard = 1.5f;
 
 		private readonly Dictionary<string, PlayerView> m_Views = new();
-		// 盤面待ちの一括生成フローを二重に仕掛けないためのフラグ。
-		private bool m_BatchSpawnArmed;
 		private IGameState m_State;
 
 		public static PlayerSpawner Instance { get; private set; }
 		public IReadOnlyDictionary<string, PlayerView> Views => m_Views;
-		// 一括生成で全員のキャラを出し終えたときに発火する。本轮開始の同期に使う。
+		// 一括生成で全員のキャラを出し終えたときに発火する。ラウンド開始の同期に使う。
 		public event System.Action OnAllSpawned;
 		public PlayerView LocalPlayer =>
 			m_State != null && m_State.MyId != null && m_Views.TryGetValue(m_State.MyId, out var v) ? v : null;
@@ -42,79 +37,30 @@ namespace GamblingAction.Gameplay
 				Debug.LogError("[PlayerSpawner] GameStateLocator.Current is null. Make sure GameInstaller runs before PlayerSpawner (Awake before Start).");
 				return;
 			}
-			m_State.OnStateInitialized += SyncSpawns;
-			m_State.OnPlayersChanged   += SyncSpawns;
+			// 退出したプレイヤーの despawn 同期のみ購読する。
+			// 生成のタイミングは RoundFlow（RoundStartSequencer）が編成する。
+			m_State.OnPlayersChanged += DespawnLeftPlayers;
 		}
 
 		private void OnDestroy()
 		{
 			if (Instance == this) Instance = null;
 			if (m_State == null) return;
-			m_State.OnStateInitialized -= SyncSpawns;
-			m_State.OnPlayersChanged   -= SyncSpawns;
+			m_State.OnPlayersChanged -= DespawnLeftPlayers;
 		}
 
-		private void SyncSpawns()
-		{
-			if (m_Board == null) m_Board = BoardView.Instance;
-
-			bool anyMissing = false;
-			foreach (var id in m_State.Players.Keys)
-				if (!m_Views.ContainsKey(id)) { anyMissing = true; break; }
-
-			if (anyMissing)
-			{
-				// 盤面がまだなら登場演出 + 待ち時間のあと、全員を同時に生成する。
-				if (m_Board != null && !m_Board.IsBoardReady)
-					ArmBatchSpawn();
-				else
-					SpawnAllMissing();
-			}
-
-			var stale = new List<string>();
-			foreach (var id in m_Views.Keys)
-				if (!m_State.Players.ContainsKey(id))
-					stale.Add(id);
-			foreach (var id in stale)
-				Despawn(id);
-		}
-
-		// 本轮のキャラ生成を明示的に起動する。RoundStartSequencer から呼ぶ。
-		// プレイヤーデータは常駐 GameState に既にあるため、sync_state を待たずに生成できる。
-		// 盤面がまだなら登場演出の完了を待ち、完了済みなら即生成する。
-		public void BeginRoundSpawn()
+		// 現在のプレイヤーのうち未生成のものを全員生成する。RoundFlow から呼ぶ。
+		// 盤面の準備や待ち時間は RoundFlow 側で制御するため、ここでは即時生成する。
+		public void SpawnAll()
 		{
 			if (m_State == null) m_State = GameStateLocator.Current;
 			if (m_State == null)
 			{
-				Debug.LogError("[PlayerSpawner] BeginRoundSpawn: GameStateLocator.Current is null.");
+				Debug.LogError("[PlayerSpawner] SpawnAll: GameStateLocator.Current is null.");
 				return;
 			}
 			if (m_Board == null) m_Board = BoardView.Instance;
 
-			if (m_Board != null && !m_Board.IsBoardReady)
-				ArmBatchSpawn();
-			else
-				SpawnAllMissing();
-		}
-
-		// 盤面完成 → 待ち時間 → 全員同時生成、の流れを一度だけ仕掛ける。
-		private void ArmBatchSpawn()
-		{
-			if (m_BatchSpawnArmed) return;
-			m_BatchSpawnArmed = true;
-			m_Board.AddBoardReadyHandler(() =>
-				DOVirtual.DelayedCall(m_SpawnDelayAfterBoard, () =>
-				{
-					if (this == null) return;
-					SpawnAllMissing();
-				}));
-		}
-
-		// 現在の全プレイヤーのうち未生成のものをまとめて生成する。
-		private void SpawnAllMissing()
-		{
-			if (m_State == null) return;
 			bool spawnedAny = false;
 			foreach (var id in m_State.Players.Keys)
 				if (!m_Views.ContainsKey(id))
@@ -126,6 +72,25 @@ namespace GamblingAction.Gameplay
 			// 実際に生成し、かつ全員が揃ったときだけ通知する。
 			if (spawnedAny && m_Views.Count >= m_State.Players.Count)
 				OnAllSpawned?.Invoke();
+		}
+
+		// 全プレイヤーの View を破棄する。ラウンド間で作り直すために RoundFlow から呼ぶ。
+		public void DespawnAll()
+		{
+			foreach (var view in m_Views.Values)
+				if (view != null) Destroy(view.gameObject);
+			m_Views.Clear();
+		}
+
+		// state から消えたプレイヤーの View を破棄する。
+		private void DespawnLeftPlayers()
+		{
+			var stale = new List<string>();
+			foreach (var id in m_Views.Keys)
+				if (!m_State.Players.ContainsKey(id))
+					stale.Add(id);
+			foreach (var id in stale)
+				Despawn(id);
 		}
 
 		private void Spawn(string id)

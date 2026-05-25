@@ -43,6 +43,7 @@ namespace GamblingAction.Domain
 		public event Action OnCountdownStart;
 		public event Action OnCountdownCancel;
 		public event Action OnPrepareRound;
+		public event Action<string, int> OnCharaSelected;
 		public event Action<bool> OnConnectionChanged;
 
 		public GameState(INetClient net)
@@ -105,6 +106,11 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.RoundReady, new { });
 		}
 
+		public void SubmitSelectChara(int index)
+		{
+			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
+		}
+
 		public int GetCalculatedPower(string playerId, string intentType, int basePower)
 		{
 			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
@@ -153,6 +159,8 @@ namespace GamblingAction.Domain
 			m_Net.On(ServerEvents.StartCountdown,      () => OnCountdownStart?.Invoke());
 			m_Net.On(ServerEvents.CountdownCanceled,   () => OnCountdownCancel?.Invoke());
 			m_Net.On(ServerEvents.PrepareRound,        () => OnPrepareRound?.Invoke());
+			m_Net.On<CharaSelectedMessage>(ServerEvents.CharaSelected,
+				msg => OnCharaSelected?.Invoke(msg.PlayerId, msg.Index));
 			m_Net.On(ServerEvents.StartExchange,       () => SetPhase(EGamePhase.Exchange));
 			m_Net.On(ServerEvents.StartBuffSelection,  () => SetPhase(EGamePhase.BuffSelection));
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
@@ -289,6 +297,7 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.StartCountdown);
 			m_Net.Off(ServerEvents.CountdownCanceled);
 			m_Net.Off(ServerEvents.PrepareRound);
+			m_Net.Off(ServerEvents.CharaSelected);
 			m_Net.Off(ServerEvents.StartExchange);
 			m_Net.Off(ServerEvents.StartBuffSelection);
 			m_Net.Off(ServerEvents.StartMatchCountdown);
