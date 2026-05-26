@@ -15,8 +15,6 @@ namespace GamblingAction.Domain
         public virtual int StartMoney => 10000;
         public virtual int StartChips => 10;
         public virtual int MaxStamina => 5;
-        public virtual int Defense => 5;
-        public virtual int Charge => 5;
 
         public virtual string CharacterName => "サンプルキャラ";
 

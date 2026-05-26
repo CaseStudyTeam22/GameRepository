@@ -19,7 +19,7 @@
   <WaapiIP>127.0.0.1</WaapiIP>
   <AutoSyncWaapi>true</AutoSyncWaapi>
   <WaapiChangePending>false</WaapiChangePending>
-  <InstallationWasRequested>true</InstallationWasRequested>
+  <InstallationWasRequested>false</InstallationWasRequested>
   <UseGitRepository>true</UseGitRepository>
   <PackageSource />
   <AddressableBankFolder>WwiseData/Bank</AddressableBankFolder>
