@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace GamblingAction.Core.Dto
 {
@@ -10,17 +11,54 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("y")]           public int Y;
 		[JsonProperty("intent")]      public IntentDto Intent;
 		[JsonProperty("ready")]       public bool Ready;
+		[JsonProperty("inLobby")]     public bool InLobby;
 		[JsonProperty("exchanged")]   public bool Exchanged;
 		[JsonProperty("score")]       public int Score;
 		[JsonProperty("money")]       public int Money;
 		[JsonProperty("chips")]       public int Chips;
-		[JsonProperty("stamina")]     public int Stamina;
 		[JsonProperty("isAI")]        public bool IsAI;
 		[JsonProperty("personality")] public string Personality;
 		[JsonProperty("color")]       public string Color;
 		[JsonProperty("selectedBuff")] public string SelectedBuff;
 		[JsonProperty("buffReady")]   public bool BuffReady;
 		[JsonProperty("falling")]     public bool Falling;
+
+		[JsonProperty("characterId")] public string CharacterId; // キャラクター識別ID
+
+		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
+		// 上記の合体値用フィールド
+		[JsonProperty("stamina")]     public int Stamina;
+		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
+	}
+
+	// キャラクターの初期データの定義
+	// とりあえず選択キャラに応じてここからデータを引っ張りサーバー側に渡すような処理の構築が必要。
+	public class InitCharacterDto
+	{
+		[JsonProperty("characterId")] public string CharacterId; // 管理id
+		[JsonProperty("name")]        public string Name; // 表示名
+		[JsonProperty("description")] public string Description;
+		[JsonProperty("initMoney")]    public int InitMoney; // 初期所持金
+		[JsonProperty("initChips")]    public int InitChips; // 初期チップ数
+		[JsonProperty("initStamina")]  public int InitStamina; // 初期最大スタミナ
+	}
+
+	// キャラごとのスキル値管理
+	public class CharacterSkillDto
+	{
+		[JsonProperty("characterId")] public string CharacterId; // 管理id
+		[JsonProperty("skill")]      public string Skill;
+		[JsonProperty("power")]      public int Power; // 強さ
+		[JsonProperty("cost")]       public int Cost; // スタミナコスト
+		[JsonProperty("target")]     public string Target; // 対象 (self, enemy, all)
+		[JsonProperty("damage")] 	public int Damage; // ダメージ量 (攻撃スキルの場合)
+		[JsonProperty("heal")] 		public int Heal; // 回復量 (回復スキルの場合)
+		[JsonProperty("forceAction")] public string ForceAction; // スキルを発動した際に強制行動 (攻撃ならattack, 防御ならdefendなど)
+
 	}
 
 	public class IntentDto
@@ -28,5 +66,31 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("type")]  public string Type;
 		[JsonProperty("dir")]   public string Dir;
 		[JsonProperty("power")] public int Power;
+	}
+
+	// stats乗算
+	// バフごとに持たないといけないため形状は変わるかも
+	public class BuffEffectDto
+	{
+		[JsonProperty("buff")] public ModifierContainer Buff;
+	}
+
+	public enum EMissionType
+	{
+		Move,
+		Push,
+		//Attack,
+		Defend,
+		//Heal,
+		GainCoin,
+		GainChip
+	}
+
+	public class MissionDto
+	{
+		public EMissionType Type;
+    	public int TargetCount;
+    	public int CurrentCount;
+    	public bool IsCleared;
 	}
 }

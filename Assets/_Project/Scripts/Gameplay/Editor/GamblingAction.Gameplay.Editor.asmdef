@@ -1,0 +1,20 @@
+{
+    "name": "GamblingAction.Gameplay.Editor",
+    "rootNamespace": "GamblingAction.Gameplay.Editor",
+    "references": [
+        "GamblingAction.Gameplay",
+        "GamblingAction.Core",
+        "GamblingAction.Domain"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

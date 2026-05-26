@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using GamblingAction.Net;
 using UnityEngine;
@@ -39,6 +40,10 @@ namespace GamblingAction.Domain
 		public event Action<string> OnGameOver;
 		public event Action<string> OnPlayerLeft;
 		public event Action<string> OnWaitingForOthers;
+		public event Action OnCountdownStart;
+		public event Action OnCountdownCancel;
+		public event Action OnPrepareRound;
+		public event Action<string, int> OnCharaSelected;
 		public event Action<bool> OnConnectionChanged;
 
 		public GameState(INetClient net)
@@ -52,12 +57,38 @@ namespace GamblingAction.Domain
 			if (!GameActive || CurrentBeat >= 4) return;
 			var me = Me;
 			if (me == null || me.IsAI) return;
-			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
+
+			// テストで4拍ごとに押し出し力+1
+			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
+			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
+
+			// スタミナ上限を追加
+			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
+
+			// ステータスを更新
+			RefreshPlayerStats(m_Players[MyId]);
+			// 自分の stats 変化を UI に反映する。
+			OnPlayersChanged?.Invoke();
+
+			// 補正等を考慮した力を持ってくる
+			int finalPower = GetCalculatedPower(MyId, type, power);
+
+			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
 		}
 
 		public void SubmitReady(bool isAI)
 		{
 			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
+		}
+
+		public void SubmitUnready()
+		{
+			m_Net.Emit(ClientEvents.PlayerUnready, new { });
+		}
+
+		public void SubmitEnterLobby()
+		{
+			m_Net.Emit(ClientEvents.EnterLobby, new { });
 		}
 
 		public void SubmitExchange(int amount)
@@ -68,6 +99,38 @@ namespace GamblingAction.Domain
 		public void SubmitBuff(string buffId)
 		{
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
+		}
+
+		public void SubmitRoundReady()
+		{
+			m_Net.Emit(ClientEvents.RoundReady, new { });
+		}
+
+		public void SubmitSelectChara(int index)
+		{
+			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
+		}
+
+		public int GetCalculatedPower(string playerId, string intentType, int basePower)
+		{
+			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
+
+			float finalPower = basePower;
+
+			// 行動タイプ別に応じてバフを適応
+			// stringで管理してる関係上switchｶﾅｰ
+			switch(intentType)
+			{
+				case IntentTypes.Push:
+					finalPower = player.PushModifier.GetModifiedValue(basePower);
+					break;
+				case IntentTypes.Move:
+					finalPower = player.MoveModifier.GetModifiedValue(basePower);
+					break;
+				// スタミナは一旦まち
+			}
+
+			return Mathf.RoundToInt(finalPower);
 		}
 
 		private void Subscribe()
@@ -93,6 +156,11 @@ namespace GamblingAction.Domain
 			m_Net.On<WaitingForOthersMessage>(ServerEvents.WaitingForOthers, HandleWaitingForOthers);
 			m_Net.On<string>(ServerEvents.PlayerLeft, HandlePlayerLeft);
 
+			m_Net.On(ServerEvents.StartCountdown,      () => OnCountdownStart?.Invoke());
+			m_Net.On(ServerEvents.CountdownCanceled,   () => OnCountdownCancel?.Invoke());
+			m_Net.On(ServerEvents.PrepareRound,        () => OnPrepareRound?.Invoke());
+			m_Net.On<CharaSelectedMessage>(ServerEvents.CharaSelected,
+				msg => OnCharaSelected?.Invoke(msg.PlayerId, msg.Index));
 			m_Net.On(ServerEvents.StartExchange,       () => SetPhase(EGamePhase.Exchange));
 			m_Net.On(ServerEvents.StartBuffSelection,  () => SetPhase(EGamePhase.BuffSelection));
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
@@ -132,6 +200,8 @@ namespace GamblingAction.Domain
 
 		private void HandleGameEvents(EventDto[] events)
 		{
+			// ここで特定のイベント(動いたならとか)で処理を実行等々
+
 			if (events == null || events.Length == 0) return;
 			OnGameEvents?.Invoke(events);
 		}
@@ -171,7 +241,38 @@ namespace GamblingAction.Domain
 			m_Players.Clear();
 			if (incoming == null) return;
 			foreach (var kv in incoming)
+			{
+				var player = kv.Value;
+				// modifierはnullならインスタンス化しておく
+				player.PushModifier ??= new ModifierContainer {Modifiers = new()};
+				player.MoveModifier ??= new ModifierContainer {Modifiers = new()};
+				player.StaminaModifier ??= new ModifierContainer {Modifiers = new()};
+
 				m_Players[kv.Key] = kv.Value;
+				
+				// プレイヤーの統計情報を更新
+				RefreshPlayerStats(player);
+			}
+		}
+
+		// プレイヤーのModifierに基づきステータスを再計算
+		private void RefreshPlayerStats(PlayerDto player)
+		{
+			if (player == null) return;
+
+			// スタミナの補正計算
+			int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
+
+			// 現在との差分を計算
+			int diff = modifiedStamina - player.Stamina;
+			player.MaxStamina += diff; // 最大値更新
+			
+			if (diff < 0 && player.Stamina > player.MaxStamina)
+			{
+				player.Stamina = player.MaxStamina;
+			}
+			
+			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
 		}
 
 		private void SetPhase(EGamePhase phase)
@@ -193,11 +294,43 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.GameOver);
 			m_Net.Off(ServerEvents.WaitingForOthers);
 			m_Net.Off(ServerEvents.PlayerLeft);
+			m_Net.Off(ServerEvents.StartCountdown);
+			m_Net.Off(ServerEvents.CountdownCanceled);
+			m_Net.Off(ServerEvents.PrepareRound);
+			m_Net.Off(ServerEvents.CharaSelected);
 			m_Net.Off(ServerEvents.StartExchange);
 			m_Net.Off(ServerEvents.StartBuffSelection);
 			m_Net.Off(ServerEvents.StartMatchCountdown);
 			m_Net.Off(ServerEvents.RoundStart);
 			m_Net.Off(ServerEvents.CloseAll);
+		}
+	}
+
+	// Modifierの拡張メソッド定義
+	public static class ModifierDomainExtensions
+	{
+		public static float GetModifiedValue(this ModifierContainer container, float baseValue)
+		{
+			if (container == null || container.Modifiers == null) return baseValue;
+			float totalRaw = 0.0f;
+			float totalRatio = 0.0f;
+			foreach (var modifier in container.Modifiers.Values)
+			{
+				totalRaw += modifier.RawValue;
+				totalRatio += modifier.RatioValue;
+			}
+			return (baseValue + totalRaw) * (1 + totalRatio);
+		}
+
+		public static void AddModifier(this ModifierContainer container, string tag, Modifier modifier)
+		{
+			if (container.Modifiers == null) container.Modifiers = new Dictionary<string, Modifier>();
+			container.Modifiers[tag] = modifier;
+		}
+
+		public static void RemoveModifier(this ModifierContainer container, string tag)
+		{
+			container.Modifiers?.Remove(tag);
 		}
 	}
 }

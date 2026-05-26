@@ -1,9 +1,9 @@
-using System.Collections;
-using System.Linq;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
@@ -12,8 +12,6 @@ namespace GamblingAction.UI
 	public class FlowPanelView : MonoBehaviour
 	{
 		[Header("Existing flow panels")]
-		[FormerlySerializedAs("lobbyPanel")]
-		[SerializeField] private GameObject m_LobbyPanel;
 		[FormerlySerializedAs("exchangePanel")]
 		[SerializeField] private GameObject m_ExchangePanel;
 		[FormerlySerializedAs("buffPanel")]
@@ -27,9 +25,17 @@ namespace GamblingAction.UI
 		[FormerlySerializedAs("mainGameStage")]
 		[SerializeField] private GameObject m_MainGameStage;
 
+		[Header("Preparing countdown (Exchange / BuffSelection)")]
+		[Tooltip("チップ交換 / カード選択フェーズの制限時間パネル。Timebar(Image filled radial) と TimeText を子に持つ")]
+		[SerializeField] private GameObject m_PreparingCountdownPanel;
+		[Tooltip("チップ交換 / カード選択の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
+		[SerializeField] private float m_PrepareSeconds = 20f;
+
 		[Header("Tuning")]
 		[FormerlySerializedAs("totalRounds")]
 		[SerializeField] private int m_TotalRounds = 3;
+		[Tooltip("決着パネル（RoundOver）を表示しておく秒数。経過後に自動で隠す。サーバの次ラウンド開始待ち（3 秒）に合わせる")]
+		[SerializeField] private float m_RoundOverDisplaySeconds = 3f;
 		[FormerlySerializedAs("executeFlashSeconds")]
 		[SerializeField] private float m_ExecuteFlashSeconds = 0.4f;
 		[FormerlySerializedAs("beatOnColor")]
@@ -39,10 +45,16 @@ namespace GamblingAction.UI
 		[FormerlySerializedAs("beatOffColor")]
 		[SerializeField] private Color m_BeatOffColor = new Color(0.17f, 0.17f, 0.16f, 1f);
 
+		[Header("Player slot colors")]
+		[SerializeField, Tooltip("P1 の文字色（role 固定。ワールドの P1 と同じ色）")]
+		// GameConfig.P1Color（#00f2fe）に合わせる
+		private Color m_P1SlotColor = new Color(0f, 242f / 255f, 254f / 255f, 1f);
+		[SerializeField, Tooltip("P2 の文字色（role 固定。ワールドの P2 と同じ色）")]
+		// GameConfig.P2Color（#ff4444）に合わせる
+		private Color m_P2SlotColor = new Color(1f, 68f / 255f, 68f / 255f, 1f);
+
 		private IGameState m_State;
 
-		private Button m_ReadyButton;
-		private Toggle m_ReadyAsAIToggle;
 		private Slider m_ExchangeSlider;
 		private TMP_Text m_ExchangeAmountText;
 		private Button m_ExchangeConfirmButton;
@@ -59,9 +71,14 @@ namespace GamblingAction.UI
 		private RectTransform m_TimeBarFill;
 		private TMP_Text m_RoundText;
 
+		private Image m_PrepareTimebar;
+		private TMP_Text m_PrepareTimeText;
+
 		private int m_RoundCount;
 		private Coroutine m_CountdownCo;
 		private Coroutine m_ExecuteFlashCo;
+		private Coroutine m_RoundOverHideCo;
+		private Coroutine m_PrepareCountdownCo;
 		private Vector2 m_TimeBarFillFullSize;
 
 		private void Start()
@@ -99,9 +116,6 @@ namespace GamblingAction.UI
 
 		private void FindFlowControls()
 		{
-			m_ReadyButton           = FindIn<Button>(m_LobbyPanel,    "ReadyButton");
-			m_ReadyAsAIToggle       = FindIn<Toggle>(m_LobbyPanel,    "ReadyAsAIToggle");
-
 			m_ExchangeSlider        = FindIn<Slider>(m_ExchangePanel, "ExchangeSlider");
 			m_ExchangeAmountText    = FindIn<TMP_Text>(m_ExchangePanel, "ExchangeAmountText");
 			m_ExchangeConfirmButton = FindIn<Button>(m_ExchangePanel, "ExchangeConfirmButton");
@@ -109,6 +123,9 @@ namespace GamblingAction.UI
 			m_HighRiskButton        = FindIn<Button>(m_BuffPanel, "HighRiskButton");
 			m_LowRiskButton         = FindIn<Button>(m_BuffPanel, "LowRiskButton");
 			m_SkipBuffButton        = FindIn<Button>(m_BuffPanel, "SkipBuffButton");
+
+			m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
+			m_PrepareTimeText = FindIn<TMP_Text>(m_PreparingCountdownPanel, "TimeText");
 		}
 
 		private void FindStageControls()
@@ -175,14 +192,6 @@ namespace GamblingAction.UI
 
 		private void WireButtons()
 		{
-			if (m_ReadyButton != null)
-				m_ReadyButton.onClick.AddListener(() =>
-				{
-					bool isAI = m_ReadyAsAIToggle != null && m_ReadyAsAIToggle.isOn;
-					m_State.SubmitReady(isAI);
-					m_ReadyButton.interactable = false;
-				});
-
 			if (m_ExchangeSlider != null)
 				m_ExchangeSlider.onValueChanged.AddListener(v =>
 				{
@@ -213,17 +222,25 @@ namespace GamblingAction.UI
 
 		private void HandlePhase(EGamePhase phase)
 		{
-			SetActive(m_LobbyPanel,     phase == EGamePhase.Lobby);
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
 			SetActive(m_BuffPanel,      phase == EGamePhase.BuffSelection);
-			SetActive(m_RoundOverPanel, phase == EGamePhase.RoundOver);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
+
+			// 決着パネルは固定秒数だけ表示して自動で隠す（次ラウンドの生成より前に消す）。
+			// それ以外のフェーズに入ったら取りこぼし防止で即座に隠す。
+			if (phase == EGamePhase.RoundOver)
+				ShowRoundOverThenHide();
+			else
+				HideRoundOverPanel();
 
 			bool stageVisible = phase == EGamePhase.Countdown || phase == EGamePhase.Battle;
 			SetActive(m_MainGameStage, stageVisible);
 
-			if (phase == EGamePhase.Lobby && m_ReadyButton != null)
-				m_ReadyButton.interactable = true;
+			// チップ交換 / カード選択フェーズだけ制限時間パネルを出してカウントダウンする。
+			if (phase == EGamePhase.Exchange || phase == EGamePhase.BuffSelection)
+				StartPrepareCountdown();
+			else
+				StopPrepareCountdown();
 
 			if (phase == EGamePhase.Exchange)
 			{
@@ -258,21 +275,23 @@ namespace GamblingAction.UI
 			if (phase == EGamePhase.GameOver)
 			{
 				m_RoundCount = 0;
-			}
+                StartCoroutine(GoToResultSceneAfterDelay(5f));
+            }
 		}
 
 		private void HandlePlayersChanged()
 		{
 			if (m_State == null) return;
 
-			var p1 = m_State.Players.Values.FirstOrDefault(p => p.Role == "P1");
-			var p2 = m_State.Players.Values.FirstOrDefault(p => p.Role == "P2");
+			// 左スロット=自分、右スロット=相手で固定（role に依存しない）
+			var me       = m_State.Me;
+			var opponent = m_State.Opponent;
 
-			ApplyPlayerSlot(p1, m_P1Name, m_P1Money, m_P1Chips, hideChipsIfOpponent: false);
-			ApplyPlayerSlot(p2, m_P2Name, m_P2Money, null,     hideChipsIfOpponent: true);
+			ApplyPlayerSlot(me,       m_P1Name, m_P1Money, m_P1Chips, isSelf: true);
+			ApplyPlayerSlot(opponent, m_P2Name, m_P2Money, null,      isSelf: false);
 		}
 
-		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool hideChipsIfOpponent)
+		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool isSelf)
 		{
 			if (dto == null)
 			{
@@ -282,17 +301,23 @@ namespace GamblingAction.UI
 				return;
 			}
 
+			// 色は role 固定（ワールドのプレイヤー色と一致させる）。スロット位置は self/opponent。
+			Color slotColor = dto.Role == "P2" ? m_P2SlotColor : m_P1SlotColor;
+
 			if (nameText != null)
 			{
-				string label = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
-				nameText.text = label;
+				nameText.text = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
+				nameText.color = slotColor;
 			}
-			if (moneyText != null) moneyText.text = $"¥{dto.Money:N0}";
+			if (moneyText != null)
+			{
+				moneyText.text = $"¥{dto.Money:N0}";
+				moneyText.color = slotColor;
+			}
 			if (chipsText != null)
 			{
-				bool isMe = dto.Id == m_State.MyId;
-				if (hideChipsIfOpponent && !isMe) chipsText.text = "??";
-				else chipsText.text = dto.Chips.ToString();
+				chipsText.text = isSelf ? dto.Chips.ToString() : "??";
+				chipsText.color = slotColor;
 			}
 		}
 
@@ -353,6 +378,75 @@ namespace GamblingAction.UI
 			m_ExecuteFlashCo = null;
 		}
 
+		// 決着パネルを表示し、固定秒数後に自動で隠す。
+		private void ShowRoundOverThenHide()
+		{
+			SetActive(m_RoundOverPanel, true);
+			if (m_RoundOverHideCo != null) StopCoroutine(m_RoundOverHideCo);
+			m_RoundOverHideCo = StartCoroutine(HideRoundOverAfterDelay());
+		}
+
+		private IEnumerator HideRoundOverAfterDelay()
+		{
+			yield return new WaitForSeconds(m_RoundOverDisplaySeconds);
+			SetActive(m_RoundOverPanel, false);
+			m_RoundOverHideCo = null;
+		}
+
+		private void HideRoundOverPanel()
+		{
+			if (m_RoundOverHideCo != null)
+			{
+				StopCoroutine(m_RoundOverHideCo);
+				m_RoundOverHideCo = null;
+			}
+			SetActive(m_RoundOverPanel, false);
+		}
+
+		// チップ交換 / カード選択フェーズの制限時間カウントダウンを開始する。
+		// サーバ側の制限時間と同じ秒数をクライアントでも独立に数えて表示する（表示専用）。
+		private void StartPrepareCountdown()
+		{
+			if (m_PreparingCountdownPanel == null) return;
+			SetActive(m_PreparingCountdownPanel, true);
+			if (m_PrepareCountdownCo != null) StopCoroutine(m_PrepareCountdownCo);
+			m_PrepareCountdownCo = StartCoroutine(PrepareCountdownSequence());
+		}
+
+		private void StopPrepareCountdown()
+		{
+			if (m_PrepareCountdownCo != null)
+			{
+				StopCoroutine(m_PrepareCountdownCo);
+				m_PrepareCountdownCo = null;
+			}
+			SetActive(m_PreparingCountdownPanel, false);
+		}
+
+		private IEnumerator PrepareCountdownSequence()
+		{
+			if (m_PrepareSeconds <= 0f)
+			{
+				if (m_PrepareTimebar != null) m_PrepareTimebar.fillAmount = 0f;
+				if (m_PrepareTimeText != null) m_PrepareTimeText.text = "0";
+				SetActive(m_PreparingCountdownPanel, false);
+				m_PrepareCountdownCo = null;
+				yield break;
+			}
+
+			float remaining = m_PrepareSeconds;
+			while (remaining > 0f)
+			{
+				if (m_PrepareTimebar != null) m_PrepareTimebar.fillAmount = remaining / m_PrepareSeconds;
+				if (m_PrepareTimeText != null) m_PrepareTimeText.text = Mathf.CeilToInt(remaining).ToString();
+				remaining -= Time.deltaTime;
+				yield return null;
+			}
+			if (m_PrepareTimebar != null) m_PrepareTimebar.fillAmount = 0f;
+			if (m_PrepareTimeText != null) m_PrepareTimeText.text = "0";
+			m_PrepareCountdownCo = null;
+		}
+
 		private void StartCountdown()
 		{
 			if (m_ReadyText == null && m_CountdownText == null) return;
@@ -401,7 +495,13 @@ namespace GamblingAction.UI
 			m_CountdownCo = null;
 		}
 
-		private void UpdateRoundText()
+        private IEnumerator GoToResultSceneAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            SceneManager.LoadScene("ResultScene");
+        }
+
+        private void UpdateRoundText()
 		{
 			if (m_RoundText == null) return;
 			int shown = Mathf.Clamp(m_RoundCount, 1, m_TotalRounds);

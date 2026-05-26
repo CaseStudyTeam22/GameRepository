@@ -37,6 +37,12 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("waitingFor")] public string WaitingFor;
 	}
 
+	public class CharaSelectedMessage
+	{
+		[JsonProperty("playerId")] public string PlayerId;
+		[JsonProperty("index")]    public int Index;
+	}
+
 	public static class ServerEvents
 	{
 		public const string Init                 = "init";
@@ -53,5 +59,12 @@ namespace GamblingAction.Core.Dto
 		public const string WaitingForOthers     = "waiting_for_others";
 		public const string PlayerLeft           = "player_left";
 		public const string CloseAll             = "close_all";
+		// Lobby で双方準備完了後のカウントダウン開始 / 中断。
+		public const string StartCountdown       = "start_countdown";
+		public const string CountdownCanceled    = "countdown_canceled";
+		// ラウンドの開始要求。クライアントは盤面・キャラ生成を終えてから round_ready を返す。
+		public const string PrepareRound         = "prepare_round";
+		// 誰かが Lobby でキャラを選択した。相手側の表示同期に使う。
+		public const string CharaSelected        = "chara_selected";
 	}
 }

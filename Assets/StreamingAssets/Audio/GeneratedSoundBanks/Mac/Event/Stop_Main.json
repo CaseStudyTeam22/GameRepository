@@ -1,0 +1,33 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "3435675815",
+    "Type": "Event",
+    "GUID": "{68A092B9-B96D-48CB-A140-960A361DFAF1}",
+    "Language": "SFX",
+    "Hash": "{BF4DE82D-8EF0-CF46-25E7-62BC2BF55AC9}",
+    "ObjectPath": "Stop_Main",
+    "ShortName": "Stop_Main",
+    "Path": "Event/Stop_Main.bnk",
+    "Events": [
+     {
+      "Id": "3435675815",
+      "Name": "Stop_Main",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Stop_Main",
+      "GUID": "{68A092B9-B96D-48CB-A140-960A361DFAF1}",
+      "MaxAttenuation": "0",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     }
+    ]
+   }
+  ],
+  "FileHash": "{D7FB9D95-3239-C4F9-53D0-6747B6060DD6}"
+ }
+}
