@@ -28,6 +28,11 @@ namespace GamblingAction.UI
 		[Header("Preparing countdown (Exchange / BuffSelection)")]
 		[Tooltip("チップ交換 / カード選択フェーズの制限時間パネル。Timebar(Image filled radial) と TimeText を子に持つ")]
 		[SerializeField] private GameObject m_PreparingCountdownPanel;
+
+		[Header("Mission Panels")]
+		[SerializeField] private GameObject m_MissionPanel;
+		[SerializeField] private GameObject m_MissionSelectionPanel;
+
 		[Tooltip("チップ交換 / カード選択の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
 		[SerializeField] private float m_PrepareSeconds = 20f;
 
@@ -62,6 +67,14 @@ namespace GamblingAction.UI
 		private Button m_LowRiskButton;
 		private Button m_SkipBuffButton;
 
+		private TMP_Text m_MissionText;
+		private TMP_Text m_MissionRewardText;
+		private Image    m_MissionProgressFill;
+
+		private Button[]   m_MissionOptionButtons;
+		private TMP_Text[] m_MissionDescriptionTexts;
+		private TMP_Text[] m_MissionRewardTexts;
+
 		private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
 		private TMP_Text m_P2Name, m_P2Money;
 		private Image[] m_NormalBeats;
@@ -92,6 +105,7 @@ namespace GamblingAction.UI
 
 			FindFlowControls();
 			FindStageControls();
+			FindMissionControls();
 			WireButtons();
 
 			m_State.OnPhaseChanged   += HandlePhase;
@@ -126,6 +140,27 @@ namespace GamblingAction.UI
 
 			m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
 			m_PrepareTimeText = FindIn<TMP_Text>(m_PreparingCountdownPanel, "TimeText");
+		}
+
+		private void FindMissionControls()
+		{
+			// Mission HUD
+			m_MissionText         = FindIn<TMP_Text>(m_MissionPanel, "MissionText");
+			m_MissionRewardText   = FindIn<TMP_Text>(m_MissionPanel, "RewardText");
+			m_MissionProgressFill = FindIn<Image>(m_MissionPanel, "ProgressFill");
+
+			// Mission Selection
+			m_MissionOptionButtons    = new Button[3];
+			m_MissionDescriptionTexts = new TMP_Text[3];
+			m_MissionRewardTexts      = new TMP_Text[3];
+
+			for (int i = 0; i < 3; i++)
+			{
+				string path = $"Option{i + 1}";
+				m_MissionOptionButtons[i]    = FindByPath<Button>(m_MissionSelectionPanel, $"{path}/Button");
+				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Description");
+				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Reward");
+			}
 		}
 
 		private void FindStageControls()
@@ -210,6 +245,24 @@ namespace GamblingAction.UI
 			if (m_HighRiskButton != null) m_HighRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.HighRisk));
 			if (m_LowRiskButton != null)  m_LowRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.LowRisk));
 			if (m_SkipBuffButton != null) m_SkipBuffButton.onClick.AddListener(() => SubmitBuff(null));
+
+			if (m_MissionOptionButtons != null)
+			{
+				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
+				{
+					int index = i;
+					if (m_MissionOptionButtons[i] == null) continue;
+					m_MissionOptionButtons[i].onClick.AddListener(() =>
+					{
+						var me = m_State.Me;
+						if (me != null && me.AvailableMissions != null && index < me.AvailableMissions.Count)
+						{
+							m_State.SubmitMission(me.AvailableMissions[index].Id);
+							SetActive(m_MissionSelectionPanel, false);
+						}
+					});
+				}
+			}
 		}
 
 		private void SubmitBuff(string id)
@@ -225,6 +278,18 @@ namespace GamblingAction.UI
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
 			SetActive(m_BuffPanel,      phase == EGamePhase.BuffSelection);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
+
+			// ミッション選択HUDはバフ選択中かつ選択肢がある時に表示
+			bool showSelection = phase == EGamePhase.BuffSelection && 
+								 m_State.Me != null && 
+								 m_State.Me.AvailableMissions != null && 
+								 m_State.Me.AvailableMissions.Count > 0 &&
+								 m_State.Me.Mission == null;
+			SetActive(m_MissionSelectionPanel, showSelection);
+
+			// ミッションHUDを表示するフェーズの制御
+			bool showMission = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
+			SetActive(m_MissionPanel, showMission);
 
 			// 決着パネルは固定秒数だけ表示して自動で隠す（次ラウンドの生成より前に消す）。
 			// それ以外のフェーズに入ったら取りこぼし防止で即座に隠す。
@@ -289,6 +354,60 @@ namespace GamblingAction.UI
 
 			ApplyPlayerSlot(me,       m_P1Name, m_P1Money, m_P1Chips, isSelf: true);
 			ApplyPlayerSlot(opponent, m_P2Name, m_P2Money, null,      isSelf: false);
+
+			UpdateMissionUI();
+			UpdateMissionSelectionUI();
+		}
+
+		private void UpdateMissionUI()
+		{
+			var me = m_State.Me;
+			bool showMission = (m_State.Phase == EGamePhase.Countdown || m_State.Phase == EGamePhase.Battle) && me?.Mission != null;
+			SetActive(m_MissionPanel, showMission);
+
+			if (showMission && me.Mission != null)
+			{
+				if (m_MissionText != null) m_MissionText.text = me.Mission.Description;
+				if (m_MissionRewardText != null) m_MissionRewardText.text = $"Reward: {me.Mission.RewardType} x{me.Mission.RewardValue}";
+				if (m_MissionProgressFill != null)
+				{
+					float progress = me.Mission.TargetCount > 0 ? (float)me.Mission.CurrentCount / me.Mission.TargetCount : 0f;
+					m_MissionProgressFill.fillAmount = Mathf.Clamp01(progress);
+				}
+			}
+		}
+
+		private void UpdateMissionSelectionUI()
+		{
+			var me = m_State.Me;
+			bool showSelection = m_State.Phase == EGamePhase.BuffSelection && 
+								 me != null && 
+								 me.AvailableMissions != null && 
+								 me.AvailableMissions.Count > 0 && 
+								 me.Mission == null;
+			SetActive(m_MissionSelectionPanel, showSelection);
+
+			if (showSelection)
+			{
+				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
+				{
+					if (m_MissionOptionButtons[i] == null) continue;
+
+					if (i < me.AvailableMissions.Count)
+					{
+						m_MissionOptionButtons[i].gameObject.SetActive(true);
+						var mission = me.AvailableMissions[i];
+						if (m_MissionDescriptionTexts != null && i < m_MissionDescriptionTexts.Length && m_MissionDescriptionTexts[i] != null)
+							m_MissionDescriptionTexts[i].text = mission.Description;
+						if (m_MissionRewardTexts != null && i < m_MissionRewardTexts.Length && m_MissionRewardTexts[i] != null)
+							m_MissionRewardTexts[i].text = $"{mission.RewardType} x{mission.RewardValue}";
+					}
+					else
+					{
+						m_MissionOptionButtons[i].gameObject.SetActive(false);
+					}
+				}
+			}
 		}
 
 		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool isSelf)

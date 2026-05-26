@@ -25,6 +25,7 @@ namespace GamblingAction.Domain
 		void SubmitEnterLobby();
 		void SubmitExchange(int amount);
 		void SubmitBuff(string buffId);
+		void SubmitMission(string missionId);
 		void SubmitRoundReady();
 		void SubmitSelectChara(int index);
 

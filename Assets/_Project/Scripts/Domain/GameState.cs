@@ -101,6 +101,11 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
 		}
 
+		public void SubmitMission(string missionId)
+		{
+			m_Net.Emit(ClientEvents.MissionSelected, new MissionSelectedMessage { MissionId = missionId });
+		}
+
 		public void SubmitRoundReady()
 		{
 			m_Net.Emit(ClientEvents.RoundReady, new { });
