@@ -55,7 +55,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  - {fileID: 2100000, guid: 5320a35c3db452e4e852250237f61b4d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -158,6 +158,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_SpriteRoot: {fileID: 3511433893856657145}
+  m_DissolveSprite: {fileID: 812772530480566379}
+  m_AppearDuration: 1.5
+  m_AppearEase: 6
   m_HitShakeStrength: 0.05
   m_HitShakeDuration: 0.3
   m_HitShakeVibrato: 18

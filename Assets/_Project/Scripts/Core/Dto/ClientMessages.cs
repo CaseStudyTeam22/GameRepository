@@ -17,6 +17,11 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("buffId")] public string BuffId;
 	}
 
+	public class SelectCharaMessage
+	{
+		[JsonProperty("index")] public int Index;
+	}
+
 	public class SetIntentMessage
 	{
 		[JsonProperty("type")]  public string Type;
@@ -27,9 +32,15 @@ namespace GamblingAction.Core.Dto
 	public static class ClientEvents
 	{
 		public const string PlayerReady    = "player_ready";
+		public const string PlayerUnready  = "player_unready";
+		public const string EnterLobby     = "enter_lobby";
 		public const string ExchangeChips  = "exchange_chips";
 		public const string BuffSelected   = "buff_selected";
 		public const string MissionCompleted = "mission_completed";
+		// 盤面・キャラ生成を終え、ラウンドを始められる状態になったことを通知する。
+		public const string RoundReady     = "round_ready";
+		// Lobby でのキャラ選択。対局開始前に変更できる。
+		public const string SelectChara    = "select_chara";
 		public const string SetIntent      = "set_intent";
 		public const string Shutdown       = "shutdown";
 	}
@@ -46,6 +57,7 @@ namespace GamblingAction.Core.Dto
 		public const string Push    = "push";
 		public const string Attack  = "attack";
 		public const string Defense = "defense";
+		public const string Skill = "skill";
 		public const string Rest    = "rest";
 		public const string None    = "none";
 	}
