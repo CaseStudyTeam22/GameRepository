@@ -26,6 +26,20 @@ let currentBeat = 0;
 let cycleCount = 0; 
 let timeLeft = Config.GAME_DURATION;
 let gameActive = false;
+// 双方準備完了後のカウントダウン中の setTimeout 句柄。取り消し時に clear する。
+let lobbyCountdownTimer = null;
+// カウントダウンの長さ（ミリ秒）。クライアントの 3-2-1-GO 表示に合わせる。
+const LOBBY_COUNTDOWN_MS = 3200;
+
+// チップ交換 / カード選択フェーズの制限時間（ミリ秒）。超過時は自動処理する。
+const PREPARE_PHASE_MS = 20000;
+// チップ交換 / カード選択の制限時間タイマー句柄。全員完了時 / フェーズ離脱時に clear する。
+let exchangeTimer = null;
+let buffTimer = null;
+// 盤面・キャラ生成の完了後、チップ交換フェーズへ進むまでの待ち時間（ミリ秒）。
+// 生成直後すぐ UI を出さず、少し見せてから出すための間。
+const ROUND_INTRO_MS = 1500;
+let roundIntroTimer = null;
 
 function resetPlayerPos(id) {
     const p = players[id];
@@ -38,6 +52,29 @@ function resetPlayerPos(id) {
     p.selectedBuff = null; p.buffReady = false;
 }
 
+// ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
+// resetMatch / round_over の直後にここを通し、双方の round_ready を待つ。
+function beginRound() {
+    for (let id in players) players[id].roundReady = false;
+    if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
+    // 位置を先に初期化して配る。クライアントは再生成時に新しい位置のキャラを出せる。
+    for (let id in players) resetPlayerPos(id);
+    io.emit('sync_state', { players });
+    io.emit('prepare_round');
+}
+
+// 双方のクライアントが盤面・キャラ生成を終えたら、少し間を置いてチップ交換フェーズへ進む。
+function checkAllRoundReady() {
+    const pList = Object.values(players);
+    if (pList.length >= 2 && pList.every(pl => pl.roundReady)) {
+        if (roundIntroTimer) clearTimeout(roundIntroTimer);
+        roundIntroTimer = setTimeout(() => {
+            roundIntroTimer = null;
+            prepareExchangePhase();
+        }, ROUND_INTRO_MS);
+    }
+}
+
 function prepareExchangePhase() {
     items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION;
     for (let id in players) {
@@ -48,6 +85,26 @@ function prepareExchangePhase() {
     io.emit('sync_state', { players });
     io.emit('sync_items', items);
     io.emit('start_exchange');
+
+    // 制限時間：超過したら未交換のプレイヤーを自動でチップ交換する。
+    if (exchangeTimer) clearTimeout(exchangeTimer);
+    exchangeTimer = setTimeout(autoExchangeTimedOut, PREPARE_PHASE_MS);
+}
+
+// チップ交換の制限時間超過。未交換のプレイヤーは所持金の 1/3 をチップに替える。
+function autoExchangeTimedOut() {
+    exchangeTimer = null;
+    let changed = false;
+    for (let id in players) {
+        const p = players[id];
+        if (p.exchanged || p.isAI) continue;
+        const amount = Math.floor(p.money / 3 / 100);
+        const cost = amount * 100;
+        p.money -= cost; p.chips += amount; p.exchanged = true;
+        changed = true;
+    }
+    if (changed) io.emit('sync_state', { players });
+    checkAllExchanged();
 }
 
 function handleAIExchange(id) {
@@ -61,24 +118,16 @@ function handleAIExchange(id) {
     }, 1000 + Math.random() * 1000);
 }
 
-function checkAllExchanged() {
-    const pList = Object.values(players);
-    if (pList.length >= 2 && pList.every(pl => pl.exchanged)) {
-        // 进入 BUFF 选择环节
-        io.emit('start_buff_selection');
-        // AI 逻辑：等待玩家选择后再自动选择 (由客户端逻辑或服务器延迟触发)
-    }
-}
-
 setInterval(() => {
-    if (!gameActive) return; 
+    if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
     
     // 时间到，判定平局或结束
     if (timeLeft <= 0) {
         gameActive = false;
         io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
-        setTimeout(prepareExchangePhase, 3000);
+        // 次ラウンドもゲートを通す：盤面・キャラ生成を待ってからチップ交換へ。
+        setTimeout(beginRound, 3000);
         return;
     }
 
@@ -113,7 +162,7 @@ setInterval(() => {
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
                             if (players[winnerId].score >= 2) io.emit('game_over', { winnerRole: players[winnerId].role });
-                            else { io.emit('round_over', { winnerRole: players[winnerId].role }); setTimeout(prepareExchangePhase, 3000); }
+                            else { io.emit('round_over', { winnerRole: players[winnerId].role }); setTimeout(beginRound, 3000); }
                         }
                     }, 1500);
                 }
@@ -344,7 +393,8 @@ io.on('connection', (socket) => {
         intent: null, ready: false, exchanged: false, score: 0,
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
-        selectedBuff: null, buffReady: false
+        selectedBuff: null, buffReady: false, inLobby: false, roundReady: false,
+        charaIndex: 0
     };
     
     console.log(`[Server] Player joined: ${socket.id} as ${role}`);
@@ -363,11 +413,64 @@ io.on('connection', (socket) => {
 
             const pList = Object.values(players);
             if (pList.length >= 2 && pList.every(pl => pl.ready)) {
-                resetMatch();
+                // すぐに対局へ進めず、カウントダウンを挟む。途中で取り消せるようにする。
+                // 重複した ready 通知では既存のカウントダウンを再作成しない。
+                if (!lobbyCountdownTimer) {
+                    io.emit('start_countdown');
+                    lobbyCountdownTimer = setTimeout(() => {
+                        lobbyCountdownTimer = null;
+                        resetMatch();
+                    }, LOBBY_COUNTDOWN_MS);
+                }
             } else {
                 socket.emit('waiting_for_others', { waitingFor: p.role === 'P1' ? 'P2' : 'P1' });
             }
             io.emit('sync_state', { players });
+        }
+    });
+
+    socket.on('player_unready', () => {
+        const p = players[socket.id];
+        // 対局開始前のみ準備を取り消せる。
+        if (p && !gameActive) {
+            p.ready = false;
+            p.isAI = false;
+            console.log(`[Server] Player ${p.role} canceled ready`);
+            // カウントダウン中なら中断し、対局へ進めない。
+            if (lobbyCountdownTimer) {
+                clearTimeout(lobbyCountdownTimer);
+                lobbyCountdownTimer = null;
+                io.emit('countdown_canceled');
+            }
+            io.emit('sync_state', { players });
+        }
+    });
+
+    // クライアントが Lobby シーンに入ったことを通知する。相手の Portrait 滑り込みの起点になる。
+    socket.on('enter_lobby', () => {
+        const p = players[socket.id];
+        if (p) {
+            p.inLobby = true;
+            io.emit('sync_state', { players });
+        }
+    });
+
+    // Lobby でのキャラ選択。対局開始前に変更でき、全員へ広播して相手側の表示を同期する。
+    socket.on('select_chara', (data) => {
+        const p = players[socket.id];
+        if (p && !gameActive) {
+            const index = parseInt(data && data.index) || 0;
+            p.charaIndex = index;
+            io.emit('chara_selected', { playerId: socket.id, index });
+        }
+    });
+
+    // クライアントが盤面・キャラ生成を終え、ラウンドを始められる状態になったことを通知する。
+    socket.on('round_ready', () => {
+        const p = players[socket.id];
+        if (p) {
+            p.roundReady = true;
+            checkAllRoundReady();
         }
     });
 
@@ -413,10 +516,37 @@ io.on('connection', (socket) => {
 function checkAllExchanged() {
     const pList = Object.values(players);
     if (pList.length >= 2 && pList.every(pl => pl.exchanged)) {
+        // チップ交換フェーズを抜けるので制限時間タイマーを止める。
+        if (exchangeTimer) { clearTimeout(exchangeTimer); exchangeTimer = null; }
         io.emit('start_buff_selection');
+        // カード選択フェーズの制限時間。超過したら未選択のプレイヤーを自動で選ぶ。
+        if (buffTimer) clearTimeout(buffTimer);
+        buffTimer = setTimeout(autoBuffTimedOut, PREPARE_PHASE_MS);
         // 如果全是 AI，或者需要 AI 自动选卡，触发检查
         setTimeout(checkAllBuffsSelected, 1500);
     }
+}
+
+// カード選択の制限時間超過。未選択のプレイヤーは購入可能な範囲でランダムに選ぶ。
+function autoBuffTimedOut() {
+    buffTimer = null;
+    let changed = false;
+    for (let id in players) {
+        const p = players[id];
+        if (p.buffReady || p.isAI) continue;
+        let pick = null;
+        if (p.chips >= 15 && Math.random() < 0.5) pick = 'high_risk';
+        else if (p.chips >= 5) pick = 'low_risk';
+        if (pick) {
+            const c = pick === 'high_risk' ? 15 : 5;
+            p.chips -= c;
+            p.selectedBuff = pick;
+        }
+        p.buffReady = true;
+        changed = true;
+    }
+    if (changed) io.emit('sync_state', { players });
+    checkAllBuffsSelected();
 }
 
 function checkAllBuffsSelected() {
@@ -445,6 +575,8 @@ function checkAllBuffsSelected() {
 
         // 如果全员（包括 AI）都选好了，开始倒计时
         if (pList.every(pl => pl.buffReady)) {
+            // カード選択フェーズを抜けるので制限時間タイマーを止める。
+            if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
             io.emit('start_match_countdown');
             setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
         }
@@ -459,5 +591,6 @@ server.listen(3000, '::', () => console.log(`[GamblingAction Server] Running on 
 function resetMatch() {
     gameActive = false; items = []; currentBeat = 0;
     for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; resetPlayerPos(id); players[id].exchanged = false; }
-    prepareExchangePhase();
+    // 直接チップ交換へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
+    beginRound();
 }

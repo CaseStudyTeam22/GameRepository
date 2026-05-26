@@ -40,6 +40,10 @@ namespace GamblingAction.Domain
 		public event Action<string> OnGameOver;
 		public event Action<string> OnPlayerLeft;
 		public event Action<string> OnWaitingForOthers;
+		public event Action OnCountdownStart;
+		public event Action OnCountdownCancel;
+		public event Action OnPrepareRound;
+		public event Action<string, int> OnCharaSelected;
 		public event Action<bool> OnConnectionChanged;
 
 		public GameState(INetClient net)
@@ -63,6 +67,8 @@ namespace GamblingAction.Domain
 
 			// ステータスを更新
 			RefreshPlayerStats(m_Players[MyId]);
+			// 自分の stats 変化を UI に反映する。
+			OnPlayersChanged?.Invoke();
 
 			// 補正等を考慮した力を持ってくる
 			int finalPower = GetCalculatedPower(MyId, type, power);
@@ -75,6 +81,16 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
 		}
 
+		public void SubmitUnready()
+		{
+			m_Net.Emit(ClientEvents.PlayerUnready, new { });
+		}
+
+		public void SubmitEnterLobby()
+		{
+			m_Net.Emit(ClientEvents.EnterLobby, new { });
+		}
+
 		public void SubmitExchange(int amount)
 		{
 			m_Net.Emit(ClientEvents.ExchangeChips, new ExchangeChipsMessage { Amount = amount });
@@ -83,6 +99,16 @@ namespace GamblingAction.Domain
 		public void SubmitBuff(string buffId)
 		{
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
+		}
+
+		public void SubmitRoundReady()
+		{
+			m_Net.Emit(ClientEvents.RoundReady, new { });
+		}
+
+		public void SubmitSelectChara(int index)
+		{
+			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
 		}
 
 		public int GetCalculatedPower(string playerId, string intentType, int basePower)
@@ -130,6 +156,11 @@ namespace GamblingAction.Domain
 			m_Net.On<WaitingForOthersMessage>(ServerEvents.WaitingForOthers, HandleWaitingForOthers);
 			m_Net.On<string>(ServerEvents.PlayerLeft, HandlePlayerLeft);
 
+			m_Net.On(ServerEvents.StartCountdown,      () => OnCountdownStart?.Invoke());
+			m_Net.On(ServerEvents.CountdownCanceled,   () => OnCountdownCancel?.Invoke());
+			m_Net.On(ServerEvents.PrepareRound,        () => OnPrepareRound?.Invoke());
+			m_Net.On<CharaSelectedMessage>(ServerEvents.CharaSelected,
+				msg => OnCharaSelected?.Invoke(msg.PlayerId, msg.Index));
 			m_Net.On(ServerEvents.StartExchange,       () => SetPhase(EGamePhase.Exchange));
 			m_Net.On(ServerEvents.StartBuffSelection,  () => SetPhase(EGamePhase.BuffSelection));
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
@@ -242,7 +273,6 @@ namespace GamblingAction.Domain
 			}
 			
 			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
-			OnPlayersChanged?.Invoke();
 		}
 
 		private void SetPhase(EGamePhase phase)
@@ -264,6 +294,10 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.GameOver);
 			m_Net.Off(ServerEvents.WaitingForOthers);
 			m_Net.Off(ServerEvents.PlayerLeft);
+			m_Net.Off(ServerEvents.StartCountdown);
+			m_Net.Off(ServerEvents.CountdownCanceled);
+			m_Net.Off(ServerEvents.PrepareRound);
+			m_Net.Off(ServerEvents.CharaSelected);
 			m_Net.Off(ServerEvents.StartExchange);
 			m_Net.Off(ServerEvents.StartBuffSelection);
 			m_Net.Off(ServerEvents.StartMatchCountdown);
