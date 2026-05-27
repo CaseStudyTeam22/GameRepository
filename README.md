@@ -6,24 +6,30 @@ CaseStudyTeam22「Winner Takes All」（仮称）の Unity 6 クライアント 
 
 ### 必要環境
 - Unity 6 LTS（URP 3D テンプレート）
-- Node.js（開発時のサーバー起動用。ビルド成果物には同梱 portable Node を使うため不要）
 - Git LFS
-- Windows PowerShell（portable Node 取得スクリプトの実行用）
+- Node.js（**初回のみ必要**。`node_modules` を取得するために使用）
 
 ### 起動方法
 1. リポジトリを `git clone`（LFS 必須）
-2. **portable Node を取得**：リポジトリ root の一つ上にある `Tools/download-node.ps1` を一度だけ実行する
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File Tools\download-node.ps1
-   ```
-   - `Assets/StreamingAssets/Server/node.exe`（約 80MB）が配置されます
-   - リポジトリには含まれていないため、**clone 後と再取得時のみ**実行が必要です
-   - 配置済みの場合は何もせず終了します
-3. Unity Hub で `GameRepository/` フォルダを開く
+   - `Assets/StreamingAssets/Server/node.exe`（約 80MB）はリポジトリに含まれているため、追加取得は不要です
+2. Unity Hub で `GameRepository/` フォルダを開く
+3. **初回のみ**：Unity メニュー `Tools → GamblingAction → サーバー依存を導入 (npm install)` を一度実行する
+   - `Assets/StreamingAssets/Server/node_modules/` が生成されます（リポジトリには含まれていません）
+   - 実行には PC に Node.js がインストールされている必要があります
 4. Unity で `Bootstrap.unity` を Play
    - サーバーは Unity 側が自動で起動します（旧 `start_server.bat` の手動起動は不要）
    - 同一 LAN 上に既存ホストがあれば自動でクライアントとして接続します
 5. 2 人プレイは Unity の **Multiplayer Play Mode** を使用
+
+### ビルド成果物の配布時の注意
+
+別 PC に渡す前に、Unity メニュー `Tools → GamblingAction → ビルド出力に setup-firewall.bat を配置` を実行してください。フォルダ選択ダイアログでビルド出力（game.exe があるフォルダ）を選ぶと、**game.exe と同じ階層に `setup-firewall.bat` が書き出されます**。
+
+配布先のユーザーには次の手順を伝えてください:
+1. `setup-firewall.bat` を右クリック →「管理者として実行」
+2. 「設定が完了しました」と表示されたら game.exe を起動
+
+このバッチを実行しなくても、ゲーム初回起動時に Windows Defender のダイアログが表示されたら「アクセスを許可する」を選べば同じ効果になります。バッチは取りこぼし対策です。
 
 #### Multiplayer Play Mode の初回セットアップ
 
