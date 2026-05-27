@@ -2706,8 +2706,8 @@ MonoBehaviour:
   m_GameOverPanel: {fileID: 1793614204653652201}
   m_MainGameStage: {fileID: 6967025498251287470}
   m_PreparingCountdownPanel: {fileID: 5131348455053630107}
-  m_MissionPanel: {fileID: 0}
-  m_MissionSelectionPanel: {fileID: 0}
+  m_MissionPanel: {fileID: 2757121875411395943}
+  m_MissionSelectionPanel: {fileID: 8937467723542657996}
   m_PrepareSeconds: 20
   m_TotalRounds: 3
   m_RoundOverDisplaySeconds: 3
@@ -6049,6 +6049,11 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 7545105994632802393, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
   m_PrefabInstance: {fileID: 3098357823662594650}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8937467723542657996 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6266714406817718678, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
+  m_PrefabInstance: {fileID: 3098357823662594650}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &7381529644823893827
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6146,6 +6151,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 495971300a895c743943528954e6d97f, type: 3}
+--- !u!1 &2757121875411395943 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4626100232422470180, guid: 495971300a895c743943528954e6d97f, type: 3}
+  m_PrefabInstance: {fileID: 7381529644823893827}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &7590169772802714326 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1091495277450132885, guid: 495971300a895c743943528954e6d97f, type: 3}

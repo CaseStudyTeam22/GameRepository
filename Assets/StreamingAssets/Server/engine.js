@@ -238,9 +238,31 @@ const Engine = {
         [p1, p2].forEach(p => {
             for (let i = items.length - 1; i >= 0; i--) {
                 if (p.x === items[i].x && p.y === items[i].y) {
-                    if (items[i].type === 'chips') p.chips += Config.CHIP_ITEM_VALUE;
+                    if (items[i].type === 'chips') {
+                        p.chips += Config.CHIP_ITEM_VALUE;
+                        events.push({ type: 'mission_progress', playerId: p.id, missionType: 'GainChip', amount: Config.CHIP_ITEM_VALUE });
+                    }
                     else p.money += Config.MONEY_ITEM_VALUE;
                     items.splice(i, 1);
+                }
+            }
+        });
+
+        // 移動・プッシュの進捗を記録
+        [p1, p2].forEach(p => {
+            const intent = intents[p.id];
+            if (!intent) return;
+            if (intent.type === 'move') {
+                const dist = Math.abs(p.x - p.prevX) + Math.abs(p.y - p.prevY);
+                if (dist > 0) {
+                    events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Move', amount: dist });
+                }
+            } else if (intent.type === 'push') {
+                const target = p.id === p1Id ? p2 : p1;
+                const pushDist = Math.abs(target.x - target.prevX) + Math.abs(target.y - target.prevY);
+                // 相手が実際に動いた（ノックバックした）場合のみカウント
+                if (pushDist > 0) {
+                    events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Push', amount: 1 });
                 }
             }
         });

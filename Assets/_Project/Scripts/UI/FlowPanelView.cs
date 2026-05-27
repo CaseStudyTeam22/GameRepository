@@ -276,20 +276,34 @@ namespace GamblingAction.UI
 		private void HandlePhase(EGamePhase phase)
 		{
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
-			SetActive(m_BuffPanel,      phase == EGamePhase.BuffSelection);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
 
-			// ミッション選択HUDはバフ選択中かつ選択肢がある時に表示
-			bool showSelection = phase == EGamePhase.BuffSelection && 
-								 m_State.Me != null && 
-								 m_State.Me.AvailableMissions != null && 
-								 m_State.Me.AvailableMissions.Count > 0 &&
-								 m_State.Me.Mission == null;
-			SetActive(m_MissionSelectionPanel, showSelection);
+			// BuffSelection フェーズで、バフ選択順序とミッション選択順序を制御
+			// バフ未選択 → m_BuffPanel 表示
+			// バフ選択済み＆ミッション未選択 → m_MissionSelectionPanel 表示
+			if (phase == EGamePhase.BuffSelection)
+			{
+				var me = m_State.Me;
+				bool buffSelected = me != null && me.BuffReady;
+				bool showBuff = !buffSelected;
+				bool showMission = buffSelected && 
+									me != null && 
+									me.AvailableMissions != null && 
+									me.AvailableMissions.Count > 0 &&
+									me.Mission == null;
+				
+				SetActive(m_BuffPanel, showBuff);
+				SetActive(m_MissionSelectionPanel, showMission);
+			}
+			else
+			{
+				SetActive(m_BuffPanel, false);
+				SetActive(m_MissionSelectionPanel, false);
+			}
 
 			// ミッションHUDを表示するフェーズの制御
-			bool showMission = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
-			SetActive(m_MissionPanel, showMission);
+			bool showMissionHUD = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
+			SetActive(m_MissionPanel, showMissionHUD);
 
 			// 決着パネルは固定秒数だけ表示して自動で隠す（次ラウンドの生成より前に消す）。
 			// それ以外のフェーズに入ったら取りこぼし防止で即座に隠す。
