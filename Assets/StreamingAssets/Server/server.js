@@ -619,6 +619,19 @@ function checkAllBuffsSelected() {
         if (pList.every(pl => pl.buffReady)) {
             console.log('[Server] All players selected buffs. Waiting for mission selections...');
             
+            // AIがランダムにミッション選択
+            let changed = false;
+            pList.forEach(pl => {
+                if (pl.isAI && !pl.mission) {
+                    if (selectRandomMissionForAI(pl)) {
+                        console.log(`[Server] AI Player ${pl.role} auto-selected mission: ${pl.mission.description}`);
+                        changed = true;
+                    }
+                }
+            });
+            
+            if (changed) io.emit('sync_state', { players });
+            
             // ミッション選択フェーズの制限時間タイマーを設定
             if (missionTimer) clearTimeout(missionTimer);
             missionTimer = setTimeout(autoMissionTimedOut, MISSION_PHASE_MS);
@@ -632,6 +645,16 @@ function checkAllBuffsSelected() {
 // ミッション選択の完了を確認
 let missionTimer = null;
 const MISSION_PHASE_MS = 15000; // ミッション選択フェーズの制限時間（ミリ秒）
+
+// AIがミッションをランダムに選択（将来的に重み付けする可能性を考慮して関数化）
+function selectRandomMissionForAI(player) {
+	if (player.availableMissions && player.availableMissions.length > 0) {
+		const randomIndex = Math.floor(Math.random() * player.availableMissions.length);
+		player.mission = JSON.parse(JSON.stringify(player.availableMissions[randomIndex]));
+		return true;
+	}
+	return false;
+}
 
 function checkAllMissionsSelected() {
     const pList = Object.values(players);

@@ -6146,6 +6146,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MissionPanel
       objectReference: {fileID: 0}
+    - target: {fileID: 4626100232422470180, guid: 495971300a895c743943528954e6d97f, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

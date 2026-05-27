@@ -278,32 +278,16 @@ namespace GamblingAction.UI
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
 
-			// BuffSelection フェーズで、バフ選択順序とミッション選択順序を制御
-			// バフ未選択 → m_BuffPanel 表示
-			// バフ選択済み＆ミッション未選択 → m_MissionSelectionPanel 表示
-			if (phase == EGamePhase.BuffSelection)
-			{
-				var me = m_State.Me;
-				bool buffSelected = me != null && me.BuffReady;
-				bool showBuff = !buffSelected;
-				bool showMission = buffSelected && 
-									me != null && 
-									me.AvailableMissions != null && 
-									me.AvailableMissions.Count > 0 &&
-									me.Mission == null;
-				
-				SetActive(m_BuffPanel, showBuff);
-				SetActive(m_MissionSelectionPanel, showMission);
-			}
-			else
+			// ミッションHUDを表示するフェーズの制御（Countdown / Battle 中）
+			bool showMissionHUD = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
+			SetActive(m_MissionPanel, showMissionHUD);
+			
+			// ミッション表示時はバフパネルを非表示に
+			if (showMissionHUD)
 			{
 				SetActive(m_BuffPanel, false);
 				SetActive(m_MissionSelectionPanel, false);
 			}
-
-			// ミッションHUDを表示するフェーズの制御
-			bool showMissionHUD = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
-			SetActive(m_MissionPanel, showMissionHUD);
 
 			// 決着パネルは固定秒数だけ表示して自動で隠す（次ラウンドの生成より前に消す）。
 			// それ以外のフェーズに入ったら取りこぼし防止で即座に隠す。
@@ -333,6 +317,10 @@ namespace GamblingAction.UI
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
 				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;
+
+				// バフ/ミッションパネル表示の更新
+				UpdateBuffPanelUI();
+				UpdateMissionSelectionUI();
 			}
 
 			if (phase == EGamePhase.Countdown)
@@ -340,6 +328,7 @@ namespace GamblingAction.UI
 				m_RoundCount++;
 				UpdateRoundText();
 				StartCountdown();
+				UpdateMissionUI();
 			}
 			else
 			{
@@ -349,6 +338,7 @@ namespace GamblingAction.UI
 			if (phase == EGamePhase.Battle)
 			{
 				UpdateBeatVisual();
+				UpdateMissionUI();
 			}
 
 			if (phase == EGamePhase.GameOver)
@@ -370,6 +360,7 @@ namespace GamblingAction.UI
 			ApplyPlayerSlot(opponent, m_P2Name, m_P2Money, null,      isSelf: false);
 
 			UpdateMissionUI();
+			UpdateBuffPanelUI();
 			UpdateMissionSelectionUI();
 		}
 
@@ -391,13 +382,37 @@ namespace GamblingAction.UI
 			}
 		}
 
+		// バフパネルの表示制御（BuffSelection フェーズのみ）
+		private void UpdateBuffPanelUI()
+		{
+			if (m_State == null) return;
+
+			// BuffSelection フェーズ以外ではバフパネルを非表示
+			if (m_State.Phase != EGamePhase.BuffSelection)
+			{
+				SetActive(m_BuffPanel, false);
+				return;
+			}
+
+			// BuffSelection フェーズ：自分がバフ未選択の時のみ表示
+			var me = m_State.Me;
+			bool buffSelected = me != null && me.BuffReady;
+			bool showBuffPanel = !buffSelected;
+
+			SetActive(m_BuffPanel, showBuffPanel);
+		}
+
+		// ミッション選択パネルの表示制御
 		private void UpdateMissionSelectionUI()
 		{
 			var me = m_State.Me;
+			// 自分がバフ選択済み、かつミッション未選択の時のみ表示
+			bool buffSelected = me != null && me.BuffReady;
 			bool showSelection = m_State.Phase == EGamePhase.BuffSelection && 
-								 me != null && 
-								 me.AvailableMissions != null && 
-								 me.AvailableMissions.Count > 0 && 
+							 buffSelected &&
+								 me != null &&
+								 me.AvailableMissions != null &&
+								 me.AvailableMissions.Count > 0 &&
 								 me.Mission == null;
 			SetActive(m_MissionSelectionPanel, showSelection);
 
