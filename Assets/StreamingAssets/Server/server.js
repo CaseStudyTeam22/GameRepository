@@ -43,6 +43,16 @@ let buffTimer = null;
 const ROUND_INTRO_MS = 1500;
 let roundIntroTimer = null;
 
+// ファイナルレイズ進行中フラグ。true の間は次の round_over で勝者が直接全勝（game_over）。
+let isFinalDuel = false;
+// 提案者（直前ラウンドの敗者）・応答者（直前ラウンドの勝者）の socket id を保持する。
+// 切断や resetMatch でクリアする。
+let finalRaiseProposerId = null;
+let finalRaiseResponderId = null;
+// 提案・応答それぞれの制限時間タイマー句柄。
+let finalRaiseOfferTimer = null;
+let finalRaisePendingTimer = null;
+
 function resetPlayerPos(id) {
     const p = players[id];
     if (!p) return;
@@ -163,8 +173,7 @@ setInterval(() => {
                         const winnerId = Object.keys(players).find(oid => oid !== loserId);
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
-                            if (players[winnerId].score >= 2) io.emit('game_over', { winnerRole: players[winnerId].role });
-                            else { io.emit('round_over', { winnerRole: players[winnerId].role }); setTimeout(beginRound, 3000); }
+                            handleRoundConcluded(winnerId, loserId);
                         }
                     }, 1500);
                 }
@@ -506,11 +515,37 @@ io.on('connection', (socket) => {
         if (gameActive && currentBeat < 4 && p && !p.isAI) p.intent = { type: data.type || 'move', dir: data.dir, power: data.power || 1 };
     });
 
+    // 敗者がファイナルレイズを発起するか決定する。accept=true で勝者の応答待ちへ。
+    socket.on('final_raise_propose', (data) => {
+        if (socket.id !== finalRaiseProposerId) return;
+        if (!finalRaiseOfferTimer) return;
+        clearTimeout(finalRaiseOfferTimer);
+        finalRaiseOfferTimer = null;
+        const accept = !!(data && data.accept);
+        if (accept) beginFinalRaisePending();
+        else cancelFinalRaise('declined');
+    });
+
+    // 勝者がファイナルレイズを受諾するか決定する。accept=true で本番ラウンドへ。
+    socket.on('final_raise_respond', (data) => {
+        if (socket.id !== finalRaiseResponderId) return;
+        if (!finalRaisePendingTimer) return;
+        clearTimeout(finalRaisePendingTimer);
+        finalRaisePendingTimer = null;
+        const accept = !!(data && data.accept);
+        if (accept) startFinalDuel();
+        else cancelFinalRaise('declined');
+    });
+
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
-    socket.on('disconnect', () => { 
+    socket.on('disconnect', () => {
         console.log(`[Server] Player left: ${socket.id}`);
-        delete players[socket.id]; 
-        io.emit('player_left', socket.id); 
+        // 切断者がファイナルレイズの当事者ならフローを中断する。
+        if (socket.id === finalRaiseProposerId || socket.id === finalRaiseResponderId) {
+            cancelFinalRaise('disconnect');
+        }
+        delete players[socket.id];
+        io.emit('player_left', socket.id);
         io.emit('sync_state', { players });
     });
 });
@@ -643,8 +678,104 @@ function startLanBroadcast() {
     });
 }
 
+// 1 ラウンドの決着がついた直後に呼ばれる。
+// ファイナルレイズ進行中なら即 game_over。
+// 通常ラウンドで勝者が 2 勝目を取った瞬間に提案フェーズへ入り、それ以外は次ラウンドへ。
+function handleRoundConcluded(winnerId, loserId) {
+    const winner = players[winnerId];
+    if (!winner) return;
+
+    if (isFinalDuel) {
+        // ファイナルレイズ本番：勝者が全勝。フラグはここでリセットしておく。
+        isFinalDuel = false;
+        io.emit('game_over', { winnerRole: winner.role });
+        return;
+    }
+
+    if (winner.score >= 2) {
+        // 2 勝に到達。敗者にファイナルレイズの提案権を与える。
+        startFinalRaiseOffer(winnerId, loserId);
+        return;
+    }
+
+    io.emit('round_over', { winnerRole: winner.role });
+    setTimeout(beginRound, 3000);
+}
+
+// 敗者（loser）が「ファイナルレイズを発起するか」を決めるフェーズを開始する。
+// 制限時間内に応答がなければ拒否扱いで通常の game_over に流す。
+function startFinalRaiseOffer(winnerId, loserId) {
+    finalRaiseProposerId = loserId;
+    finalRaiseResponderId = winnerId;
+
+    const winner = players[winnerId];
+    const loser = players[loserId];
+    io.emit('final_raise_offer', {
+        proposerRole: loser ? loser.role : null,
+        responderRole: winner ? winner.role : null,
+        timeoutMs: Config.FINAL_RAISE_TIMEOUT_MS
+    });
+
+    if (finalRaiseOfferTimer) clearTimeout(finalRaiseOfferTimer);
+    finalRaiseOfferTimer = setTimeout(() => {
+        finalRaiseOfferTimer = null;
+        // 時間切れは「発起しない」扱い。通常の決着へ。
+        cancelFinalRaise('timeout');
+    }, Config.FINAL_RAISE_TIMEOUT_MS);
+}
+
+// 勝者の応答（受諾 / 拒否）を待つフェーズへ進む。
+function beginFinalRaisePending() {
+    const winner = players[finalRaiseResponderId];
+    const loser = players[finalRaiseProposerId];
+    io.emit('final_raise_pending', {
+        proposerRole: loser ? loser.role : null,
+        responderRole: winner ? winner.role : null,
+        timeoutMs: Config.FINAL_RAISE_TIMEOUT_MS
+    });
+
+    if (finalRaisePendingTimer) clearTimeout(finalRaisePendingTimer);
+    finalRaisePendingTimer = setTimeout(() => {
+        finalRaisePendingTimer = null;
+        cancelFinalRaise('timeout');
+    }, Config.FINAL_RAISE_TIMEOUT_MS);
+}
+
+// ファイナルレイズの中断（拒否・タイムアウト・切断）。通常の game_over へ流す。
+function cancelFinalRaise(reason) {
+    if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
+    if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
+    const winnerId = finalRaiseResponderId;
+    finalRaiseProposerId = null;
+    finalRaiseResponderId = null;
+    isFinalDuel = false;
+
+    const winner = winnerId ? players[winnerId] : null;
+    io.emit('final_raise_canceled', { reason });
+    if (winner) io.emit('game_over', { winnerRole: winner.role });
+}
+
+// 勝者が受諾した。ファイナルレイズ本番ラウンドを開始する。
+function startFinalDuel() {
+    if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
+    if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
+    finalRaiseProposerId = null;
+    finalRaiseResponderId = null;
+    isFinalDuel = true;
+
+    io.emit('final_raise_started');
+    // 通常ラウンドと同じ準備フローに合わせるため、少し間を置いてから beginRound へ。
+    setTimeout(beginRound, 3000);
+}
+
 function resetMatch() {
     gameActive = false; items = []; currentBeat = 0;
+    // ファイナルレイズ状態もリセット。
+    if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
+    if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
+    isFinalDuel = false;
+    finalRaiseProposerId = null;
+    finalRaiseResponderId = null;
     for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; resetPlayerPos(id); players[id].exchanged = false; }
     // 直接チップ交換へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
     beginRound();
