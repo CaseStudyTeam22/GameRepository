@@ -21,7 +21,7 @@ namespace GamblingAction.Gameplay.Editor
 		private const string k_PidKey = "PlayModeServerLauncher.Pid";
 		// この EditorPref が true のときだけ旧フローを動かす。既定は無効。
 		private const string k_LegacyEnabledKey = "GamblingAction.PlayModeServerLauncher.Legacy";
-		private const string k_MenuPath = "Tools/GamblingAction/Use Legacy PlayModeServerLauncher";
+		private const string k_MenuPath = "Tools/GamblingAction/再生時に旧サーバー自動起動を使う";
 
 		static PlayModeServerLauncher()
 		{
@@ -33,7 +33,7 @@ namespace GamblingAction.Gameplay.Editor
 		{
 			bool next = !EditorPrefs.GetBool(k_LegacyEnabledKey, false);
 			EditorPrefs.SetBool(k_LegacyEnabledKey, next);
-			Debug.Log($"[Server] Legacy PlayModeServerLauncher = {next}");
+			Debug.Log($"[Server] 旧サーバー自動起動 = {(next ? "有効" : "無効")}");
 		}
 
 		[MenuItem(k_MenuPath, true)]
