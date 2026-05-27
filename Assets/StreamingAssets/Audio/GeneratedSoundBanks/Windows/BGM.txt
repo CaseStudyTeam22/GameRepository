@@ -13,6 +13,4 @@ State	ID	Name	State Group			Notes
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	143921451	025_dr_bpm160_4-4_rock	.cache\6B\{6B6BD8F9-555E-8AEE-A9D5-8C2C32F2B9CF}.wem		\Containers\Default Work Unit\BGM\BGM_Swtich\BGM_Loop\SubBGM02\025_dr_bpm160_4-4_rock		4233696
-	567241478	alban	.cache\9C\{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem		\Containers\Default Work Unit\BGM\BGM_Swtich_Offset\BGM_Loop\MainBgm\alban		12437088
-	778453348	loop_6_beat	.cache\B1\{B1215744-F64F-2902-DE33-CE7DB3A77542}.wem		\Containers\Default Work Unit\BGM\BGM_Swtich_Cue\BGM_Loop\SubBGM\loop_6_beat		2207328
 

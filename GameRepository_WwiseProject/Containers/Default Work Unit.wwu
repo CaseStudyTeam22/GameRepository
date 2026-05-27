@@ -324,7 +324,7 @@
 										</MusicSegment>
 										<MusicSegment Name="SubBGM02" ID="{3E190CF4-D753-4875-8094-4158271E6BBE}" ShortID="50467498">
 											<PropertyList>
-												<Property Name="EndPosition" Type="Real64" Value="24000"/>
+												<Property Name="EndPosition" Type="Real64" Value="10504.1620061154"/>
 												<Property Name="OverrideClockSettings" Type="bool" Value="True"/>
 												<Property Name="Tempo" Type="Real64" Value="160"/>
 											</PropertyList>
@@ -511,6 +511,13 @@
 							</ObjectLists>
 						</MusicSwitchContainer>
 						<MusicSwitchContainer Name="BGM_Swtich_Cue" ID="{553B4211-45B2-4C00-856A-365EF2079FED}" ShortID="20707454">
+							<PropertyList>
+								<Property Name="Inclusion" Type="bool">
+									<ValueList>
+										<Value>False</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
 							<ReferenceList>
 								<Reference Name="Conversion">
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>
@@ -896,6 +903,13 @@
 							</ObjectLists>
 						</MusicSwitchContainer>
 						<MusicSwitchContainer Name="BGM_Swtich_Offset" ID="{DE67A132-7FB8-474B-A04B-696A2882FAA4}" ShortID="35966109">
+							<PropertyList>
+								<Property Name="Inclusion" Type="bool">
+									<ValueList>
+										<Value>False</Value>
+									</ValueList>
+								</Property>
+							</PropertyList>
 							<ReferenceList>
 								<Reference Name="Conversion">
 									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>

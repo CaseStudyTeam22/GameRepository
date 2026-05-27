@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
     "Language": "SFX",
-    "Hash": "{3AC241E8-A912-D8C6-ECF5-C8910688DBA1}",
+    "Hash": "{2FB8E059-C4ED-B87F-1954-8B93F1A62FE6}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\BGM",
     "ShortName": "BGM",
     "Path": "BGM.bnk",
@@ -22,22 +22,6 @@
       "Location": "Memory",
       "ShortName": "025_dr_bpm160_4-4_rock.wav",
       "CachePath": "6B/{6B6BD8F9-555E-8AEE-A9D5-8C2C32F2B9CF}.wem"
-     },
-     {
-      "Id": "567241478",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Memory",
-      "ShortName": "alban.wav",
-      "CachePath": "9C/{9CC8AECD-CB0C-F9BB-3531-5458F7020F03}.wem"
-     },
-     {
-      "Id": "778453348",
-      "Language": "SFX",
-      "Streaming": "false",
-      "Location": "Memory",
-      "ShortName": "loop_6_beat.wav",
-      "CachePath": "B1/{B1215744-F64F-2902-DE33-CE7DB3A77542}.wem"
      }
     ],
     "Events": [
@@ -46,22 +30,9 @@
       "Name": "Play_BGM_Swtich_Cue",
       "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_Cue",
       "GUID": "{6A7310ED-DF0C-4989-B030-88FADFA93DFB}",
-      "DurationType": "Infinite",
-      "SwitchContainers": [
-       {
-        "SwitchValue": {
-         "GroupType": "State",
-         "GroupId": "762757699",
-         "Id": "2937832959",
-         "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
-        },
-        "MediaRefs": [
-         {
-          "Id": "778453348"
-         }
-        ]
-       }
-      ],
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0",
       "ActionSetState": [
        {
         "GroupId": "762757699",
@@ -77,22 +48,9 @@
       "Name": "Play_BGM_Swtich_Offset",
       "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_Offset",
       "GUID": "{98D336B6-3990-456B-8FB7-369671D458D1}",
-      "DurationType": "Infinite",
-      "SwitchContainers": [
-       {
-        "SwitchValue": {
-         "GroupType": "State",
-         "GroupId": "762757699",
-         "Id": "2937832959",
-         "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
-        },
-        "MediaRefs": [
-         {
-          "Id": "567241478"
-         }
-        ]
-       }
-      ],
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0",
       "ActionSetState": [
        {
         "GroupId": "762757699",
@@ -165,6 +123,6 @@
     ]
    }
   ],
-  "FileHash": "{6C540820-349F-FAF5-FF55-342413FFCDF4}"
+  "FileHash": "{0C4FD1BC-3661-FE29-DD74-E807D5E624EA}"
  }
 }
