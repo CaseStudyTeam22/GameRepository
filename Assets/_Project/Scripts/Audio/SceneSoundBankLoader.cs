@@ -20,16 +20,14 @@ namespace GamblingAction.Audio
         /// </summary>
         [SerializeField] private List<string> m_SoundBankNames = new List<string>();
 
-        // -------------------------------------------------------
-        // プロパティ
-        // -------------------------------------------------------
+        /// <summary>
+        /// Play終了時のフラグ。
+        /// OnApplicationQuit が呼ばれた場合に true になり、OnDestroy でのアンロードをスキップする。
+        /// </summary>
+        private bool m_IsQuitting = false;
 
         /// <summary>ログ出力用のシーン名サフィックス。</summary>
         private string SceneLabel => $"(Scene: {SceneManager.GetActiveScene().name})";
-
-        // -------------------------------------------------------
-        // Unity メッセージ
-        // -------------------------------------------------------
 
         private void Start()
         {
@@ -53,8 +51,16 @@ namespace GamblingAction.Audio
             }
         }
 
+        private void OnApplicationQuit()
+        {
+            m_IsQuitting = true;
+        }
+
         private void OnDestroy()
         {
+            // Play終了時はアンロード処理をスキップする
+            if (m_IsQuitting) return;
+
             // WwiseBankManager が存在しない場合はエラーログを出して処理しない
             if (WwiseBankManager.Instance == null)
             {

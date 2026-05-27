@@ -29,7 +29,8 @@ namespace GamblingAction.Audio
         /// 使用可能なバンク名の一覧。Inspector で登録する。
         /// 登録されていないバンク名は操作対象外としてエラーログを出す。
         /// </summary>
-        [SerializeField] private List<string> m_RegisteredBankNames = new List<string>();
+        [SerializeField]
+        private List<string> m_RegisteredBankNames = new List<string>();
 
         /// <summary>現在ロード済みのバンク名を管理するセット。</summary>
         private HashSet<string> m_LoadedBanks = new HashSet<string>();
@@ -61,11 +62,11 @@ namespace GamblingAction.Audio
         // -------------------------------------------------------
 
         /// <summary>
-        /// 指定したバンクをロードする。
+        /// 指定したSoundBankをロードする。
         /// ロード完了時に onCompleted を呼び出す（引数は成否）。
         /// 遅延アンロード待ち中の場合はキャンセルしてロード済み状態を維持する。
         /// </summary>
-        /// <param name="bankName">ロードするバンク名。Inspector 登録済みである必要がある。</param>
+        /// <param name="bankName">ロードするSoundBank名。Inspector 登録済みである必要がある。</param>
         /// <param name="onCompleted">ロード完了時のコールバック。引数は成否（true: 成功）。</param>
         public void LoadBank(string bankName, Action<bool> onCompleted = null)
         {
@@ -112,10 +113,10 @@ namespace GamblingAction.Audio
         }
 
         /// <summary>
-        /// 指定したバンクを次のフレームでアンロードする。
-        /// ロードされていないバンクが指定された場合はエラーログを出して処理しない。
+        /// 指定したSoundBankを次のフレームでアンロードする。
+        /// ロードされていないSoundBankが指定された場合はエラーログを出して処理しない。
         /// </summary>
-        /// <param name="bankName">アンロードするバンク名。Inspector 登録済みである必要がある。</param>
+        /// <param name="bankName">アンロードするSoundBank名。Inspector 登録済みである必要がある。</param>
         public void UnloadBank(string bankName)
         {
             // 未登録SoundBank名はエラーとして処理しない
@@ -149,7 +150,7 @@ namespace GamblingAction.Audio
         // -------------------------------------------------------
 
         /// <summary>
-        /// 1フレーム待機後にバンクをアンロードするコルーチン。
+        /// 1フレーム待機後にSoundBankをアンロードするコルーチン。
         /// </summary>
         private IEnumerator UnloadBankNextFrame(string bankName)
         {
@@ -163,7 +164,7 @@ namespace GamblingAction.Audio
         }
 
         /// <summary>
-        /// 指定したバンク名が Inspector に登録済みかどうかを返す。
+        /// 指定したSoundBank名が Inspector に登録済みかどうかを返す。
         /// </summary>
         private bool IsRegistered(string bankName)
         {
