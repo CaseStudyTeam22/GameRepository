@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8630b08e990f5e8468c063ea4b929a7a, type: 3}
+  m_Name: NarikinStatsData
+  m_EditorClassIdentifier: 
+  m_Keys:
+  - "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u4ED5\u69D8\uFF08\u6210\u91D1\uFF09"
+  - "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u540D"
+  - "\u8CC7\u91D1"
+  - "\u30C1\u30C3\u30D7"
+  - "\u30B9\u30BF\u30DF\u30CA\uFF08\u4F53\u5E79\uFF09"
+  - "\u7A81\u9032"
+  - "\u9632\u5FA1"
+  - "\u30B9\u30AD\u30EB"
+  - "\u30B9\u30AD\u30EB\u5185\u5BB9"
+  m_Values:
+  - 
+  - "\u6210\u91D1"
+  - 20000
+  - 10
+  - 10
+  - 4
+  - 1
+  - 2
+  - "\u30B9\u30AD\u30EB\u306E\u767A\u52D5\u81EA\u4F53\u306F\u6D88\u8CBB\uFF10"
