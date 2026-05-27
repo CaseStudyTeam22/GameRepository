@@ -6,9 +6,9 @@ using Debug = UnityEngine.Debug;
 
 namespace GamblingAction.Gameplay.Editor
 {
-	// PIE（Play In Editor）開始時に node server.js を別 cmd ウィンドウで自動起動し、
-	// PIE 終了時に自動で停止する。手動で start_server.bat を起動する手間を省くためのもの。
-	// ログは従来通り別ウィンドウにそのまま出るので debug しやすい。
+	// 旧 PIE フロー：再生開始時に node server.js を別 cmd ウィンドウで起動。
+	// 現在は NetworkBootstrap（StreamingAssets/Server/node.exe を子プロセスで起動）に
+	// 役割を移譲済み。既定では無効。Tools > GamblingAction > Use Legacy ... で切替可。
 	[InitializeOnLoad]
 	public static class PlayModeServerLauncher
 	{
@@ -19,14 +19,35 @@ namespace GamblingAction.Gameplay.Editor
 		// 起動した node プロセスの PID を domain reload をまたいで保持するためのキー。
 		// static フィールドは PIE 開始時の domain reload で消えるため SessionState を使う。
 		private const string k_PidKey = "PlayModeServerLauncher.Pid";
+		// この EditorPref が true のときだけ旧フローを動かす。既定は無効。
+		private const string k_LegacyEnabledKey = "GamblingAction.PlayModeServerLauncher.Legacy";
+		private const string k_MenuPath = "Tools/GamblingAction/Use Legacy PlayModeServerLauncher";
 
 		static PlayModeServerLauncher()
 		{
 			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 		}
 
+		[MenuItem(k_MenuPath)]
+		private static void ToggleLegacy()
+		{
+			bool next = !EditorPrefs.GetBool(k_LegacyEnabledKey, false);
+			EditorPrefs.SetBool(k_LegacyEnabledKey, next);
+			Debug.Log($"[Server] Legacy PlayModeServerLauncher = {next}");
+		}
+
+		[MenuItem(k_MenuPath, true)]
+		private static bool ToggleLegacyValidate()
+		{
+			Menu.SetChecked(k_MenuPath, EditorPrefs.GetBool(k_LegacyEnabledKey, false));
+			return true;
+		}
+
 		private static void OnPlayModeStateChanged(PlayModeStateChange state)
 		{
+			// 既定では NetworkBootstrap が StreamingAssets/Server/node.exe を起動するので何もしない。
+			if (!EditorPrefs.GetBool(k_LegacyEnabledKey, false)) return;
+
 			switch (state)
 			{
 				// 再生ボタンを押し、PIE に入る直前。ここでサーバを起動する。

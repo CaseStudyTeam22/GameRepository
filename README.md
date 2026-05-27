@@ -6,16 +6,23 @@ CaseStudyTeam22「Winner Takes All」（仮称）の Unity 6 クライアント 
 
 ### 必要環境
 - Unity 6 LTS（URP 3D テンプレート）
-- Node.js（サーバー起動用）
+- Node.js（開発時のサーバー起動用。ビルド成果物には同梱 portable Node を使うため不要）
 - Git LFS
+- Windows PowerShell（portable Node 取得スクリプトの実行用）
 
 ### 起動方法
 1. リポジトリを `git clone`（LFS 必須）
-2. Unity Hub で `GameRepository/` フォルダを開く
-3. 別途、**サーバーを起動**：リポジトリ root の `start_server.bat` をダブルクリック
-   - 初回は `npm install` が走ります
-   - `[GamblingAction Server] Running on port 3000...` の表示で起動完了
-4. Unity で `Boot.unity` を Play
+2. **portable Node を取得**：リポジトリ root の一つ上にある `Tools/download-node.ps1` を一度だけ実行する
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File Tools\download-node.ps1
+   ```
+   - `Assets/StreamingAssets/Server/node.exe`（約 80MB）が配置されます
+   - リポジトリには含まれていないため、**clone 後と再取得時のみ**実行が必要です
+   - 配置済みの場合は何もせず終了します
+3. Unity Hub で `GameRepository/` フォルダを開く
+4. Unity で `Bootstrap.unity` を Play
+   - サーバーは Unity 側が自動で起動します（旧 `start_server.bat` の手動起動は不要）
+   - 同一 LAN 上に既存ホストがあれば自動でクライアントとして接続します
 5. 2 人プレイは Unity の **Multiplayer Play Mode** を使用
 
 #### Multiplayer Play Mode の初回セットアップ
