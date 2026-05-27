@@ -11,15 +11,20 @@ CaseStudyTeam22「Winner Takes All」（仮称）の Unity 6 クライアント 
 
 ### 起動方法
 1. リポジトリを `git clone`（LFS 必須）
-   - `Assets/StreamingAssets/Server/node.exe`（約 80MB）はリポジトリに含まれているため、追加取得は不要です
-2. Unity Hub で `GameRepository/` フォルダを開く
-3. **初回のみ**：Unity メニュー `Tools → GamblingAction → サーバー依存を導入 (npm install)` を一度実行する
+2. **portable Node を配置**：チーム共有ドライブから `node.exe` をダウンロードし、以下のパスに直接置く
+   ```
+   Assets/StreamingAssets/Server/node.exe
+   ```
+   - 約 80MB。git で配ると壊れるため共有ドライブ経由で配布しています
+   - URL はチーム内で別途共有しています
+3. Unity Hub で `GameRepository/` フォルダを開く
+4. **初回のみ**：Unity メニュー `Tools → GamblingAction → サーバー依存を導入 (npm install)` を一度実行する
    - `Assets/StreamingAssets/Server/node_modules/` が生成されます（リポジトリには含まれていません）
    - 実行には PC に Node.js がインストールされている必要があります
-4. Unity で `Bootstrap.unity` を Play
+5. Unity で `Bootstrap.unity` を Play
    - サーバーは Unity 側が自動で起動します（旧 `start_server.bat` の手動起動は不要）
    - 同一 LAN 上に既存ホストがあれば自動でクライアントとして接続します
-5. 2 人プレイは Unity の **Multiplayer Play Mode** を使用
+6. 2 人プレイは Unity の **Multiplayer Play Mode** を使用
 
 ### ビルド成果物の配布時の注意
 
