@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const dgram = require('dgram');
+const os = require('os');
 
 const Config = require('./config');
 const Engine = require('./engine');
@@ -694,7 +696,60 @@ function autoMissionTimedOut() {
 // IPv6 ワイルドカード '::' でリッスン。Node は IPv4-mapped IPv6 経由で
 // IPv4 接続も同じソケットで受けるため、127.0.0.1 / ::1 / LAN IPv4 / IPv6
 // いずれのアドレスでもクライアントから接続できる。
-server.listen(3000, '::', () => console.log(`[GamblingAction Server] Running on port 3000 (IPv4/IPv6 dual-stack)...`));
+server.listen(3000, '::', () => {
+    console.log(`[GamblingAction Server] Running on port 3000 (IPv4/IPv6 dual-stack)...`);
+    startLanBroadcast();
+});
+
+// ---------------------------------------------------------------------
+// LAN 自動発見：同一ブロードキャストドメイン上のクライアントに自機 IP を
+// UDP で周期的に通知する。クライアント側（LanDiscovery.cs）がこのパケットを
+// 受信して接続先 URL を決定する。
+// ---------------------------------------------------------------------
+
+// パケット識別用の MAGIC 文字列。クライアントと一致させること。
+const LAN_DISCOVERY_MAGIC = 'GAMBLINGACTION|7f3a4d9e';
+// 通知先 UDP ポート。TCP 3000 と衝突しないよう別ポートを使う。
+const LAN_DISCOVERY_PORT = 38900;
+// 通知間隔（ミリ秒）。
+const LAN_BROADCAST_INTERVAL_MS = 1000;
+
+// 自機の LAN 上の IPv4 アドレスを返す。複数 NIC があれば最初の非ループバック v4 を採用する。
+function pickLanIPv4() {
+    const ifaces = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+        for (const info of ifaces[name] || []) {
+            if (info.family === 'IPv4' && !info.internal) {
+                return info.address;
+            }
+        }
+    }
+    return '127.0.0.1';
+}
+
+function startLanBroadcast() {
+    const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+    sock.on('error', (err) => {
+        console.warn('[LanDiscovery] broadcast socket error:', err.message);
+        sock.close();
+    });
+    sock.bind(() => {
+        try { sock.setBroadcast(true); } catch (_) { /* OS によっては失敗するが致命ではない */ }
+        const send = () => {
+            const ip = pickLanIPv4();
+            // 形式: <MAGIC>|<IPv4>|<TCP_PORT>|<PID>
+            // PID は自プロセス発信分の自己受信を除外するためにクライアント側で照合する。
+            const payload = `${LAN_DISCOVERY_MAGIC}|${ip}|3000|${process.pid}`;
+            const buf = Buffer.from(payload, 'utf8');
+            sock.send(buf, 0, buf.length, LAN_DISCOVERY_PORT, '255.255.255.255', (err) => {
+                if (err) console.warn('[LanDiscovery] broadcast send error:', err.message);
+            });
+        };
+        send();
+        setInterval(send, LAN_BROADCAST_INTERVAL_MS);
+        console.log(`[LanDiscovery] broadcasting on UDP ${LAN_DISCOVERY_PORT} every ${LAN_BROADCAST_INTERVAL_MS}ms`);
+    });
+}
 
 function resetMatch() {
     gameActive = false; items = []; currentBeat = 0;

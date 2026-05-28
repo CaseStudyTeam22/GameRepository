@@ -118,3 +118,8 @@ Thumbs.db
 # metaファイルが追跡されてしまうと、Unityを開いた際にnode_modulesの空フォルダが生成されるため追跡の対象外とする
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node_modules.meta
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/package-lock.json
+
+# Portable Node ランタイム。Tools/download-node.ps1 で初回 clone 後に取得する。
+# サイズが大きく（90MB+）リポジトリには含めない。
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node.exe
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node.exe.meta
