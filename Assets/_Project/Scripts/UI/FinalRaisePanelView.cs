@@ -3,79 +3,101 @@ using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace GamblingAction.UI
 {
 	// ファイナルレイズの提案 / 応答 UI。
 	//
-	// 双方同じ Panel を見るが、操作できるのはその時点で手番のプレイヤーだけ。
-	// 確定ボタン（FIGHT / ACCEPT）と拒否ボタン（FOLD / DECLINE）の 2 つを長押し 2 秒で確定。
-	// ボタン背景の Image.fillAmount を 0→1 にして充塔フィードバックを出す。
-	// 確定後はその局面の入力をロックする。一度発起したら撤回できない。
+	// パネルは左右 2 つ（YouPanel / OpponentPanel）で構成され、
+	// 自分と相手のどちらが操作中かをそれぞれの位置に表示する。
+	// 提案フェーズ：敗者が「挑戦する / 降りる」を選ぶ。
+	// 応答フェーズ：勝者が「受ける / 拒否」を選ぶ。
+	// 拒否・タイムアウト・切断は全てサーバ側で game_over に流される。
+	//
+	// 子オブジェクトの参照は名前ベースで自動取得する。Prefab で以下の構造を保つこと：
+	//   FinalRaisePanel (このスクリプト, 常駐 active)
+	//     Root                       ← 表示切替対象。名前は "Root" 固定。無ければスクリプト自身を使う
+	//       YouPanel
+	//         Winner / AcceptButton, RefuseButton
+	//         Loser  / ChallengeButton, FoldButton
+	//         CountdownPanel / Text (TMP)
+	//       OpponentPanel
+	//         Winner / AcceptButton, RefuseButton
+	//         Loser  / ChallengeButton, FoldButton
+	//         CountdownPanel / Text (TMP)
+	//       Status (TMP)             ← 任意
 	public class FinalRaisePanelView : MonoBehaviour
 	{
-		[Header("Root")]
-		[Tooltip("Panel 全体の表示切替に使うルート GameObject")]
-		[SerializeField] private GameObject m_Root;
-
-		[Header("Header")]
-		[Tooltip("タイトル表示。フェーズに応じて文言が変わる")]
-		[SerializeField] private TMP_Text m_TitleText;
-		[Tooltip("残り時間表示")]
-		[SerializeField] private TMP_Text m_TimerText;
-
-		[Header("Buttons")]
-		[Tooltip("確定側ボタン（提案では FIGHT、応答では ACCEPT）。長押し 2 秒で確定。")]
-		[SerializeField] private Button m_ConfirmButton;
-		[Tooltip("確定側ボタンのラベル")]
-		[SerializeField] private TMP_Text m_ConfirmLabel;
-		[Tooltip("確定側ボタンの充塔表示用 Image（Image Type = Filled）")]
-		[SerializeField] private Image m_ConfirmFill;
-
-		[Tooltip("拒否側ボタン（提案では FOLD、応答では DECLINE）。長押し 2 秒で確定。")]
-		[SerializeField] private Button m_DeclineButton;
-		[Tooltip("拒否側ボタンのラベル")]
-		[SerializeField] private TMP_Text m_DeclineLabel;
-		[Tooltip("拒否側ボタンの充塔表示用 Image（Image Type = Filled）")]
-		[SerializeField] private Image m_DeclineFill;
-
-		[Header("Status")]
-		[Tooltip("待機中などの状況テキスト。操作可能側には空表示")]
-		[SerializeField] private TMP_Text m_StatusText;
-
-		[Header("Tuning")]
-		[Tooltip("ボタン長押しで確定するまでの保持秒数")]
-		[SerializeField] private float m_HoldSeconds = 2f;
+		// 表示切替対象。Awake で "Root" 子を探し、無ければ自分自身。
+		private GameObject m_Root;
+		// 自分側 / 相手側のセット。Awake で名前検索して埋める。
+		private SideRefs m_You;
+		private SideRefs m_Opp;
+		private TMP_Text m_StatusText;
 
 		private IGameState m_State;
 		private Coroutine m_TimerCo;
 
-		// 現在の局面（提案 / 応答 / 非表示）。
 		private enum EStage { Hidden, Offer, Pending }
 		private EStage m_Stage = EStage.Hidden;
 
-		// どちらのボタンを押下中か。
-		private enum EHeld { None, Confirm, Decline }
-		private EHeld m_Held = EHeld.None;
-		// 押下開始からの経過秒数。
-		private float m_HoldElapsed;
-
-		// 操作可能側（true なら自分の手番）。
 		private bool m_IsActive;
-		// 確定済かどうか。確定後は再操作不可。
-		private bool m_Locked;
+		private bool m_Submitted;
+
+		private class SideRefs
+		{
+			public GameObject WinnerGroup;
+			public GameObject LoserGroup;
+			public Button     AcceptButton;
+			public Button     RefuseButton;
+			public Button     ChallengeButton;
+			public Button     FoldButton;
+			public GameObject CountdownPanel;
+			public TMP_Text   CountdownText;
+		}
 
 		private void Awake()
 		{
-			if (m_Root == null) m_Root = gameObject;
+			var rootTr = transform.Find("Root");
+			m_Root = rootTr != null ? rootTr.gameObject : gameObject;
+
+			m_You = ResolveSide("YouPanel");
+			m_Opp = ResolveSide("OpponentPanel");
+			m_StatusText = FindChild<TMP_Text>(m_Root.transform, "Status");
+
 			SetActiveSafe(m_Root, false);
 
-			BindHoldEvents(m_ConfirmButton, EHeld.Confirm);
-			BindHoldEvents(m_DeclineButton, EHeld.Decline);
+			BindClick(m_You.ChallengeButton, () => SubmitProposeIfAllowed(true));
+			BindClick(m_You.FoldButton,      () => SubmitProposeIfAllowed(false));
+			BindClick(m_You.AcceptButton,    () => SubmitRespondIfAllowed(true));
+			BindClick(m_You.RefuseButton,    () => SubmitRespondIfAllowed(false));
+		}
 
-			// TODO: ゲームパッド対応（決定ボタン / キャンセルボタンの長押しで Confirm / Decline と同じ動作を駆動）。
+		private SideRefs ResolveSide(string sideName)
+		{
+			var side = m_Root.transform.Find(sideName);
+			if (side == null)
+			{
+				Debug.LogError($"[FinalRaisePanel] '{sideName}' が見つかりません");
+				return new SideRefs();
+			}
+
+			var winner = side.Find("Winner");
+			var loser  = side.Find("Loser");
+			var cdPanel = side.Find("CountdownPanel");
+
+			return new SideRefs
+			{
+				WinnerGroup     = winner != null ? winner.gameObject : null,
+				LoserGroup      = loser  != null ? loser.gameObject  : null,
+				AcceptButton    = winner != null ? FindChild<Button>(winner, "AcceptButton")    : null,
+				RefuseButton    = winner != null ? FindChild<Button>(winner, "RefuseButton")    : null,
+				ChallengeButton = loser  != null ? FindChild<Button>(loser,  "ChallengeButton") : null,
+				FoldButton      = loser  != null ? FindChild<Button>(loser,  "FoldButton")      : null,
+				CountdownPanel  = cdPanel != null ? cdPanel.gameObject : null,
+				CountdownText   = cdPanel != null ? cdPanel.GetComponentInChildren<TMP_Text>(true) : null
+			};
 		}
 
 		private void Start()
@@ -102,38 +124,6 @@ namespace GamblingAction.UI
 			m_State.OnFinalRaiseCanceled  -= HandleCanceled;
 			m_State.OnFinalRaiseStarted   -= HandleStarted;
 			m_State.OnGameOver            -= HandleGameOver;
-		}
-
-		private void Update()
-		{
-			if (m_Stage == EStage.Hidden) return;
-
-			if (!m_IsActive || m_Locked)
-			{
-				if (m_Held != EHeld.None)
-				{
-					m_Held = EHeld.None;
-					m_HoldElapsed = 0f;
-				}
-				UpdateFill(EHeld.None, 0f);
-				return;
-			}
-
-			if (m_Held == EHeld.None)
-			{
-				m_HoldElapsed = 0f;
-				UpdateFill(EHeld.None, 0f);
-				return;
-			}
-
-			m_HoldElapsed += Time.deltaTime;
-			float ratio = Mathf.Clamp01(m_HoldElapsed / m_HoldSeconds);
-			UpdateFill(m_Held, ratio);
-
-			if (m_HoldElapsed >= m_HoldSeconds)
-			{
-				Confirm(m_Held == EHeld.Confirm);
-			}
 		}
 
 		private void HandleOffer(FinalRaiseOfferMessage msg)
@@ -165,31 +155,35 @@ namespace GamblingAction.UI
 		private void BeginStage(EStage stage, string proposerRole, string responderRole, int timeoutMs)
 		{
 			m_Stage = stage;
-			m_Locked = false;
-			m_Held = EHeld.None;
-			m_HoldElapsed = 0f;
+			m_Submitted = false;
 
 			string myRole = m_State.Me != null ? m_State.Me.Role : null;
-			bool meIsProposer = myRole != null && myRole == proposerRole;
+			bool meIsProposer  = myRole != null && myRole == proposerRole;
 			bool meIsResponder = myRole != null && myRole == responderRole;
 
-			if (stage == EStage.Offer)
-			{
-				m_IsActive = meIsProposer;
-				SetLabels("FIGHT", "FOLD");
-				SetTitle("FINAL RAISE?");
-				SetStatus(m_IsActive ? "" : "WAITING FOR LOSER...");
-			}
-			else
-			{
-				m_IsActive = meIsResponder;
-				SetLabels("ACCEPT", "DECLINE");
-				SetTitle("FINAL RAISE?");
-				SetStatus(m_IsActive ? "" : "WAITING FOR OPPONENT...");
-			}
+			// 提案フェーズの操作側は敗者、応答フェーズの操作側は勝者。
+			m_IsActive = stage == EStage.Offer ? meIsProposer : meIsResponder;
 
-			SetButtonsInteractable(m_IsActive);
-			UpdateFill(EHeld.None, 0f);
+			// 自分が操作側のときだけ自分側にボタンを出す。相手側のボタンは常に非表示。
+			// （相手の選択肢は知る必要がない。「相手が選択中」というのは CountdownPanel の存在で伝える）
+			bool youShowLoser  = m_IsActive && stage == EStage.Offer;
+			bool youShowWinner = m_IsActive && stage == EStage.Pending;
+
+			SetActiveSafe(m_You.LoserGroup,  youShowLoser);
+			SetActiveSafe(m_You.WinnerGroup, youShowWinner);
+			SetActiveSafe(m_Opp.LoserGroup,  false);
+			SetActiveSafe(m_Opp.WinnerGroup, false);
+
+			SetInteractable(m_You.ChallengeButton, m_IsActive);
+			SetInteractable(m_You.FoldButton,      m_IsActive);
+			SetInteractable(m_You.AcceptButton,    m_IsActive);
+			SetInteractable(m_You.RefuseButton,    m_IsActive);
+
+			// カウントダウンはアクティブな側だけ。
+			SetActiveSafe(m_You.CountdownPanel, m_IsActive);
+			SetActiveSafe(m_Opp.CountdownPanel, !m_IsActive);
+
+			SetStatus("");
 			SetActiveSafe(m_Root, true);
 			RestartTimer(timeoutMs);
 		}
@@ -198,58 +192,51 @@ namespace GamblingAction.UI
 		{
 			m_Stage = EStage.Hidden;
 			m_IsActive = false;
-			m_Locked = false;
-			m_Held = EHeld.None;
-			m_HoldElapsed = 0f;
+			m_Submitted = false;
 			StopTimer();
-			UpdateFill(EHeld.None, 0f);
+
+			SetActiveSafe(m_You.LoserGroup,     false);
+			SetActiveSafe(m_You.WinnerGroup,    false);
+			SetActiveSafe(m_Opp.LoserGroup,     false);
+			SetActiveSafe(m_Opp.WinnerGroup,    false);
+			SetActiveSafe(m_You.CountdownPanel, false);
+			SetActiveSafe(m_Opp.CountdownPanel, false);
 			SetActiveSafe(m_Root, false);
 		}
 
-		// 長押し 2 秒経過時の確定処理。
-		private void Confirm(bool accept)
+		private void SubmitProposeIfAllowed(bool accept)
 		{
-			if (m_State == null || m_Locked) return;
-
-			m_Locked = true;
-			m_Held = EHeld.None;
-
-			if (m_Stage == EStage.Offer)
-				m_State.SubmitFinalRaisePropose(accept);
-			else if (m_Stage == EStage.Pending)
-				m_State.SubmitFinalRaiseRespond(accept);
-
-			UpdateFill(accept ? EHeld.Confirm : EHeld.Decline, 1f);
-			SetButtonsInteractable(false);
-			SetStatus(accept ? "LOCKED IN" : "FOLDED");
+			if (!m_IsActive || m_Submitted || m_Stage != EStage.Offer) return;
+			m_Submitted = true;
+			m_State.SubmitFinalRaisePropose(accept);
+			LockAfterSubmit(accept ? "挑戦を申し込みました" : "降りました");
 		}
 
-		private void UpdateFill(EHeld held, float ratio)
+		private void SubmitRespondIfAllowed(bool accept)
 		{
-			if (m_ConfirmFill != null) m_ConfirmFill.fillAmount = held == EHeld.Confirm ? ratio : 0f;
-			if (m_DeclineFill != null) m_DeclineFill.fillAmount = held == EHeld.Decline ? ratio : 0f;
+			if (!m_IsActive || m_Submitted || m_Stage != EStage.Pending) return;
+			m_Submitted = true;
+			m_State.SubmitFinalRaiseRespond(accept);
+			LockAfterSubmit(accept ? "ファイナルレイズ開始..." : "拒否しました");
 		}
 
-		private void SetLabels(string confirm, string decline)
+		// 送信直後のロック表示。
+		// 「挑戦」を選んだ場合は応答フェーズ通知を待つので、ここでは自分側ボタンを操作不可にしてステータスを出すだけ。
+		// 拒否・取り消し・本番開始時の Panel 非表示は HandleCanceled / HandleStarted / HandleGameOver が担当する。
+		private void LockAfterSubmit(string status)
 		{
-			if (m_ConfirmLabel != null) m_ConfirmLabel.text = confirm;
-			if (m_DeclineLabel != null) m_DeclineLabel.text = decline;
-		}
-
-		private void SetTitle(string text)
-		{
-			if (m_TitleText != null) m_TitleText.text = text;
+			SetInteractable(m_You.ChallengeButton, false);
+			SetInteractable(m_You.FoldButton,      false);
+			SetInteractable(m_You.AcceptButton,    false);
+			SetInteractable(m_You.RefuseButton,    false);
+			SetStatus(status);
 		}
 
 		private void SetStatus(string text)
 		{
-			if (m_StatusText != null) m_StatusText.text = text;
-		}
-
-		private void SetButtonsInteractable(bool value)
-		{
-			if (m_ConfirmButton != null) m_ConfirmButton.interactable = value;
-			if (m_DeclineButton != null) m_DeclineButton.interactable = value;
+			if (m_StatusText == null) return;
+			m_StatusText.text = text;
+			SetActiveSafe(m_StatusText.gameObject, !string.IsNullOrEmpty(text));
 		}
 
 		private void RestartTimer(int timeoutMs)
@@ -265,7 +252,7 @@ namespace GamblingAction.UI
 				StopCoroutine(m_TimerCo);
 				m_TimerCo = null;
 			}
-			if (m_TimerText != null) m_TimerText.text = "";
+			SetCountdownText("");
 		}
 
 		private IEnumerator TimerSequence(float seconds)
@@ -273,58 +260,53 @@ namespace GamblingAction.UI
 			float remaining = seconds;
 			while (remaining > 0f)
 			{
-				if (m_TimerText != null) m_TimerText.text = Mathf.CeilToInt(remaining).ToString();
+				SetCountdownText(Mathf.CeilToInt(remaining) + "s");
 				remaining -= Time.deltaTime;
 				yield return null;
 			}
-			if (m_TimerText != null) m_TimerText.text = "0";
+			SetCountdownText("0s");
 			m_TimerCo = null;
 		}
 
-		// ボタンに PointerDown / PointerUp / PointerExit を仕込み、押している間だけ m_Held をセット。
-		private void BindHoldEvents(Button button, EHeld held)
+		private void SetCountdownText(string text)
 		{
-			if (button == null) return;
-
-			var trigger = button.gameObject.GetComponent<EventTrigger>();
-			if (trigger == null) trigger = button.gameObject.AddComponent<EventTrigger>();
-
-			AddTrigger(trigger, EventTriggerType.PointerDown, _ =>
-			{
-				if (!m_IsActive || m_Locked) return;
-				if (!button.interactable) return;
-				m_Held = held;
-				m_HoldElapsed = 0f;
-			});
-			AddTrigger(trigger, EventTriggerType.PointerUp, _ =>
-			{
-				if (m_Held == held)
-				{
-					m_Held = EHeld.None;
-					m_HoldElapsed = 0f;
-				}
-			});
-			AddTrigger(trigger, EventTriggerType.PointerExit, _ =>
-			{
-				// ボタン外へ指/カーソルが出たらキャンセル扱い。
-				if (m_Held == held)
-				{
-					m_Held = EHeld.None;
-					m_HoldElapsed = 0f;
-				}
-			});
+			if (m_You.CountdownText != null) m_You.CountdownText.text = m_IsActive  ? text : "";
+			if (m_Opp.CountdownText != null) m_Opp.CountdownText.text = !m_IsActive ? text : "";
 		}
 
-		private static void AddTrigger(EventTrigger trigger, EventTriggerType type, System.Action<BaseEventData> cb)
+		private static void BindClick(Button button, System.Action handler)
 		{
-			var entry = new EventTrigger.Entry { eventID = type };
-			entry.callback.AddListener(new UnityEngine.Events.UnityAction<BaseEventData>(cb));
-			trigger.triggers.Add(entry);
+			if (button == null) return;
+			button.onClick.RemoveAllListeners();
+			button.onClick.AddListener(new UnityEngine.Events.UnityAction(handler));
+		}
+
+		private static void SetInteractable(Button button, bool value)
+		{
+			if (button != null) button.interactable = value;
 		}
 
 		private static void SetActiveSafe(GameObject go, bool active)
 		{
 			if (go != null && go.activeSelf != active) go.SetActive(active);
+		}
+
+		// 直下の子から名前一致を探し、見つからなければ非アクティブも含めて再帰検索する。
+		private static T FindChild<T>(Transform root, string name) where T : Component
+		{
+			if (root == null) return null;
+			var direct = root.Find(name);
+			if (direct != null)
+			{
+				var c = direct.GetComponent<T>();
+				if (c != null) return c;
+			}
+			var all = root.GetComponentsInChildren<T>(true);
+			for (int i = 0; i < all.Length; i++)
+			{
+				if (all[i].name == name) return all[i];
+			}
+			return null;
 		}
 	}
 }

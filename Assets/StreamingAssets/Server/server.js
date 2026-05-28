@@ -693,8 +693,10 @@ function handleRoundConcluded(winnerId, loserId) {
     }
 
     if (winner.score >= 2) {
-        // 2 勝に到達。敗者にファイナルレイズの提案権を与える。
-        startFinalRaiseOffer(winnerId, loserId);
+        // 2 勝に到達。まず通常通り決着パネルを見せてから、敗者にファイナルレイズの提案権を与える。
+        // 通常ラウンドと違い、ここでは beginRound は呼ばない（提案/応答の決定を待つ）。
+        io.emit('round_over', { winnerRole: winner.role });
+        setTimeout(() => startFinalRaiseOffer(winnerId, loserId), 3000);
         return;
     }
 
