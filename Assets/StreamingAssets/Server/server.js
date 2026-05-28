@@ -167,8 +167,9 @@ setInterval(() => {
         players = result.players;
         items = result.items;
 
-        // ミッション進捗の処理
+        // ミッション進捗の処理（配列をその場で変更しない安全な実装）
         if (result.events) {
+            const appendedEvents = [];
             result.events.forEach(ev => {
                 if (ev.type === 'mission_progress') {
                     const p = players[ev.playerId];
@@ -176,20 +177,27 @@ setInterval(() => {
                     if (p && p.mission && typeof p.mission === 'object' && !p.mission.isCleared) {
                         const mTypeMap = { 'Move': 0, 'Push': 1, 'GainChip': 4 };
                         const targetType = mTypeMap[ev.missionType];
-                        
+
                         // 型と値の存在確認を行ってから判定
                         if (targetType !== undefined && p.mission.type === targetType) {
                             p.mission.currentCount += ev.amount;
+                            console.log(`[Mission Progress] ${p.role}: ${p.mission.currentCount} / ${p.mission.targetCount} (${ev.missionType})`);
+
                             if (p.mission.currentCount >= p.mission.targetCount) {
                                 p.mission.currentCount = p.mission.targetCount;
                                 p.mission.isCleared = true;
                                 p.chips += (p.mission.rewardValue || 0);
-                                io.emit('game_events', [{ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" }]);
+                                console.log(`[Mission CLEARED] ${p.role} completed mission.`);
+                                // 演出イベントはここでは配列に追加して後で結合する
+                                appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                             }
                         }
                     }
                 }
             });
+
+            // もし追加の演出イベントがあれば、元の events 配列に結合して一括送信する
+            if (appendedEvents.length > 0) result.events = result.events.concat(appendedEvents);
             io.emit('game_events', result.events);
         }
 
@@ -224,7 +232,8 @@ setInterval(() => {
         }
         // 同步结算前的状态，以便客户端记录日志（保留一拍 intent）
         io.emit('sync_state', { players });
-        if (result.events) io.emit('game_events', result.events);
+        // すでに上で一括送信済みのため、個別の演出送信は不要
+        // if (result.events) io.emit('game_events', result.events);
 
         // 延迟清除 intent，确保客户端有足够时间在 Beat 4 记录
         setTimeout(() => {
@@ -845,11 +854,10 @@ function generateMissions() {
 // --- グローバル・エラーハンドラ ---
 // 予期せぬクラッシュを防ぎ、エラー内容をコンソールに出力してサーバーを延命させる
 process.on('uncaughtException', (err) => {
-    console.error('[Fatal Error] 予期せぬ例外が発生しました:', err);
-    // gameActive を false にして進行を止めることで、さらなるエラーの連鎖を防ぐ
-    gameActive = false;
+    console.error('[Warning] 処理中に例外が発生しました（進行維持）:', err);
+    // gameActive = false; // 開発中は止めずにログのみ出す
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('[Fatal Error] 未処理の Promise 拒否:', reason);
+    console.error('[Warning] 未処理の Promise 拒否:', reason);
 });
