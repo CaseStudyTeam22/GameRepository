@@ -11,7 +11,7 @@
     "GUID": "{80E7D19C-36CA-4B7F-AB32-510E99BC51BA}",
     "Language": "SFX",
     "Hash": "{D9B58EC3-E4DB-B9DC-2197-2ED20346997F}",
-    "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\SE",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BootScene\\SE\\SE",
     "ShortName": "SE",
     "Path": "SE.bnk",
     "Media": [
@@ -64,6 +64,6 @@
     ]
    }
   ],
-  "FileHash": "{7EA30619-0BBF-6D8B-1EBC-5BC5A84339E2}"
+  "FileHash": "{CFD1CC96-B0F1-DB72-25D2-B41FAAE87487}"
  }
 }

@@ -11,7 +11,7 @@
     "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
     "Language": "SFX",
     "Hash": "{2FB8E059-C4ED-B87F-1954-8B93F1A62FE6}",
-    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\BGM",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BootScene\\BGM\\BGM",
     "ShortName": "BGM",
     "Path": "BGM.bnk",
     "Media": [
@@ -123,6 +123,6 @@
     ]
    }
   ],
-  "FileHash": "{0C4FD1BC-3661-FE29-DD74-E807D5E624EA}"
+  "FileHash": "{A437E5D1-15D2-079C-4698-E51B6B87A800}"
  }
 }
