@@ -372,7 +372,12 @@ namespace GamblingAction.UI
 
 			if (showMission && me.Mission != null)
 			{
-				if (m_MissionText != null) m_MissionText.text = me.Mission.Description;
+				if (m_MissionText != null)
+				{
+					m_MissionText.text = me.Mission.Description;
+					// ミッション達成時は文字色を緑にする
+					m_MissionText.color = me.Mission.IsCleared ? new Color(0.18f, 0.9f, 0.3f, 1f) : Color.white;
+				}
 				if (m_MissionRewardText != null) m_MissionRewardText.text = $"Reward: {me.Mission.RewardType} x{me.Mission.RewardValue}";
 				if (m_MissionProgressFill != null)
 				{
