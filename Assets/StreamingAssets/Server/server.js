@@ -686,9 +686,11 @@ function handleRoundConcluded(winnerId, loserId) {
     if (!winner) return;
 
     if (isFinalDuel) {
-        // ファイナルレイズ本番：勝者が全勝。フラグはここでリセットしておく。
-        isFinalDuel = false;
+        // ファイナルレイズ本番：勝者が全勝。
         io.emit('game_over', { winnerRole: winner.role });
+        // 試合終了に伴い、Lobby に戻ったときに前回状態が残らないよう全てリセットする。
+        resetMatchState();
+        io.emit('sync_state', { players });
         return;
     }
 
@@ -754,7 +756,12 @@ function cancelFinalRaise(reason) {
 
     const winner = winnerId ? players[winnerId] : null;
     io.emit('final_raise_canceled', { reason });
-    if (winner) io.emit('game_over', { winnerRole: winner.role });
+    if (winner) {
+        io.emit('game_over', { winnerRole: winner.role });
+        // 試合終了に伴い、Lobby に戻ったときに前回状態が残らないよう全てリセットする。
+        resetMatchState();
+        io.emit('sync_state', { players });
+    }
 }
 
 // 勝者が受諾した。ファイナルレイズ本番ラウンドを開始する。
@@ -770,15 +777,31 @@ function startFinalDuel() {
     setTimeout(beginRound, 3000);
 }
 
-function resetMatch() {
+// 試合中の数値・進行状態を初期化する（プレイヤー数値、ファイナルレイズ、対局フラグ）。
+// Lobby 関連フラグ（ready / inLobby / isAI / roundReady / buffReady）もここで初期化する。
+// 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
+function resetMatchState() {
     gameActive = false; items = []; currentBeat = 0;
-    // ファイナルレイズ状態もリセット。
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
     if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
     isFinalDuel = false;
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
-    for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; resetPlayerPos(id); players[id].exchanged = false; }
+    if (lobbyCountdownTimer) { clearTimeout(lobbyCountdownTimer); lobbyCountdownTimer = null; }
+    for (let id in players) {
+        const p = players[id];
+        p.score = 0; p.money = Config.INITIAL_MONEY; p.chips = Config.INITIAL_CHIPS;
+        p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
+        p.roundReady = false; p.intent = null;
+        // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
+        // 前回の ready / 入室状態が残らないようにする。
+        p.ready = false; p.isAI = false; p.inLobby = false;
+        resetPlayerPos(id);
+    }
+}
+
+function resetMatch() {
+    resetMatchState();
     // 直接チップ交換へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
     beginRound();
 }

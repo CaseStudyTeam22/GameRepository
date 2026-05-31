@@ -179,9 +179,10 @@ namespace GamblingAction.UI
 			SetInteractable(m_You.AcceptButton,    m_IsActive);
 			SetInteractable(m_You.RefuseButton,    m_IsActive);
 
-			// カウントダウンはアクティブな側だけ。
+			// カウントダウンは自分が操作側のときだけ自分側に表示する。
+			// 相手の残り時間は隠す（相手の決断状況を知らせない）。
 			SetActiveSafe(m_You.CountdownPanel, m_IsActive);
-			SetActiveSafe(m_Opp.CountdownPanel, !m_IsActive);
+			SetActiveSafe(m_Opp.CountdownPanel, false);
 
 			SetStatus("");
 			SetActiveSafe(m_Root, true);
