@@ -61,7 +61,7 @@ function resetPlayerPos(id) {
     p.color = p.role === 'P1' ? '#00f2fe' : '#ff4444';
     p.stamina = Config.INITIAL_STAMINA;
     p.falling = false; p.intent = null; p.chips = Config.INITIAL_CHIPS;
-    p.selectedBuff = null; p.buffReady = false;
+    p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
 }
 
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
@@ -123,9 +123,10 @@ function handleAIExchange(id) {
     const p = players[id];
     let ratio = 0.5 + (Math.random() * 0.1 - 0.05);
     const amount = Math.floor((p.money * ratio) / 100);
-    const cost = amount * 100;
     setTimeout(() => {
-        p.money -= cost; p.chips += amount; p.exchanged = true;
+        // AI も精算は後でまとめて行うため、選択内容だけ記録する。
+        p.pendingExchange = amount;
+        p.exchanged = true;
         checkAllExchanged();
     }, 1000 + Math.random() * 1000);
 }
@@ -404,7 +405,7 @@ io.on('connection', (socket) => {
         intent: null, ready: false, exchanged: false, score: 0,
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
-        selectedBuff: null, buffReady: false, inLobby: false, roundReady: false,
+        selectedBuff: null, buffReady: false, pendingExchange: 0, inLobby: false, roundReady: false,
         charaIndex: 0
     };
     
@@ -490,10 +491,12 @@ io.on('connection', (socket) => {
         if (p && !gameActive && !p.isAI) {
             const amount = parseInt(data.amount) || 0;
             const cost = amount * 100;
-            if (p.money >= cost) { 
-                p.money -= cost; p.chips += amount; p.exchanged = true; 
-                io.emit('sync_state', { players });
-                checkAllExchanged(); 
+            // この時点では所持金・チップを動かさず、選択内容だけ記録する。
+            // 実際の精算は両替・カード選択が全員終わってからまとめて行う。
+            if (p.money >= cost) {
+                p.pendingExchange = amount;
+                p.exchanged = true;
+                checkAllExchanged();
             }
         }
     });
@@ -502,11 +505,12 @@ io.on('connection', (socket) => {
         const p = players[socket.id];
         if (!p) return;
         const cost = data.buffId === 'high_risk' ? 15 : (data.buffId === 'low_risk' ? 5 : 0);
-        if (p.chips < cost) return;
-        p.chips -= cost;
+        // 両替後に手元に来る予定のチップで購入可否を判定する。
+        // ここでもチップは減らさず、選択内容だけ記録する。
+        const expectedChips = p.chips + (p.pendingExchange || 0);
+        if (expectedChips < cost) return;
         p.selectedBuff = data.buffId;
         p.buffReady = true;
-        io.emit('sync_state', { players });
         checkAllBuffsSelected();
     });
 
@@ -567,22 +571,18 @@ function checkAllExchanged() {
 // カード選択の制限時間超過。未選択のプレイヤーは購入可能な範囲でランダムに選ぶ。
 function autoBuffTimedOut() {
     buffTimer = null;
-    let changed = false;
     for (let id in players) {
         const p = players[id];
         if (p.buffReady || p.isAI) continue;
+        // 両替後の予定チップで購入可否を判定し、ここでは記録のみ。
+        // チップの増減は精算でまとめて行う。
+        const expectedChips = p.chips + (p.pendingExchange || 0);
         let pick = null;
-        if (p.chips >= 15 && Math.random() < 0.5) pick = 'high_risk';
-        else if (p.chips >= 5) pick = 'low_risk';
-        if (pick) {
-            const c = pick === 'high_risk' ? 15 : 5;
-            p.chips -= c;
-            p.selectedBuff = pick;
-        }
+        if (expectedChips >= 15 && Math.random() < 0.5) pick = 'high_risk';
+        else if (expectedChips >= 5) pick = 'low_risk';
+        if (pick) p.selectedBuff = pick;
         p.buffReady = true;
-        changed = true;
     }
-    if (changed) io.emit('sync_state', { players });
     checkAllBuffsSelected();
 }
 
@@ -592,32 +592,45 @@ function checkAllBuffsSelected() {
 
     // 如果所有真人玩家都选好了，让 AI 自动选卡
     if (pList.every(pl => pl.buffReady || pl.isAI)) {
-        let changed = false;
         pList.forEach(pl => {
             if (pl.isAI && !pl.buffReady) {
+                // AI も両替後の予定チップで購入可否を判定し、ここでは記録のみ。
+                const expectedChips = pl.chips + (pl.pendingExchange || 0);
                 let pick = null;
-                if (pl.chips >= 15 && Math.random() < 0.6) pick = 'high_risk';
-                else if (pl.chips >= 5) pick = 'low_risk';
-                if (pick) {
-                    const c = pick === 'high_risk' ? 15 : 5;
-                    pl.chips -= c;
-                    pl.selectedBuff = pick;
-                }
+                if (expectedChips >= 15 && Math.random() < 0.6) pick = 'high_risk';
+                else if (expectedChips >= 5) pick = 'low_risk';
+                if (pick) pl.selectedBuff = pick;
                 pl.buffReady = true;
-                changed = true;
             }
         });
-        
-        if (changed) io.emit('sync_state', { players });
 
-        // 如果全员（包括 AI）都选好了，开始倒计时
+        // 如果全员（包括 AI）都选好了，统一精算并开始倒计时
         if (pList.every(pl => pl.buffReady)) {
             // カード選択フェーズを抜けるので制限時間タイマーを止める。
             if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
+            settleAllChoices();
             io.emit('start_match_countdown');
             setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
         }
     }
+}
+
+// 両替とカード選択が全員終わった後、まとめて所持金・チップを精算する。
+// ここで初めて値を変えて一度だけ sync_state を送るので、
+// クライアント側の所持金・チップ表示は最後に一括で動く。
+function settleAllChoices() {
+    for (let id in players) {
+        const p = players[id];
+        const amount = p.pendingExchange || 0;
+        if (amount > 0) {
+            p.money -= amount * 100;
+            p.chips += amount;
+        }
+        const buffCost = p.selectedBuff === 'high_risk' ? 15 : (p.selectedBuff === 'low_risk' ? 5 : 0);
+        if (buffCost > 0) p.chips -= buffCost;
+        p.pendingExchange = 0;
+    }
+    io.emit('sync_state', { players });
 }
 
 // IPv6 ワイルドカード '::' でリッスン。Node は IPv4-mapped IPv6 経由で
