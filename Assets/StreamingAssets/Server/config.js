@@ -36,7 +36,7 @@ module.exports = {
     },
 
     INITIAL_MONEY: 10000,
-    INITIAL_CHIPS: 10,
+    INITIAL_CHIPS: 0,
     INITIAL_STAMINA: 5,
     MAX_STAMINA: 5,
 
