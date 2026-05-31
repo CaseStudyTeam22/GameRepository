@@ -240,7 +240,7 @@ const Engine = {
                 if (p.x === items[i].x && p.y === items[i].y) {
                     if (items[i].type === 'chips') {
                         p.chips += Config.CHIP_ITEM_VALUE;
-                        events.push({ type: 'mission_progress', playerId: p.id, missionType: 'GainChip', amount: Config.CHIP_ITEM_VALUE });
+                        events.push({ type: 'mission_progress', playerId: p.id, missionType: 'GainChip', amount: 1 });
                     }
                     else p.money += Config.MONEY_ITEM_VALUE;
                     items.splice(i, 1);

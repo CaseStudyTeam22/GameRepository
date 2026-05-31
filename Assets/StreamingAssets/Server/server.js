@@ -832,8 +832,8 @@ function generateMissions() {
                 description = `相手を計 ${targetCount} 回プッシュしよう`;
                 break;
             case 4: // GainChip
-                targetCount = 5 + Math.floor(Math.random() * 6); // 5-10 chips
-                rewardValue = Math.floor(targetCount * 1.5);
+                targetCount = 2 + Math.floor(Math.random() * 4); // 2-5 chips
+                rewardValue = Math.floor(targetCount * 3);
                 description = `チップを計 ${targetCount} 枚獲得しよう`;
                 break;
         }
