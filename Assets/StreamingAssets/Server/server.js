@@ -175,7 +175,7 @@ setInterval(() => {
                     const p = players[ev.playerId];
                     // 防御的プログラミング: p.mission が存在し、オブジェクトであることを厳重にチェック
                     if (p && p.mission && typeof p.mission === 'object' && !p.mission.isCleared) {
-                        const mTypeMap = { 'Move': 0, 'Push': 1, 'GainChip': 4 };
+                        const mTypeMap = { 'Move': 0, 'Push': 1, 'Defense': 2, 'GainChip': 4 };
                         const targetType = mTypeMap[ev.missionType];
 
                         // 型と値の存在確認を行ってから判定
@@ -808,7 +808,7 @@ function resetMatch() {
 }
 
 function generateMissions() {
-    const types = [0, 1, 4]; // Move:0, Push:1, GainChip:4
+    const types = [0, 1, 2, 4]; // Move:0, Push:1, Defense:2, GainChip:4
     const missions = [];
     
     // 基本的な3種類からランダムに選ぶ（重複なし）
@@ -830,6 +830,11 @@ function generateMissions() {
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 pushes
                 rewardValue = targetCount * 5;
                 description = `相手を計 ${targetCount} 回プッシュしよう`;
+                break;
+            case 2: // Defense
+                targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 defenses
+                rewardValue = targetCount * 4;
+                description = `防御を計 ${targetCount} 回使用しよう`;
                 break;
             case 4: // GainChip
                 targetCount = 2 + Math.floor(Math.random() * 4); // 2-5 chips

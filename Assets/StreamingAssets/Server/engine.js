@@ -231,6 +231,10 @@ const Engine = {
                 events.push({ type: 'hit', targetId: target.id, damage: dmg });
             }
 
+            if (intent.type === 'defense') {
+                events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Defense', amount: 1 });
+            }
+
             if (intent.type === 'rest') events.push({ type: 'vfx', vfxType: 'rest_vfx', targetId: p.id, x: p.x, y: p.y });
         });
 
