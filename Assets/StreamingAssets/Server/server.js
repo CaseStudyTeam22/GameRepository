@@ -43,6 +43,16 @@ let buffTimer = null;
 const ROUND_INTRO_MS = 1500;
 let roundIntroTimer = null;
 
+// ファイナルレイズ進行中フラグ。true の間は次の round_over で勝者が直接全勝（game_over）。
+let isFinalDuel = false;
+// 提案者（直前ラウンドの敗者）・応答者（直前ラウンドの勝者）の socket id を保持する。
+// 切断や resetMatch でクリアする。
+let finalRaiseProposerId = null;
+let finalRaiseResponderId = null;
+// 提案・応答それぞれの制限時間タイマー句柄。
+let finalRaiseOfferTimer = null;
+let finalRaisePendingTimer = null;
+
 function resetPlayerPos(id) {
     const p = players[id];
     if (!p) return;
@@ -51,7 +61,7 @@ function resetPlayerPos(id) {
     p.color = p.role === 'P1' ? '#00f2fe' : '#ff4444';
     p.stamina = Config.INITIAL_STAMINA;
     p.falling = false; p.intent = null; p.chips = Config.INITIAL_CHIPS;
-    p.selectedBuff = null; p.buffReady = false;
+    p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
 }
 
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
@@ -113,9 +123,10 @@ function handleAIExchange(id) {
     const p = players[id];
     let ratio = 0.5 + (Math.random() * 0.1 - 0.05);
     const amount = Math.floor((p.money * ratio) / 100);
-    const cost = amount * 100;
     setTimeout(() => {
-        p.money -= cost; p.chips += amount; p.exchanged = true;
+        // AI も精算は後でまとめて行うため、選択内容だけ記録する。
+        p.pendingExchange = amount;
+        p.exchanged = true;
         checkAllExchanged();
     }, 1000 + Math.random() * 1000);
 }
@@ -163,8 +174,7 @@ setInterval(() => {
                         const winnerId = Object.keys(players).find(oid => oid !== loserId);
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
-                            if (players[winnerId].score >= 2) io.emit('game_over', { winnerRole: players[winnerId].role });
-                            else { io.emit('round_over', { winnerRole: players[winnerId].role }); setTimeout(beginRound, 3000); }
+                            handleRoundConcluded(winnerId, loserId);
                         }
                     }, 1500);
                 }
@@ -395,7 +405,7 @@ io.on('connection', (socket) => {
         intent: null, ready: false, exchanged: false, score: 0,
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
-        selectedBuff: null, buffReady: false, inLobby: false, roundReady: false,
+        selectedBuff: null, buffReady: false, pendingExchange: 0, inLobby: false, roundReady: false,
         charaIndex: 0
     };
     
@@ -481,10 +491,12 @@ io.on('connection', (socket) => {
         if (p && !gameActive && !p.isAI) {
             const amount = parseInt(data.amount) || 0;
             const cost = amount * 100;
-            if (p.money >= cost) { 
-                p.money -= cost; p.chips += amount; p.exchanged = true; 
-                io.emit('sync_state', { players });
-                checkAllExchanged(); 
+            // この時点では所持金・チップを動かさず、選択内容だけ記録する。
+            // 実際の精算は両替・カード選択が全員終わってからまとめて行う。
+            if (p.money >= cost) {
+                p.pendingExchange = amount;
+                p.exchanged = true;
+                checkAllExchanged();
             }
         }
     });
@@ -493,11 +505,12 @@ io.on('connection', (socket) => {
         const p = players[socket.id];
         if (!p) return;
         const cost = data.buffId === 'high_risk' ? 15 : (data.buffId === 'low_risk' ? 5 : 0);
-        if (p.chips < cost) return;
-        p.chips -= cost;
+        // 両替後に手元に来る予定のチップで購入可否を判定する。
+        // ここでもチップは減らさず、選択内容だけ記録する。
+        const expectedChips = p.chips + (p.pendingExchange || 0);
+        if (expectedChips < cost) return;
         p.selectedBuff = data.buffId;
         p.buffReady = true;
-        io.emit('sync_state', { players });
         checkAllBuffsSelected();
     });
 
@@ -506,11 +519,37 @@ io.on('connection', (socket) => {
         if (gameActive && currentBeat < 4 && p && !p.isAI) p.intent = { type: data.type || 'move', dir: data.dir, power: data.power || 1 };
     });
 
+    // 敗者がファイナルレイズを発起するか決定する。accept=true で勝者の応答待ちへ。
+    socket.on('final_raise_propose', (data) => {
+        if (socket.id !== finalRaiseProposerId) return;
+        if (!finalRaiseOfferTimer) return;
+        clearTimeout(finalRaiseOfferTimer);
+        finalRaiseOfferTimer = null;
+        const accept = !!(data && data.accept);
+        if (accept) beginFinalRaisePending();
+        else cancelFinalRaise('declined');
+    });
+
+    // 勝者がファイナルレイズを受諾するか決定する。accept=true で本番ラウンドへ。
+    socket.on('final_raise_respond', (data) => {
+        if (socket.id !== finalRaiseResponderId) return;
+        if (!finalRaisePendingTimer) return;
+        clearTimeout(finalRaisePendingTimer);
+        finalRaisePendingTimer = null;
+        const accept = !!(data && data.accept);
+        if (accept) startFinalDuel();
+        else cancelFinalRaise('declined');
+    });
+
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
-    socket.on('disconnect', () => { 
+    socket.on('disconnect', () => {
         console.log(`[Server] Player left: ${socket.id}`);
-        delete players[socket.id]; 
-        io.emit('player_left', socket.id); 
+        // 切断者がファイナルレイズの当事者ならフローを中断する。
+        if (socket.id === finalRaiseProposerId || socket.id === finalRaiseResponderId) {
+            cancelFinalRaise('disconnect');
+        }
+        delete players[socket.id];
+        io.emit('player_left', socket.id);
         io.emit('sync_state', { players });
     });
 });
@@ -532,22 +571,18 @@ function checkAllExchanged() {
 // カード選択の制限時間超過。未選択のプレイヤーは購入可能な範囲でランダムに選ぶ。
 function autoBuffTimedOut() {
     buffTimer = null;
-    let changed = false;
     for (let id in players) {
         const p = players[id];
         if (p.buffReady || p.isAI) continue;
+        // 両替後の予定チップで購入可否を判定し、ここでは記録のみ。
+        // チップの増減は精算でまとめて行う。
+        const expectedChips = p.chips + (p.pendingExchange || 0);
         let pick = null;
-        if (p.chips >= 15 && Math.random() < 0.5) pick = 'high_risk';
-        else if (p.chips >= 5) pick = 'low_risk';
-        if (pick) {
-            const c = pick === 'high_risk' ? 15 : 5;
-            p.chips -= c;
-            p.selectedBuff = pick;
-        }
+        if (expectedChips >= 15 && Math.random() < 0.5) pick = 'high_risk';
+        else if (expectedChips >= 5) pick = 'low_risk';
+        if (pick) p.selectedBuff = pick;
         p.buffReady = true;
-        changed = true;
     }
-    if (changed) io.emit('sync_state', { players });
     checkAllBuffsSelected();
 }
 
@@ -557,32 +592,45 @@ function checkAllBuffsSelected() {
 
     // 如果所有真人玩家都选好了，让 AI 自动选卡
     if (pList.every(pl => pl.buffReady || pl.isAI)) {
-        let changed = false;
         pList.forEach(pl => {
             if (pl.isAI && !pl.buffReady) {
+                // AI も両替後の予定チップで購入可否を判定し、ここでは記録のみ。
+                const expectedChips = pl.chips + (pl.pendingExchange || 0);
                 let pick = null;
-                if (pl.chips >= 15 && Math.random() < 0.6) pick = 'high_risk';
-                else if (pl.chips >= 5) pick = 'low_risk';
-                if (pick) {
-                    const c = pick === 'high_risk' ? 15 : 5;
-                    pl.chips -= c;
-                    pl.selectedBuff = pick;
-                }
+                if (expectedChips >= 15 && Math.random() < 0.6) pick = 'high_risk';
+                else if (expectedChips >= 5) pick = 'low_risk';
+                if (pick) pl.selectedBuff = pick;
                 pl.buffReady = true;
-                changed = true;
             }
         });
-        
-        if (changed) io.emit('sync_state', { players });
 
-        // 如果全员（包括 AI）都选好了，开始倒计时
+        // 如果全员（包括 AI）都选好了，统一精算并开始倒计时
         if (pList.every(pl => pl.buffReady)) {
             // カード選択フェーズを抜けるので制限時間タイマーを止める。
             if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
+            settleAllChoices();
             io.emit('start_match_countdown');
             setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
         }
     }
+}
+
+// 両替とカード選択が全員終わった後、まとめて所持金・チップを精算する。
+// ここで初めて値を変えて一度だけ sync_state を送るので、
+// クライアント側の所持金・チップ表示は最後に一括で動く。
+function settleAllChoices() {
+    for (let id in players) {
+        const p = players[id];
+        const amount = p.pendingExchange || 0;
+        if (amount > 0) {
+            p.money -= amount * 100;
+            p.chips += amount;
+        }
+        const buffCost = p.selectedBuff === 'high_risk' ? 15 : (p.selectedBuff === 'low_risk' ? 5 : 0);
+        if (buffCost > 0) p.chips -= buffCost;
+        p.pendingExchange = 0;
+    }
+    io.emit('sync_state', { players });
 }
 
 // IPv6 ワイルドカード '::' でリッスン。Node は IPv4-mapped IPv6 経由で
@@ -643,9 +691,130 @@ function startLanBroadcast() {
     });
 }
 
-function resetMatch() {
+// 1 ラウンドの決着がついた直後に呼ばれる。
+// ファイナルレイズ進行中なら即 game_over。
+// 通常ラウンドで勝者が 2 勝目を取った瞬間に提案フェーズへ入り、それ以外は次ラウンドへ。
+function handleRoundConcluded(winnerId, loserId) {
+    const winner = players[winnerId];
+    if (!winner) return;
+
+    if (isFinalDuel) {
+        // ファイナルレイズ本番：勝者が全勝。
+        io.emit('game_over', { winnerRole: winner.role });
+        // 試合終了に伴い、Lobby に戻ったときに前回状態が残らないよう全てリセットする。
+        resetMatchState();
+        io.emit('sync_state', { players });
+        return;
+    }
+
+    if (winner.score >= 2) {
+        // 2 勝に到達。まず通常通り決着パネルを見せてから、敗者にファイナルレイズの提案権を与える。
+        // 通常ラウンドと違い、ここでは beginRound は呼ばない（提案/応答の決定を待つ）。
+        io.emit('round_over', { winnerRole: winner.role });
+        setTimeout(() => startFinalRaiseOffer(winnerId, loserId), 3000);
+        return;
+    }
+
+    io.emit('round_over', { winnerRole: winner.role });
+    setTimeout(beginRound, 3000);
+}
+
+// 敗者（loser）が「ファイナルレイズを発起するか」を決めるフェーズを開始する。
+// 制限時間内に応答がなければ拒否扱いで通常の game_over に流す。
+function startFinalRaiseOffer(winnerId, loserId) {
+    finalRaiseProposerId = loserId;
+    finalRaiseResponderId = winnerId;
+
+    const winner = players[winnerId];
+    const loser = players[loserId];
+    io.emit('final_raise_offer', {
+        proposerRole: loser ? loser.role : null,
+        responderRole: winner ? winner.role : null,
+        timeoutMs: Config.FINAL_RAISE_TIMEOUT_MS
+    });
+
+    if (finalRaiseOfferTimer) clearTimeout(finalRaiseOfferTimer);
+    finalRaiseOfferTimer = setTimeout(() => {
+        finalRaiseOfferTimer = null;
+        // 時間切れは「発起しない」扱い。通常の決着へ。
+        cancelFinalRaise('timeout');
+    }, Config.FINAL_RAISE_TIMEOUT_MS);
+}
+
+// 勝者の応答（受諾 / 拒否）を待つフェーズへ進む。
+function beginFinalRaisePending() {
+    const winner = players[finalRaiseResponderId];
+    const loser = players[finalRaiseProposerId];
+    io.emit('final_raise_pending', {
+        proposerRole: loser ? loser.role : null,
+        responderRole: winner ? winner.role : null,
+        timeoutMs: Config.FINAL_RAISE_TIMEOUT_MS
+    });
+
+    if (finalRaisePendingTimer) clearTimeout(finalRaisePendingTimer);
+    finalRaisePendingTimer = setTimeout(() => {
+        finalRaisePendingTimer = null;
+        cancelFinalRaise('timeout');
+    }, Config.FINAL_RAISE_TIMEOUT_MS);
+}
+
+// ファイナルレイズの中断（拒否・タイムアウト・切断）。通常の game_over へ流す。
+function cancelFinalRaise(reason) {
+    if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
+    if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
+    const winnerId = finalRaiseResponderId;
+    finalRaiseProposerId = null;
+    finalRaiseResponderId = null;
+    isFinalDuel = false;
+
+    const winner = winnerId ? players[winnerId] : null;
+    io.emit('final_raise_canceled', { reason });
+    if (winner) {
+        io.emit('game_over', { winnerRole: winner.role });
+        // 試合終了に伴い、Lobby に戻ったときに前回状態が残らないよう全てリセットする。
+        resetMatchState();
+        io.emit('sync_state', { players });
+    }
+}
+
+// 勝者が受諾した。ファイナルレイズ本番ラウンドを開始する。
+function startFinalDuel() {
+    if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
+    if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
+    finalRaiseProposerId = null;
+    finalRaiseResponderId = null;
+    isFinalDuel = true;
+
+    io.emit('final_raise_started');
+    // 通常ラウンドと同じ準備フローに合わせるため、少し間を置いてから beginRound へ。
+    setTimeout(beginRound, 3000);
+}
+
+// 試合中の数値・進行状態を初期化する（プレイヤー数値、ファイナルレイズ、対局フラグ）。
+// Lobby 関連フラグ（ready / inLobby / isAI / roundReady / buffReady）もここで初期化する。
+// 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
+function resetMatchState() {
     gameActive = false; items = []; currentBeat = 0;
-    for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; resetPlayerPos(id); players[id].exchanged = false; }
+    if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
+    if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
+    isFinalDuel = false;
+    finalRaiseProposerId = null;
+    finalRaiseResponderId = null;
+    if (lobbyCountdownTimer) { clearTimeout(lobbyCountdownTimer); lobbyCountdownTimer = null; }
+    for (let id in players) {
+        const p = players[id];
+        p.score = 0; p.money = Config.INITIAL_MONEY; p.chips = Config.INITIAL_CHIPS;
+        p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
+        p.roundReady = false; p.intent = null;
+        // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
+        // 前回の ready / 入室状態が残らないようにする。
+        p.ready = false; p.isAI = false; p.inLobby = false;
+        resetPlayerPos(id);
+    }
+}
+
+function resetMatch() {
+    resetMatchState();
     // 直接チップ交換へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
     beginRound();
 }
