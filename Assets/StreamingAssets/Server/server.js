@@ -689,6 +689,11 @@ function checkAllBuffsSelected() {
 
 //<<<<<<< feature/0526/sora/new_mission
 // 本来上のカッコに入ってるやつが私はここに書いている形。      
+// 基本もともとあったパターンの上書きで良いと思われる(ミッションの関数から上の処理を呼んでいるので)
+// ただ、ミッション部分の場合、settleAllChoices()を呼んでいないところがあるので注意。
+// この関数自体は下の行にある。後かっこ足りてないので注意。
+
+
         // 如果全员（包括 AI）都选好了，开始等待ミッション選択
         if (pList.every(pl => pl.buffReady)) {
             console.log('[Server] All players selected buffs. Waiting for mission selections...');
