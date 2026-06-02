@@ -567,6 +567,7 @@ io.on('connection', (socket) => {
         if (expectedChips < cost) return;
         p.selectedBuff = data.buffId;
         p.buffReady = true;
+        io.emit('sync_state', { players });
         checkAllBuffsSelected();
     });
 
@@ -610,14 +611,14 @@ io.on('connection', (socket) => {
     });
 
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
-    socket.on('disconnect', () => {
+    socket.on('disconnect', () => { 
         console.log(`[Server] Player left: ${socket.id}`);
         // 切断者がファイナルレイズの当事者ならフローを中断する。
         if (socket.id === finalRaiseProposerId || socket.id === finalRaiseResponderId) {
             cancelFinalRaise('disconnect');
         }
-        delete players[socket.id];
-        io.emit('player_left', socket.id);
+        delete players[socket.id]; 
+        io.emit('player_left', socket.id); 
         io.emit('sync_state', { players });
     });
 });
@@ -646,6 +647,7 @@ function checkAllExchanged() {
 // カード選択の制限時間超過。未選択のプレイヤーは購入可能な範囲でランダムに選ぶ。
 function autoBuffTimedOut() {
     buffTimer = null;
+    let changed = false;
     for (let id in players) {
         const p = players[id];
         if (p.buffReady || p.isAI) continue;
@@ -657,7 +659,9 @@ function autoBuffTimedOut() {
         else if (expectedChips >= 5) pick = 'low_risk';
         if (pick) p.selectedBuff = pick;
         p.buffReady = true;
+        changed = true;
     }
+    if (changed) io.emit('sync_state', { players });
     checkAllBuffsSelected();
 }
 
@@ -665,6 +669,7 @@ function checkAllBuffsSelected() {
     const pList = Object.values(players);
     if (pList.length < 2) return;
 
+    let changed = false;
     // 如果所有真人玩家都选好了，让 AI 自动选卡
     if (pList.every(pl => pl.buffReady || pl.isAI)) {
         pList.forEach(pl => {
@@ -676,23 +681,11 @@ function checkAllBuffsSelected() {
                 else if (expectedChips >= 5) pick = 'low_risk';
                 if (pick) pl.selectedBuff = pick;
                 pl.buffReady = true;
+                changed = true;
             }
         });
-    // 如果全员（包括 AI）都选好了，统一精算并开始倒计时
-    if (pList.every(pl => pl.buffReady)) {
-        // カード選択フェーズを抜けるので制限時間タイマーを止める。
-        if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
-        settleAllChoices();
-        io.emit('start_match_countdown');
-        setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
-    }
-
-//<<<<<<< feature/0526/sora/new_mission
-// 本来上のカッコに入ってるやつが私はここに書いている形。      
-// 基本もともとあったパターンの上書きで良いと思われる(ミッションの関数から上の処理を呼んでいるので)
-// ただ、ミッション部分の場合、settleAllChoices()を呼んでいないところがあるので注意。
-// この関数自体は下の行にある。後かっこ足りてないので注意。
-
+        
+        if (changed) io.emit('sync_state', { players });
 
         // 如果全员（包括 AI）都选好了，开始等待ミッション選択
         if (pList.every(pl => pl.buffReady)) {
@@ -760,15 +753,6 @@ function autoMissionTimedOut() {
             p.mission = JSON.parse(JSON.stringify(p.availableMissions[0]));
             console.log(`[Server] Auto-assigned mission to Player ${p.role}: ${p.mission.description}`);
             changed = true;
-//=======
-        // 如果全员（包括 AI）都选好了，统一精算并开始倒计时
-        if (pList.every(pl => pl.buffReady)) {
-            // カード選択フェーズを抜けるので制限時間タイマーを止める。
-            if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
-            settleAllChoices();
-            io.emit('start_match_countdown');
-            setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
-//>>>>>>> develop/0511
         }
     }
     
@@ -956,7 +940,7 @@ function startFinalDuel() {
 // 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
 function resetMatchState() {
     gameActive = false; items = []; currentBeat = 0;
-  
+
     // 全ての進行管理タイマーをリセット
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
     if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
@@ -965,13 +949,13 @@ function resetMatchState() {
     if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
     if (missionTimer) { clearTimeout(missionTimer); missionTimer = null; }
     if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
-  
+
     isFinalDuel = false;
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
     if (lobbyCountdownTimer) { clearTimeout(lobbyCountdownTimer); lobbyCountdownTimer = null; }
-  
-    for (let id in players) {
+
+    for (let id in players) { 
         const p = players[id];
         p.score = 0; p.money = Config.INITIAL_MONEY; p.chips = Config.INITIAL_CHIPS;
         p.mission = null;
@@ -980,7 +964,7 @@ function resetMatchState() {
         // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
         // 前回の ready / 入室状態が残らないようにする。
         p.ready = false; p.isAI = false; p.inLobby = false;
-        resetPlayerPos(id);
+        resetPlayerPos(id); 
     }
 }
 
