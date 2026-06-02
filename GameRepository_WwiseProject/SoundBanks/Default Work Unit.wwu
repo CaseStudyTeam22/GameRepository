@@ -3,33 +3,48 @@
 	<SoundBanks>
 		<WorkUnit Name="Default Work Unit" ID="{F5399195-274C-4EFA-94D0-BB17323A3F55}" PersistMode="Standalone">
 			<ChildrenList>
-				<Folder Name="BootScene" ID="{C80D2830-D435-46E1-85B4-4657D7AEF001}" ShortID="493073917">
+				<Folder Name="BGM" ID="{453F6B22-8AB9-41AF-9C85-4C6D5E48BF67}" ShortID="144011651">
 					<ChildrenList>
-						<Folder Name="SE" ID="{BB29454B-F62C-4004-B510-7FB86415D18E}" ShortID="266018828">
-							<ChildrenList>
-								<SoundBank Name="SE" ID="{80E7D19C-36CA-4B7F-AB32-510E99BC51BA}">
-									<ObjectInclusionList>
-										<ObjectRef Name="Play_Beat_1_to_3" ID="{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
-										<ObjectRef Name="Play_Beat_4" ID="{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
-									</ObjectInclusionList>
-									<ObjectExclusionList/>
-									<GameSyncExclusionList/>
-								</SoundBank>
-							</ChildrenList>
-						</Folder>
-						<Folder Name="BGM" ID="{453F6B22-8AB9-41AF-9C85-4C6D5E48BF67}" ShortID="144011651">
-							<ChildrenList>
-								<SoundBank Name="BGM" ID="{41121AD7-38B7-401C-874C-5C2FAF544D70}">
-									<ObjectInclusionList>
-										<ObjectRef Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
-										<ObjectRef Name="Play_Main" ID="{91159A1C-B4A0-487B-84AE-1F62BD19A298}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
-										<ObjectRef Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
-									</ObjectInclusionList>
-									<ObjectExclusionList/>
-									<GameSyncExclusionList/>
-								</SoundBank>
-							</ChildrenList>
-						</Folder>
+						<SoundBank Name="Boot_BGM" ID="{41121AD7-38B7-401C-874C-5C2FAF544D70}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="1"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList>
+								<ObjectRef Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+								<ObjectRef Name="Play_Main" ID="{91159A1C-B4A0-487B-84AE-1F62BD19A298}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+								<ObjectRef Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+							</ObjectInclusionList>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+					</ChildrenList>
+				</Folder>
+				<Folder Name="SE" ID="{BB29454B-F62C-4004-B510-7FB86415D18E}" ShortID="266018828">
+					<ChildrenList>
+						<SoundBank Name="Boot_SE" ID="{80E7D19C-36CA-4B7F-AB32-510E99BC51BA}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="1"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList>
+								<ObjectRef Name="Play_Beat_1_to_3" ID="{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+								<ObjectRef Name="Play_Beat_4" ID="{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+							</ObjectInclusionList>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+						<SoundBank Name="Bootstrap_SE" ID="{60A31E10-5905-4CE2-A205-B395B76523C5}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="19"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList>
+								<ObjectRef Name="Play_start" ID="{C2663EBE-5A32-4BCF-9CE6-C5B696F00A38}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
+							</ObjectInclusionList>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
 					</ChildrenList>
 				</Folder>
 			</ChildrenList>

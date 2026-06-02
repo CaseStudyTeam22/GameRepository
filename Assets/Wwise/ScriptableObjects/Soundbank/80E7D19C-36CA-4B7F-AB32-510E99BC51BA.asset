@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcbc6cc88b739ed4cb0be339e8ae3c1c, type: 3}
   m_Name: 80E7D19C-36CA-4B7F-AB32-510E99BC51BA
   m_EditorClassIdentifier: 
-  objectName: SE
-  id: 1584861537
+  objectName: Boot_SE
+  id: 433450704
   guid: 80E7D19C-36CA-4B7F-AB32-510E99BC51BA

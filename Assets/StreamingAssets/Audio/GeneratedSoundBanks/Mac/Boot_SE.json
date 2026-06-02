@@ -6,14 +6,14 @@
   "SoundBankVersion": "172",
   "SoundBanks": [
    {
-    "Id": "1584861537",
+    "Id": "433450704",
     "Type": "User",
     "GUID": "{80E7D19C-36CA-4B7F-AB32-510E99BC51BA}",
     "Language": "SFX",
-    "Hash": "{D9B58EC3-E4DB-B9DC-2197-2ED20346997F}",
-    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BootScene\\SE\\SE",
-    "ShortName": "SE",
-    "Path": "SE.bnk",
+    "Hash": "{7EA19F2A-C86B-1061-3FBE-7AA39B1A3D74}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Boot_SE",
+    "ShortName": "Boot_SE",
+    "Path": "Boot_SE.bnk",
     "Media": [
      {
       "Id": "631089131",
@@ -36,7 +36,7 @@
      {
       "Id": "18931912",
       "Name": "Play_Beat_1_to_3",
-      "ObjectPath": "\\Events\\Default Work Unit\\SE\\Beat\\Play_Beat_1_to_3",
+      "ObjectPath": "\\Events\\Default Work Unit\\SE\\Boot\\Beat\\Play_Beat_1_to_3",
       "GUID": "{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}",
       "DurationType": "OneShot",
       "DurationMin": "0.14473923",
@@ -50,7 +50,7 @@
      {
       "Id": "3323077879",
       "Name": "Play_Beat_4",
-      "ObjectPath": "\\Events\\Default Work Unit\\SE\\Beat\\Play_Beat_4",
+      "ObjectPath": "\\Events\\Default Work Unit\\SE\\Boot\\Beat\\Play_Beat_4",
       "GUID": "{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}",
       "DurationType": "OneShot",
       "DurationMin": "0.3023",
@@ -64,6 +64,6 @@
     ]
    }
   ],
-  "FileHash": "{CFD1CC96-B0F1-DB72-25D2-B41FAAE87487}"
+  "FileHash": "{3498EDAC-9D1C-0FB9-6910-C0218A21298C}"
  }
 }

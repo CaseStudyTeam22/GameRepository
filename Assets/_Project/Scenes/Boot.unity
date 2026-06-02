@@ -495,8 +495,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_SoundBankNames:
-  - BGM
-  - SE
+  - Boot_BGM
+  - Boot_SE
 --- !u!4 &737500126
 Transform:
   m_ObjectHideFlags: 0

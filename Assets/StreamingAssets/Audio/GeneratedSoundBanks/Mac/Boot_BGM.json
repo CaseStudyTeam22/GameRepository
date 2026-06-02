@@ -6,14 +6,14 @@
   "SoundBankVersion": "172",
   "SoundBanks": [
    {
-    "Id": "412724365",
+    "Id": "2107380706",
     "Type": "User",
     "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
     "Language": "SFX",
-    "Hash": "{2FB8E059-C4ED-B87F-1954-8B93F1A62FE6}",
-    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BootScene\\BGM\\BGM",
-    "ShortName": "BGM",
-    "Path": "BGM.bnk",
+    "Hash": "{87D660B2-A6D8-2FBA-4288-EC80C21B74BF}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\Boot_BGM",
+    "ShortName": "Boot_BGM",
+    "Path": "Boot_BGM.bnk",
     "Media": [
      {
       "Id": "143921451",
@@ -28,7 +28,7 @@
      {
       "Id": "1967054745",
       "Name": "Play_BGM_Swtich_Cue",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_Cue",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_BGM_Swtich_Cue",
       "GUID": "{6A7310ED-DF0C-4989-B030-88FADFA93DFB}",
       "DurationType": "OneShot",
       "DurationMin": "0",
@@ -46,7 +46,7 @@
      {
       "Id": "2188851721",
       "Name": "Play_BGM_Swtich_Offset",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_BGM_Swtich_Offset",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_BGM_Swtich_Offset",
       "GUID": "{98D336B6-3990-456B-8FB7-369671D458D1}",
       "DurationType": "OneShot",
       "DurationMin": "0",
@@ -64,7 +64,7 @@
      {
       "Id": "1193902085",
       "Name": "Play_Main",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Play_Main",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_Main",
       "GUID": "{91159A1C-B4A0-487B-84AE-1F62BD19A298}",
       "DurationType": "Infinite",
       "SwitchContainers": [
@@ -123,6 +123,6 @@
     ]
    }
   ],
-  "FileHash": "{14B746E1-781D-95F7-ED4D-F954CC7B93DB}"
+  "FileHash": "{7CA46329-C963-914A-2CD8-589241617CD5}"
  }
 }

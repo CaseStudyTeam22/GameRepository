@@ -8,10 +8,13 @@ namespace GamblingAction.Audio
         [Header("SE")]
         [Tooltip("1-3拍目に鳴らすSE")]
         [SerializeField] private AK.Wwise.Event m_BeatSE;
-        [Tooltip("BeatsPerBar拍目に鳴らすSE")]
+        [Tooltip("4拍目に鳴らすSE")]
         [SerializeField] private AK.Wwise.Event m_BarSE;
 
         private IBeatClock m_BeatClock;
+        private uint m_CurrentPlayingID_Beat;
+        private uint m_CurrentPlayingID_Bar;
+
 
         private void Start()
         {
@@ -19,12 +22,14 @@ namespace GamblingAction.Audio
 
             if (beatClock == null)
             {
-                Debug.LogError("[BeatSEPlayer] BeatClockが見つかりません。シーンにBeatManagerが存在するか確認してください。");
+                Debug.LogError("[BeatSEPlayer] BeatClockが見つかりません。");
                 return;
             }
 
             m_BeatClock = beatClock;
             m_BeatClock.OnBeat += HandleBeat;
+
+            m_CurrentPlayingID_Beat = WwiseSoundAPI.Instance.Play(m_BarSE, gameObject);
         }
 
         private void OnDestroy()
@@ -37,6 +42,8 @@ namespace GamblingAction.Audio
             }
 
             m_BeatClock.OnBeat -= HandleBeat;
+
+            WwiseSoundAPI.Instance?.StopAll(gameObject);
         }
 
         // OnBeatから拍番号に応じて再生
@@ -45,11 +52,22 @@ namespace GamblingAction.Audio
             // 4拍目と1～3拍目
             if (beat == m_BeatClock.BeatsPerBar)
             {
-                m_BarSE.Post(gameObject);
+                if (WwiseSoundAPI.Instance == null)
+                {
+                    Debug.LogWarning("[BeatSEPlayer] WwiseSoundAPIのInstanceがnullです。");
+                    return;
+                }
+                m_CurrentPlayingID_Beat = WwiseSoundAPI.Instance.Play(m_BeatSE, gameObject);
             }
             else
             {
-                m_BeatSE.Post(gameObject);
+                if (WwiseSoundAPI.Instance == null)
+                {
+                    Debug.LogWarning("[BeatSEPlayer] WwiseSoundAPIのInstanceがnullです。");
+                    return;
+                }
+
+                m_CurrentPlayingID_Bar = WwiseSoundAPI.Instance.Play(m_BarSE, gameObject);
             }
         }
     }
