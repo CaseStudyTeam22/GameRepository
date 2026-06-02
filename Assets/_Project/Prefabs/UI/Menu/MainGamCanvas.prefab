@@ -2813,6 +2813,8 @@ MonoBehaviour:
   m_GameOverPanel: {fileID: 1793614204653652201}
   m_MainGameStage: {fileID: 6967025498251287470}
   m_PreparingCountdownPanel: {fileID: 5131348455053630107}
+  m_MissionPanel: {fileID: 0}
+  m_MissionSelectionPanel: {fileID: 0}
   m_PrepareSeconds: 20
   m_TotalRounds: 3
   m_RoundOverDisplaySeconds: 3

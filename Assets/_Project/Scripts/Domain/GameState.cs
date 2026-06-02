@@ -106,6 +106,11 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
 		}
 
+		public void SubmitMission(string missionId)
+		{
+			m_Net.Emit(ClientEvents.MissionSelected, new MissionSelectedMessage { MissionId = missionId });
+		}
+
 		public void SubmitRoundReady()
 		{
 			m_Net.Emit(ClientEvents.RoundReady, new { });
@@ -220,9 +225,19 @@ namespace GamblingAction.Domain
 
 		private void HandleGameEvents(EventDto[] events)
 		{
-			// ここで特定のイベント(動いたならとか)で処理を実行等々
-
 			if (events == null || events.Length == 0) return;
+
+			foreach (var ev in events)
+			{
+				// ミッション達成イベントを検知してログ出力
+				if (ev.Type == EventTypes.Vfx && ev.VfxType == VfxTypes.Bump && ev.Text != null && ev.Text.Contains("MISSION CLEAR"))
+				{
+					var player = m_Players.Values.FirstOrDefault(p => p.Id == ev.TargetId);
+					string role = player != null ? player.Role : "Unknown";
+					Debug.Log($"<color=yellow>[Mission]</color> <b>Player {role} がミッションを達成しました！</b> ({ev.Text})");
+				}
+			}
+
 			OnGameEvents?.Invoke(events);
 		}
 
