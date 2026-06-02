@@ -36,12 +36,16 @@ module.exports = {
     },
 
     INITIAL_MONEY: 10000,
-    INITIAL_CHIPS: 10,
+    INITIAL_CHIPS: 0,
     INITIAL_STAMINA: 5,
     MAX_STAMINA: 5,
 
     ITEM_SPAWN_INTERVAL: 2,
     MAX_ITEMS_ON_FIELD: 10,
     CHIP_ITEM_VALUE: 5,
-    MONEY_ITEM_VALUE: 500
+    MONEY_ITEM_VALUE: 500,
+
+    // ファイナルレイズの提案・応答それぞれの制限時間（ミリ秒）。
+    // 無応答はキャンセル扱いで通常の game_over へ進む。
+    FINAL_RAISE_TIMEOUT_MS: 20000
 };

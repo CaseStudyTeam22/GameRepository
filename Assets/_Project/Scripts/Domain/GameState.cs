@@ -23,6 +23,7 @@ namespace GamblingAction.Domain
 		public bool GameActive { get; private set; }
 		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
+		public bool IsFinalDuel { get; private set; }
 
 		public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
@@ -45,6 +46,10 @@ namespace GamblingAction.Domain
 		public event Action OnPrepareRound;
 		public event Action<string, int> OnCharaSelected;
 		public event Action<bool> OnConnectionChanged;
+		public event Action<FinalRaiseOfferMessage> OnFinalRaiseOffer;
+		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
+		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
+		public event Action OnFinalRaiseStarted;
 
 		public GameState(INetClient net)
 		{
@@ -116,6 +121,16 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
 		}
 
+		public void SubmitFinalRaisePropose(bool accept)
+		{
+			m_Net.Emit(ClientEvents.FinalRaisePropose, new FinalRaiseProposeMessage { Accept = accept });
+		}
+
+		public void SubmitFinalRaiseRespond(bool accept)
+		{
+			m_Net.Emit(ClientEvents.FinalRaiseRespond, new FinalRaiseRespondMessage { Accept = accept });
+		}
+
 		public int GetCalculatedPower(string playerId, string intentType, int basePower)
 		{
 			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
@@ -171,6 +186,11 @@ namespace GamblingAction.Domain
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
 			m_Net.On(ServerEvents.RoundStart,          () => SetPhase(EGamePhase.Battle));
 			m_Net.On(ServerEvents.CloseAll,            HandleCloseAll);
+
+			m_Net.On<FinalRaiseOfferMessage>(ServerEvents.FinalRaiseOffer, HandleFinalRaiseOffer);
+			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
+			m_Net.On<FinalRaiseCanceledMessage>(ServerEvents.FinalRaiseCanceled, HandleFinalRaiseCanceled);
+			m_Net.On(ServerEvents.FinalRaiseStarted, HandleFinalRaiseStarted);
 		}
 
 		private void HandleInit(InitMessage msg)
@@ -229,8 +249,31 @@ namespace GamblingAction.Domain
 
 		private void HandleGameOver(GameOverMessage msg)
 		{
+			// 試合終了時はファイナルレイズ状態を必ずリセット（中断 / 完走どちらの経路でも）。
+			IsFinalDuel = false;
 			SetPhase(EGamePhase.GameOver);
 			OnGameOver?.Invoke(msg.WinnerRole);
+		}
+
+		private void HandleFinalRaiseOffer(FinalRaiseOfferMessage msg)
+		{
+			OnFinalRaiseOffer?.Invoke(msg);
+		}
+
+		private void HandleFinalRaisePending(FinalRaisePendingMessage msg)
+		{
+			OnFinalRaisePending?.Invoke(msg);
+		}
+
+		private void HandleFinalRaiseCanceled(FinalRaiseCanceledMessage msg)
+		{
+			OnFinalRaiseCanceled?.Invoke(msg);
+		}
+
+		private void HandleFinalRaiseStarted()
+		{
+			IsFinalDuel = true;
+			OnFinalRaiseStarted?.Invoke();
 		}
 
 		private void HandleWaitingForOthers(WaitingForOthersMessage msg)
@@ -318,6 +361,10 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.StartMatchCountdown);
 			m_Net.Off(ServerEvents.RoundStart);
 			m_Net.Off(ServerEvents.CloseAll);
+			m_Net.Off(ServerEvents.FinalRaiseOffer);
+			m_Net.Off(ServerEvents.FinalRaisePending);
+			m_Net.Off(ServerEvents.FinalRaiseCanceled);
+			m_Net.Off(ServerEvents.FinalRaiseStarted);
 		}
 	}
 

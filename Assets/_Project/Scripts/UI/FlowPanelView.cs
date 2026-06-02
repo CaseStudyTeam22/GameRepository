@@ -60,6 +60,10 @@ namespace GamblingAction.UI
 
 		private IGameState m_State;
 
+		// この回で両替申請したチップ数。精算は両替・カード選択が終わってからまとめて行うため、
+		// カード選択ボタンの可否判定は「現チップ + この値」で行う。
+		private int m_PendingExchange;
+
 		private Slider m_ExchangeSlider;
 		private TMP_Text m_ExchangeAmountText;
 		private Button m_ExchangeConfirmButton;
@@ -238,6 +242,7 @@ namespace GamblingAction.UI
 				m_ExchangeConfirmButton.onClick.AddListener(() =>
 				{
 					int amount = m_ExchangeSlider != null ? (int)m_ExchangeSlider.value : 0;
+					m_PendingExchange = amount;
 					m_State.SubmitExchange(amount);
 					m_ExchangeConfirmButton.interactable = false;
 				});
@@ -307,13 +312,14 @@ namespace GamblingAction.UI
 
 			if (phase == EGamePhase.Exchange)
 			{
+				m_PendingExchange = 0;
 				if (m_ExchangeConfirmButton != null) m_ExchangeConfirmButton.interactable = true;
 				UpdateExchangeRange();
 			}
 
 			if (phase == EGamePhase.BuffSelection)
 			{
-				int chips = m_State.Me?.Chips ?? 0;
+				int chips = (m_State.Me?.Chips ?? 0) + m_PendingExchange;
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
 				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;
