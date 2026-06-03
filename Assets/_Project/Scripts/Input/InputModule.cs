@@ -85,7 +85,7 @@ namespace GamblingAction.Input
 			TrySetSkillMode(KeyCode.Q, IntentTypes.Push);
 			TrySetSkillMode(KeyCode.W, IntentTypes.Attack);
 			TrySetSkillMode(KeyCode.E, IntentTypes.Defense);
-			TrySetSkillMode(KeyCode.R, IntentTypes.Rest);
+			TrySetSkillMode(KeyCode.R, IntentTypes.Skill);
 		}
 
 		private void TrySetSkillMode(KeyCode key, string mode)
@@ -97,10 +97,11 @@ namespace GamblingAction.Input
 			m_ActiveMode = mode;
 			m_Power = 1;
 
-			if (mode == IntentTypes.Rest)
+			if (mode == IntentTypes.Skill)
 			{
 				m_LastSentDir = null;
-				m_State.SubmitIntent(IntentTypes.Rest, null, m_Power);
+				// スキルに掛け金の概念を持ち込んでパワー替えるかは不明なため元のrestを踏襲
+				m_State.SubmitIntent(IntentTypes.Skill, null, m_Power);
 				PublishLocal();
 				return;
 			}
@@ -182,7 +183,7 @@ namespace GamblingAction.Input
 			string type = !string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None
 				? m_ActiveMode
 				: IntentTypes.Move;
-			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense;
+			bool needsDir = type != IntentTypes.Skill && type != IntentTypes.Defense;
 			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
 			{
 				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
@@ -193,7 +194,7 @@ namespace GamblingAction.Input
 		private void HandleMouseMove()
 		{
 			if (string.IsNullOrEmpty(m_ActiveMode)) return;
-			if (m_ActiveMode == IntentTypes.Rest) return;
+			if (m_ActiveMode == IntentTypes.Skill) return;
 
 			string dir = ResolveMouseDir();
 			if (dir == null || dir == m_LastSentDir) return;

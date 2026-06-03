@@ -12,6 +12,7 @@ module.exports = {
         'push':    0,
         'attack':  0,
         'defense': 0,
+        'skill':   0,
         'rest':    0
     },
 
@@ -22,6 +23,7 @@ module.exports = {
         'push':    [3, 5, 9],
         'attack':  [3, 5, 9],
         'defense': [2, 2, 2],
+        'skill':   [3, 5, 9],
         'rest':    [6, 6, 6]
     },
 
@@ -32,8 +34,25 @@ module.exports = {
         'attack':  { staminaDmg: 1 }, // 小注削 1，大招削 3（× power）
         'defense': { reduction: 0.8 },
         'idle':    { staminaRec: 0, chipsRec: 3 },
+        'skill':   { staminaDmg: 0 }, // ここがキャラによって可変するため、要調整
         'rest':    { staminaRec: 1 }
     },
+
+    // スキル効果
+    SKILLS: {
+        'docter': {heal: 2},
+        // 正直特殊処理が多すぎて値ってより関数にまとめたいな。
+        // それこそこの設計を活かすなら値を呼んで適切に処理する関数的なね。
+
+        // 他欲しいプロパティ
+        // force action
+        // no chip cost
+        // no kb
+        // no stamina cost
+        // area(攻撃範囲)
+        // can watch action
+        // 
+    },     
 
     INITIAL_MONEY: 10000,
     INITIAL_CHIPS: 0,

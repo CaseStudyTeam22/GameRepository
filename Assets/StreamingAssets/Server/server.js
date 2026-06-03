@@ -328,7 +328,7 @@ function handleAIDecision(id) {
                 decision.type = 'push'; decision.dir = pushDir;
                 decision.power = canAllIn ? 3 : (canRaise ? 2 : 1);
             } else if (rand < 0.55 + jitter()) {
-                decision.type = 'rest';
+                decision.type = 'skill'; // 仮でrest->skillへ
             } else {
                 decision.type = 'defense';
             }
@@ -363,9 +363,9 @@ function handleAIDecision(id) {
             if (nearestItem && canMove) {
                 const d = itemDirFor(nearestItem);
                 if (d) { decision.type = 'move'; decision.dir = d; decision.power = 1; }
-                else decision.type = rand < 0.5 + jitter() ? 'defense' : 'rest';
+                else decision.type = rand < 0.5 + jitter() ? 'defense' : 'skill'; // 仮でrest->skillへ
             } else {
-                decision.type = rand < 0.5 + jitter() ? 'defense' : 'rest';
+                decision.type = rand < 0.5 + jitter() ? 'defense' : 'skill';
             }
         }
     }
