@@ -1,4 +1,5 @@
 const Config = require('./config');
+const Skills = require('./skills');
 
 /**
  * 核心引擎 - Proto V10 三档 power 版
@@ -22,13 +23,20 @@ const Engine = {
 
             // 筹码消耗：按 power 查表
             const costTable = Config.CHIP_COST_BY_POWER[intent.type];
-            const chipCost = costTable ? costTable[power - 1] : 0;
+            let chipCost = costTable ? costTable[power - 1] : 0;
+            
+            // スキルによるコスト計算フックの適用
+            chipCost = Skills.onCalculateCost(p, intent, chipCost);
+            
             if (p.chips < chipCost) intent.type = 'none';
             else p.chips -= chipCost;
 
             const baseMax = p.maxStamina || 5;
             // Buff: 高风险降低定力上限到 4；低风险 rest 额外 +1
-            const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
+            // さらに将来的なステータス補正 maxStaminaBonus を適用
+            const bonusStamina = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
+            const maxStamina = (p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax) + bonusStamina;
+            
             const restRec = Config.EFFECTS.rest.staminaRec + (p.selectedBuff === 'low_risk' ? 1 : 0);
             if (intent.type === 'rest') p.stamina = Math.min(maxStamina, p.stamina + restRec);
             else if (intent.type === 'none') {
@@ -43,15 +51,19 @@ const Engine = {
 
             // 计算预想目标：push 自己前进 1 格；move 前进 power 格（遇障碍/越界会在后面限制）
             if (intent.type === 'push') {
-                if (intent.dir === 'up') p.targetY--;
-                else if (intent.dir === 'down') p.targetY++;
-                else if (intent.dir === 'left') p.targetX--;
-                else if (intent.dir === 'right') p.targetX++;
+                const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+                const finalPushDist = Math.max(1, 1 + pushBonus);
+                if (intent.dir === 'up') p.targetY -= finalPushDist;
+                else if (intent.dir === 'down') p.targetY += finalPushDist;
+                else if (intent.dir === 'left') p.targetX -= finalPushDist;
+                else if (intent.dir === 'right') p.targetX += finalPushDist;
             } else if (intent.type === 'move') {
-                if (intent.dir === 'up') p.targetY -= power;
-                else if (intent.dir === 'down') p.targetY += power;
-                else if (intent.dir === 'left') p.targetX -= power;
-                else if (intent.dir === 'right') p.targetX += power;
+                const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
+                const finalPower = Math.max(1, power + speedBonus);
+                if (intent.dir === 'up') p.targetY -= finalPower;
+                else if (intent.dir === 'down') p.targetY += finalPower;
+                else if (intent.dir === 'left') p.targetX -= finalPower;
+                else if (intent.dir === 'right') p.targetX += finalPower;
             }
         });
 
@@ -64,6 +76,8 @@ const Engine = {
             if (intent.type !== 'move') return;
             const other = p.id === p1Id ? p2 : p1;
             const power = Math.max(1, Math.min(3, intent.power || 1));
+            const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
+            const finalPower = Math.max(1, power + speedBonus);
             // 从 prev 出发逐格推进，遇到对方（用其 prev 位置判定，避免交错冲突）或越界则停止
             let cx = p.prevX, cy = p.prevY;
             let dx = 0, dy = 0;
@@ -71,7 +85,7 @@ const Engine = {
             else if (intent.dir === 'down') dy = 1;
             else if (intent.dir === 'left') dx = -1;
             else if (intent.dir === 'right') dx = 1;
-            for (let step = 0; step < power; step++) {
+            for (let step = 0; step < finalPower; step++) {
                 const nx = cx + dx, ny = cy + dy;
                 if (nx < 0 || nx >= Config.GRID_SIZE || ny < 0 || ny >= Config.GRID_SIZE) break;
                 if (nx === other.prevX && ny === other.prevY) break;
@@ -199,7 +213,8 @@ const Engine = {
             // 严格邻位判定：只有起始相邻，动作才生效
             if (intent.type === 'push' && startDist === 1) {
                 events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p.id, dir: intent.dir, power: intent.power, x: p.prevX, y: p.prevY });
-                let finalDist = power;
+                const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+                let finalDist = power + pushBonus;
                 // 高风险攻击方：power=3 时推距 +1
                 if (p.selectedBuff === 'high_risk' && power === 3) finalDist += 1;
                 const tIntent = intents[target.id] || { type: 'none' };
@@ -224,7 +239,11 @@ const Engine = {
                 // 高风险攻击方：power=3 伤害 +1
                 if (p.selectedBuff === 'high_risk' && power === 3) dmg += 1;
                 const tIntent = intents[target.id] || { type: 'none' };
-                if (tIntent.type === 'defense') dmg = Math.floor(dmg * (1 - Config.EFFECTS.defense.reduction));
+                if (tIntent.type === 'defense') {
+                    const defBonus = (target.modifiers && target.modifiers.defenseReductionBonus) || 0;
+                    const reduction = Math.min(1.0, Config.EFFECTS.defense.reduction + defBonus);
+                    dmg = Math.floor(dmg * (1 - reduction));
+                }
                 // 高风险被击方：30% 概率伤害 +1
                 if (dmg > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) dmg += 1;
                 target.stamina = Math.max(0, target.stamina - dmg);
@@ -236,6 +255,11 @@ const Engine = {
             }
 
             if (intent.type === 'rest') events.push({ type: 'vfx', vfxType: 'rest_vfx', targetId: p.id, x: p.x, y: p.y });
+            
+            // スキル（固有アクション）の実行
+            if (intent.type === 'skill') {
+                Skills.onResolve(p, target, intent, events, Config);
+            }
         });
 
         // --- 5. 拾取物品 ---

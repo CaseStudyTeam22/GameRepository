@@ -128,7 +128,12 @@ namespace GamblingAction.Input
 		{
 			if (!m_ActiveSkillKey.HasValue) return;
 			if (UnityInput.GetKeyUp(m_ActiveSkillKey.Value))
+			{
+				// 方向指定のない Skill や Defense は、キーを離しても即時キャンセルされないようにする
+				// ->バグは解決したが、skillやdefenseが、ホイールスクロールによる強さが分かりづらいのだけが難点
+				if (m_ActiveMode == IntentTypes.Skill || m_ActiveMode == IntentTypes.Defense) return;
 				CancelAll();
+			}
 		}
 
 		private void HandleEscape()

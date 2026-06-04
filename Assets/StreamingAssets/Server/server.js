@@ -7,6 +7,7 @@ const os = require('os');
 
 const Config = require('./config');
 const Engine = require('./engine');
+const Skills = require('./skills');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,7 +63,11 @@ function resetPlayerPos(id) {
     const startPos = p.role === 'P1' ? { x: 1, y: 6 } : { x: 6, y: 1 };
     p.x = startPos.x; p.y = startPos.y;
     p.color = p.role === 'P1' ? '#00f2fe' : '#ff4444';
-    p.stamina = Config.INITIAL_STAMINA;
+    // クランプ・バリデーションされた maxStamina と modifiers のボーナスを加味して定力をリセット
+    const baseMax = p.maxStamina || Config.MAX_STAMINA;
+    const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
+    const bonus = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
+    p.stamina = maxStamina + bonus;
     p.falling = false; p.intent = null; p.chips = Config.INITIAL_CHIPS;
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
 }
@@ -462,7 +467,17 @@ io.on('connection', (socket) => {
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
         selectedBuff: null, buffReady: false, pendingExchange: 0, inLobby: false, roundReady: false,
-        charaIndex: 0
+        charaIndex: 0,
+        charaName: 'Normal',
+        maxStamina: Config.MAX_STAMINA,
+        skillData: null,
+        modifiers: {
+            maxStaminaBonus: 0,
+            pushPowerBonus: 0,
+            moveSpeedBonus: 0,
+            chipCostMultiplier: 1.0,
+            defenseReductionBonus: 0.0
+        }
     };
     
     console.log(`[Server] Player joined: ${socket.id} as ${role}`);
@@ -477,7 +492,26 @@ io.on('connection', (socket) => {
             p.isAI = !!(data && data.isAI);
             if (p.isAI) p.personality = ['Aggressive', 'Balanced', 'Conservative'][Math.floor(Math.random() * 3)];
             
-            console.log(`[Server] Player ${p.role} is ready (AI: ${p.isAI})`);
+            // --- クライアントからアップロードされたキャラクターデータをクランプして保持する ---
+            if (data && data.charaData) {
+                const chara = data.charaData;
+                
+                // 定力上限のクランプ
+                const maxStaminaLimit = (Config.LIMITS && Config.LIMITS.MAX_STAMINA_LIMIT) || 8;
+                p.maxStamina = Math.min(maxStaminaLimit, Math.max(3, parseInt(chara.maxStamina) || 5));
+                
+                // スキルパラメータのクランプ
+                const recLimit = (Config.LIMITS && Config.LIMITS.SKILL_STAMINA_REC_LIMIT) || 3;
+                const costLimit = (Config.LIMITS && Config.LIMITS.SKILL_CHIP_COST_LIMIT) || 15;
+                p.skillData = {
+                    id: chara.skills?.id || null,
+                    staminaRec: Math.min(recLimit, parseInt(chara.skills?.staminaRec) || 0),
+                    chipCost: Math.min(costLimit, parseInt(chara.skills?.chipCost) || 0)
+                };
+                p.charaName = chara.name || 'Unknown';
+            }
+            
+            console.log(`[Server] Player ${p.role} is ready (AI: ${p.isAI}, Chara: ${p.charaName}, Stamina: ${p.maxStamina})`);
 
             const pList = Object.values(players);
             if (pList.length >= 2 && pList.every(pl => pl.ready)) {
@@ -767,9 +801,11 @@ function settleAllChoices() {
     for (let id in players) {
         const p = players[id];
         const amount = p.pendingExchange || 0;
+        // チップ変換時のスキル効果フック
+        const finalAmount = Skills.onExchange(p, amount);
         if (amount > 0) {
             p.money -= amount * 100;
-            p.chips += amount;
+            p.chips += finalAmount;
         }
         const buffCost = p.selectedBuff === 'high_risk' ? 15 : (p.selectedBuff === 'low_risk' ? 5 : 0);
         if (buffCost > 0) p.chips -= buffCost;
@@ -964,6 +1000,18 @@ function resetMatchState() {
         // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
         // 前回の ready / 入室状態が残らないようにする。
         p.ready = false; p.isAI = false; p.inLobby = false;
+        
+        // スキル関連とステータス補正（Modifiers）の初期化
+        p.maxStamina = Config.MAX_STAMINA;
+        p.skillData = null;
+        p.modifiers = {
+            maxStaminaBonus: 0,
+            pushPowerBonus: 0,
+            moveSpeedBonus: 0,
+            chipCostMultiplier: 1.0,
+            defenseReductionBonus: 0.0
+        };
+        
         resetPlayerPos(id); 
     }
 }

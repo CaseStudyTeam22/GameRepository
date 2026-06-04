@@ -13,6 +13,7 @@ namespace GamblingAction.Domain
 		private readonly INetClient m_Net;
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
+		private int m_SelectedCharaIndex = 0;
 
 		public string MyId { get; private set; }
 		public int GridSize { get; private set; } = GamblingAction.Core.GameConfig.GridSize;
@@ -64,11 +65,11 @@ namespace GamblingAction.Domain
 			if (me == null || me.IsAI) return;
 
 			// テストで4拍ごとに押し出し力+1
-			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
-			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
+			//m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
+			//Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
 
 			// スタミナ上限を追加
-			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
+			//m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
 
 			// ステータスを更新
 			RefreshPlayerStats(m_Players[MyId]);
@@ -83,7 +84,37 @@ namespace GamblingAction.Domain
 
 		public void SubmitReady(bool isAI)
 		{
-			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
+			var charaData = new CharaDataMessage
+			{
+				Name = "Normal",
+				MaxStamina = 5,
+				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
+			};
+
+			if (m_SelectedCharaIndex == 1)
+			{
+				charaData.Name = "Doctor";
+				charaData.MaxStamina = 5;
+				charaData.Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 3 };
+			}
+			else if (m_SelectedCharaIndex == 2)
+			{
+				charaData.Name = "DoubleEdge";
+				charaData.MaxStamina = 5;
+				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
+			}
+			else if (m_SelectedCharaIndex == 3)
+			{
+				charaData.Name = "Fighter";
+				charaData.MaxStamina = 5;
+				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
+			}
+
+			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage 
+			{ 
+				IsAI = isAI,
+				CharaData = charaData
+			});
 		}
 
 		public void SubmitUnready()
@@ -118,6 +149,7 @@ namespace GamblingAction.Domain
 
 		public void SubmitSelectChara(int index)
 		{
+			m_SelectedCharaIndex = index;
 			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
 		}
 
