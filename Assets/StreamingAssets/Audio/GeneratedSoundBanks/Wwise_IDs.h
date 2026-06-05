@@ -44,6 +44,12 @@ namespace AK
         static const AkUniqueID BOOT_BGM = 2107380706U;
         static const AkUniqueID BOOT_SE = 433450704U;
         static const AkUniqueID BOOTSTRAP_SE = 1975480976U;
+        static const AkUniqueID LODDY_BGM = 1755959872U;
+        static const AkUniqueID LODDY_SE = 4027732094U;
+        static const AkUniqueID RESULT_BGM = 3527993881U;
+        static const AkUniqueID RESULT_SE = 2182916605U;
+        static const AkUniqueID TITLE_BGM = 571634470U;
+        static const AkUniqueID TITLE_SE = 1098883604U;
     } // namespace BANKS
 
     namespace BUSSES

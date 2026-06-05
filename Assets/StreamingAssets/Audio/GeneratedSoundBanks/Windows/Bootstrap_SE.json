@@ -9,6 +9,7 @@
     "Id": "1975480976",
     "Type": "User",
     "GUID": "{60A31E10-5905-4CE2-A205-B395B76523C5}",
+    "Color": "19",
     "Language": "SFX",
     "Hash": "{841431B0-570A-D48B-D627-F7B7A9F32DAF}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Bootstrap_SE",
@@ -43,6 +44,6 @@
     ]
    }
   ],
-  "FileHash": "{96053763-D3CE-C657-DF21-42507DB624A0}"
+  "FileHash": "{30BAA034-F43D-522C-E517-925BD5B8EFC1}"
  }
 }

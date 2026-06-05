@@ -102,6 +102,12 @@
 								<Property Name="OverrideColor" Type="bool" Value="True"/>
 							</PropertyList>
 						</Folder>
+						<Folder Name="Result" ID="{72770790-D3DB-40F3-8C5D-F956684F2BC2}" ShortID="148828213">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="6"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+						</Folder>
 					</ChildrenList>
 				</Folder>
 				<Folder Name="SE" ID="{944C5C12-A59F-4F27-8197-672ABB6C637B}" ShortID="954298627">
@@ -170,6 +176,12 @@
 									</ChildrenList>
 								</Event>
 							</ChildrenList>
+						</Folder>
+						<Folder Name="Result" ID="{86A0E132-0CBC-42B1-ABC2-7AD50E0069D4}" ShortID="848028448">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="6"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
 						</Folder>
 					</ChildrenList>
 				</Folder>

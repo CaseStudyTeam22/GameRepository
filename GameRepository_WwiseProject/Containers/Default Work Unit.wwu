@@ -10,6 +10,78 @@
 								<Property Name="Color" Type="int16" Value="10"/>
 								<Property Name="OverrideColor" Type="bool" Value="True"/>
 							</PropertyList>
+							<ChildrenList>
+								<MusicSegment Name="Title_BGM_Test01" ID="{FA41E0EA-117B-4AA4-94AE-851BFD015EFC}" ShortID="313842688">
+									<PropertyList>
+										<Property Name="EndPosition" Type="Real64" Value="300042.448979592"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{1C45A0AB-3F06-4702-893D-39FB1F9A76DD}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<MusicTrack Name="Title_BGM_Test01" ID="{9D88D275-ADBE-4015-B64A-DF5EA60BAB3C}" ShortID="944514454">
+											<ReferenceList>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{1C45A0AB-3F06-4702-893D-39FB1F9A76DD}"/>
+												</Reference>
+												<Reference Name="TransitionRoot">
+													<Custom>
+														<MusicTransition Name="Root" ID="{5EECAA47-3470-4659-AC03-F2678CA2AE94}">
+															<PropertyList>
+																<Property Name="IsFolder" Type="bool" Value="True"/>
+															</PropertyList>
+															<TransitionInfo/>
+														</MusicTransition>
+													</Custom>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="Title_BGM_Test01" ID="{A94A072E-5678-4750-A98F-36257371DF5C}">
+													<Language>SFX</Language>
+													<AudioFile>Title_BGM_Test01.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="821512877"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ObjectLists>
+												<ObjectList Name="Sequences">
+													<MusicTrackSequence Name="" ID="{89E29865-C430-441B-8124-16F528AE7850}">
+														<ObjectLists>
+															<ObjectList Name="Clips">
+																<MusicClip Name="Title_BGM_Test01" ID="{BEC41CEB-68D8-493F-B666-4DE062F2D397}">
+																	<PropertyList>
+																		<Property Name="EndTrimOffset" Type="Real64" Value="300042.448979592"/>
+																		<Property Name="FadeInMode" Type="int16" Value="0"/>
+																		<Property Name="FadeOutMode" Type="int16" Value="0"/>
+																	</PropertyList>
+																	<AudioSourceRef Name="Title_BGM_Test01" ID="{A94A072E-5678-4750-A98F-36257371DF5C}"/>
+																</MusicClip>
+															</ObjectList>
+														</ObjectLists>
+													</MusicTrackSequence>
+												</ObjectList>
+											</ObjectLists>
+										</MusicTrack>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="Cues">
+											<MusicCue Name="Entry Cue" ID="{DBEC9466-3F0D-419F-9D07-3327C210D93D}"/>
+											<MusicCue Name="Exit Cue" ID="{610333D6-2DDC-4201-A814-A169C18368B1}">
+												<PropertyList>
+													<Property Name="CueType" Type="int16" Value="1"/>
+													<Property Name="TimeMs" Type="Real64" Value="300042.448979592"/>
+												</PropertyList>
+											</MusicCue>
+										</ObjectList>
+									</ObjectLists>
+								</MusicSegment>
+							</ChildrenList>
 						</Folder>
 						<Folder Name="Boot" ID="{1DAAD936-55FE-4506-A752-8D7B9CBA8032}" ShortID="685666557">
 							<PropertyList>
@@ -1346,6 +1418,84 @@
 								<Property Name="Color" Type="int16" Value="4"/>
 								<Property Name="OverrideColor" Type="bool" Value="True"/>
 							</PropertyList>
+							<ChildrenList>
+								<MusicSegment Name="Loddy_BGM_Teset01" ID="{EAB7A591-8A5E-4F86-9894-B35B40E02478}" ShortID="573964210">
+									<PropertyList>
+										<Property Name="EndPosition" Type="Real64" Value="65952"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Conversion">
+											<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>
+										</Reference>
+										<Reference Name="OutputBus">
+											<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{1C45A0AB-3F06-4702-893D-39FB1F9A76DD}"/>
+										</Reference>
+									</ReferenceList>
+									<ChildrenList>
+										<MusicTrack Name="Loddy_BGM_Teset01" ID="{092EDD35-ACD3-445A-95BC-A6CF8C862F46}" ShortID="79810245">
+											<ReferenceList>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Main Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{1C45A0AB-3F06-4702-893D-39FB1F9A76DD}"/>
+												</Reference>
+												<Reference Name="TransitionRoot">
+													<Custom>
+														<MusicTransition Name="Root" ID="{738B894E-F550-40B8-9D7D-CF2F38FF4EF1}">
+															<PropertyList>
+																<Property Name="IsFolder" Type="bool" Value="True"/>
+															</PropertyList>
+															<TransitionInfo/>
+														</MusicTransition>
+													</Custom>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="Loddy_BGM_Teset01" ID="{06401A0A-64CA-44E9-96C3-41F50FE348FC}">
+													<Language>SFX</Language>
+													<AudioFile>Loddy_BGM_Teset01.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="636669674"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ObjectLists>
+												<ObjectList Name="Sequences">
+													<MusicTrackSequence Name="" ID="{3EA4E534-C6ED-464E-972E-A51711D40FA4}">
+														<ObjectLists>
+															<ObjectList Name="Clips">
+																<MusicClip Name="Loddy_BGM_Teset01" ID="{1ABE8AF1-E1E2-437D-90EB-7AC9DBCCAE46}">
+																	<PropertyList>
+																		<Property Name="EndTrimOffset" Type="Real64" Value="65952"/>
+																		<Property Name="FadeInMode" Type="int16" Value="0"/>
+																		<Property Name="FadeOutMode" Type="int16" Value="0"/>
+																	</PropertyList>
+																	<AudioSourceRef Name="Loddy_BGM_Teset01" ID="{06401A0A-64CA-44E9-96C3-41F50FE348FC}"/>
+																</MusicClip>
+															</ObjectList>
+														</ObjectLists>
+													</MusicTrackSequence>
+												</ObjectList>
+											</ObjectLists>
+										</MusicTrack>
+									</ChildrenList>
+									<ObjectLists>
+										<ObjectList Name="Cues">
+											<MusicCue Name="Entry Cue" ID="{B1BDE440-1487-4882-8555-400F70ACF038}"/>
+											<MusicCue Name="Exit Cue" ID="{A31553ED-1421-49D5-9062-91FF7C66BF48}">
+												<PropertyList>
+													<Property Name="CueType" Type="int16" Value="1"/>
+													<Property Name="TimeMs" Type="Real64" Value="65952"/>
+												</PropertyList>
+											</MusicCue>
+										</ObjectList>
+									</ObjectLists>
+								</MusicSegment>
+							</ChildrenList>
+						</Folder>
+						<Folder Name="Resutl" ID="{F84C1EC5-5097-4219-9AD4-B1F96B3DC717}" ShortID="553831613">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="6"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
 						</Folder>
 					</ChildrenList>
 				</Folder>
@@ -1453,6 +1603,12 @@
 									</ActiveSourceList>
 								</Sound>
 							</ChildrenList>
+						</Folder>
+						<Folder Name="Reuslt" ID="{97EB63DC-1297-44C0-8234-1512515711BC}" ShortID="1000379413">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="6"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
 						</Folder>
 					</ChildrenList>
 				</Folder>

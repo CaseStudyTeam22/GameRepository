@@ -18,6 +18,33 @@
 							<ObjectExclusionList/>
 							<GameSyncExclusionList/>
 						</SoundBank>
+						<SoundBank Name="Loddy_BGM" ID="{70CFAF6C-106A-4178-9A58-07FB5786B781}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="4"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList/>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+						<SoundBank Name="Title_BGM" ID="{752FD817-B701-4124-B874-11729DF57DB9}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="10"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList/>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+						<SoundBank Name="Result_BGM" ID="{FEB49161-3551-4654-B302-6E096D85ED7A}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="6"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList/>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
 					</ChildrenList>
 				</Folder>
 				<Folder Name="SE" ID="{BB29454B-F62C-4004-B510-7FB86415D18E}" ShortID="266018828">
@@ -42,6 +69,33 @@
 							<ObjectInclusionList>
 								<ObjectRef Name="Play_start" ID="{C2663EBE-5A32-4BCF-9CE6-C5B696F00A38}" WorkUnitID="{E82C2438-602D-467F-80B3-1B402D6559E4}" Origin="Manual" Filter="7"/>
 							</ObjectInclusionList>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+						<SoundBank Name="Loddy_SE" ID="{2B66ECEE-081B-48B8-A751-C28C29FEF6F2}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="4"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList/>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+						<SoundBank Name="Title_SE" ID="{E80D6B8A-E256-4F7D-8559-DBA40AB37DBF}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="10"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList/>
+							<ObjectExclusionList/>
+							<GameSyncExclusionList/>
+						</SoundBank>
+						<SoundBank Name="Result_SE" ID="{92C62C7C-0C1B-491D-BCEE-44E3BC319320}">
+							<PropertyList>
+								<Property Name="Color" Type="int16" Value="6"/>
+								<Property Name="OverrideColor" Type="bool" Value="True"/>
+							</PropertyList>
+							<ObjectInclusionList/>
 							<ObjectExclusionList/>
 							<GameSyncExclusionList/>
 						</SoundBank>
