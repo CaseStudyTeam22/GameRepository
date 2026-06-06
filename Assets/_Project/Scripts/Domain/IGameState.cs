@@ -23,6 +23,7 @@ namespace GamblingAction.Domain
 		void SubmitReady(bool isAI);
 		void SubmitExchange(int amount);
 		void SubmitBuff(string buffId);
+		void RequestLobby();
 
 		event Action OnStateInitialized;
 		event Action OnPlayersChanged;

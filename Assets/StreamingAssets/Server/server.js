@@ -452,6 +452,6 @@ server.listen(3000, '0.0.0.0', () => console.log(`[GamblingAction Server] Runnin
 
 function resetMatch() {
     gameActive = false; items = []; currentBeat = 0;
-    for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; resetPlayerPos(id); players[id].exchanged = false; }
+    for (let id in players) { players[id].score = 0; players[id].money = Config.INITIAL_MONEY; players[id].ready = false; resetPlayerPos(id); players[id].exchanged = false; }
     prepareExchangePhase();
 }

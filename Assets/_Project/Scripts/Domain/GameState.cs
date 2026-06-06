@@ -70,6 +70,11 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.BuffSelected, new BuffSelectedMessage { BuffId = buffId });
 		}
 
+		public void RequestLobby()
+		{
+			SetPhase(EGamePhase.Lobby);
+		}
+
 		private void Subscribe()
 		{
 			m_Net.OnConnected += () =>
