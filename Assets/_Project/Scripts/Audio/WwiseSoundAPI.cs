@@ -22,6 +22,7 @@ namespace GamblingAction.Audio
         private void OnApplicationQuit()
         {
             m_IsQuitting = true;
+            WwiseGameSyncAPI.NotifyApplicationQuitting();
         }
 
         private void Awake()
@@ -35,6 +36,8 @@ namespace GamblingAction.Audio
             Instance = this;
             DontDestroyOnLoad(gameObject);
             m_PlayingIDs = new Dictionary<GameObject, List<uint>>();
+
+            WwiseGameSyncAPI.ResetForPlayMode();
         }
 
         private void OnDestroy()
@@ -48,18 +51,19 @@ namespace GamblingAction.Audio
         }
 
         // 再生インスタンスのID。再生失敗時は 0 を返す
-        public uint Play(AK.Wwise.Event wwiseEvent, GameObject gameObject)
+        public uint PlayTracked(AK.Wwise.Event wwiseEvent, GameObject gameObject)
         {
-            if(wwiseEvent == null)
+            string objectName = gameObject != null ? gameObject.name : "null";
+
+            if (wwiseEvent == null)
             {
-                string objectName = gameObject != null ? gameObject.name : "null";
-                Debug.LogWarning($"[WwiseSoundAPI] 無効なEventが指定されました。GameObject: {objectName}"); 
+                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked:無効なEventが指定されました。GameObject: {objectName}");
                 return 0;
             }
 
             if (gameObject == null)
             {
-                Debug.LogWarning($"[WwiseSoundAPI] 無効なGameObjectが指定されました。Event: {wwiseEvent.Name}");
+                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked:無効なGameObjectが指定されました。Event: {wwiseEvent.Name}");
                 return 0;
             }
 
@@ -67,12 +71,36 @@ namespace GamblingAction.Audio
 
             if (playingID == 0)
             {
-                Debug.LogWarning($"[WwiseSoundAPI] 再生失敗。Event: {wwiseEvent.Name}, GameObject: {gameObject.name}");
+                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked:再生失敗。Event: {wwiseEvent.Name}, GameObject: {gameObject.name}");
                 return 0;
             }
 
             AddPlayingID(gameObject, playingID);
             return playingID;
+        }
+
+        public void PlayOneShot(AK.Wwise.Event wwiseEvent, GameObject gameObject)
+        {
+            string objectName = gameObject != null ? gameObject.name : "null";
+
+            if (wwiseEvent == null)
+            {
+                Debug.LogWarning($"[WwiseSoundAPI] PlayOneShot: 無効なEventが指定されました。GameObject: {objectName}");
+                return;
+            }
+
+            if (gameObject == null)
+            {
+                Debug.LogWarning($"[WwiseSoundAPI] PlayOneShot: 無効なGameObjectが指定されました。Event: {wwiseEvent.Name}");
+                return;
+            }
+
+            uint playingID = wwiseEvent.Post(gameObject);
+
+            if (playingID == 0)
+            {
+                Debug.LogWarning($"[WwiseSoundAPI] PlayOneShot: 再生失敗。Event: {wwiseEvent.Name}, GameObject: {gameObject.name}");
+            }
         }
 
         public void Stop(uint playingID, GameObject gameObject, int transitionDuration = 0)
@@ -82,11 +110,16 @@ namespace GamblingAction.Audio
                 return;
             }
 
+            if (gameObject == null)
+            {
+                Debug.LogWarning("[WwiseSoundAPI] Stop対象のGameObjectがnullです。");
+                return;
+            }
 
             if (playingID == 0)
             {
                 string objectName = gameObject != null ? gameObject.name : "null";
-                Debug.LogWarning($"[WwiseSoundAPI] 無効なEventが指定されました。GameObject: {objectName}");
+                Debug.LogWarning($"[WwiseSoundAPI] 無効なPlayingIDが指定されました。GameObject: {objectName}");
                 return;
             }
 
@@ -113,6 +146,12 @@ namespace GamblingAction.Audio
                 return;
             }
 
+            if (gameObject == null)
+            {
+                Debug.LogWarning("[WwiseSoundAPI] StopAll対象のGameObjectがnullです。");
+                return;
+            }
+
             if (!m_PlayingIDs.ContainsKey(gameObject))
             {
                 return;
@@ -129,8 +168,6 @@ namespace GamblingAction.Audio
             m_PlayingIDs.Remove(gameObject);
         }
 
-        /// PlayingIDをDictionaryに追加する。
-        /// GameObjectのキーが存在しない場合は新規作成する。
         private void AddPlayingID(GameObject gameObject, uint playingID)
         {
             if (!m_PlayingIDs.ContainsKey(gameObject))
@@ -141,8 +178,6 @@ namespace GamblingAction.Audio
             m_PlayingIDs[gameObject].Add(playingID);
         }
 
-        /// PlayingIDをDictionaryから除去する。
-        /// Listが空になった場合はキーごと削除する。
         private void RemovePlayingID(GameObject gameObject, uint playingID)
         {
             m_PlayingIDs[gameObject].Remove(playingID);

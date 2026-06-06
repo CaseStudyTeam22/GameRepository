@@ -56,7 +56,7 @@ namespace GamblingAction.Audio
                     return;
                 }
 
-                m_CurrentPlayingID_Bar = WwiseSoundAPI.Instance.Play(m_BarSE, gameObject);
+                m_CurrentPlayingID_Bar = WwiseSoundAPI.Instance.PlayTracked(m_BarSE, gameObject);
             }
             else
             {
@@ -65,7 +65,7 @@ namespace GamblingAction.Audio
                     Debug.LogWarning("[BeatSEPlayer] WwiseSoundAPIÇÃInstanceÇ™nullÇ≈Ç∑ÅB");
                     return;
                 }
-                m_CurrentPlayingID_Beat = WwiseSoundAPI.Instance.Play(m_BeatSE, gameObject);
+                m_CurrentPlayingID_Beat = WwiseSoundAPI.Instance.PlayTracked(m_BeatSE, gameObject);
             }
         }
     }

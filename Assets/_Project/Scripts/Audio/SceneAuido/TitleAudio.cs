@@ -55,7 +55,7 @@ namespace GamblingAction.Audio
 
             if (m_TitleStartSE != null)
             {
-                WwiseSoundAPI.Instance.Play(m_TitleStartSE, gameObject);
+                WwiseSoundAPI.Instance.PlayOneShot(m_TitleStartSE, gameObject);
             }
         }
     }

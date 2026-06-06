@@ -270,8 +270,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_RegisteredBankNames:
+  - Title_BGM
+  - Loddy_BGM
   - Boot_BGM
   - Boot_SE
+  - Result_BGM
   - Bootstrap_SE
 --- !u!4 &273930288
 Transform:
