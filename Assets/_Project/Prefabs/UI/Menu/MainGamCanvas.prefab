@@ -6225,6 +6225,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: FinalRaisePanel
       objectReference: {fileID: 0}
+    - target: {fileID: 6559028047003102734, guid: 41185e60fbcc51e47aa331f6e35cdf4d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
