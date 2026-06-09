@@ -258,7 +258,7 @@ const Engine = {
             
             // スキル（固有アクション）の実行
             if (intent.type === 'skill') {
-                Skills.onResolve(p, target, intent, events, Config);
+                Skills.onResolve(p, target, intent, events, Config, items);
             }
         });
 

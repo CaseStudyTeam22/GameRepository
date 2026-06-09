@@ -27,13 +27,16 @@ const Skills = {
      */
     onCalculateCost: (player, intent, baseCost) => {
         const skillId = player.skillData?.id;
-        // 両刃（charaIndex === 2 / double_cost_power）は、スキル発動時はチップ消費0、
-        // 代わりにそれ以外の行動時の消費チップが2倍になる
-        if (skillId === 'double_cost_power' || player.charaName === 'DoubleEdge' || player.charaIndex === 2) {
+        const charaIndex = player.charaIndex;
+
+        // 成金（charaIndex === 2）は、スキル発動時は本来のpushの行動の2倍のチップを消費
+        const isNarikin = skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche';
+        if (isNarikin) {
             if (intent.type === 'skill') {
-                return 0;
-            } else if (intent.type !== 'none') {
-                return baseCost * 2;
+                const Config = require('./config');
+                const power = Math.max(1, Math.min(3, intent.power || 1));
+                const pushCost = Config.CHIP_COST_BY_POWER['push'][power - 1] || 3;
+                return pushCost * 2;
             }
         }
 
@@ -54,7 +57,7 @@ const Skills = {
      * @param {Array} events 描画演出用のイベントリスト (追加用)
      * @param {Object} config config.js の参照
      */
-    onResolve: (player, opponent, intent, events, config) => {
+    onResolve: (player, opponent, intent, events, config, items) => {
         if (intent.type !== 'skill') return;
 
         const skillId = player.skillData?.id;
@@ -77,8 +80,72 @@ const Skills = {
             // 成金: 本来のpushの行動の2倍のチップを消費して強化pushを出せる。また、消費したチップはフィールドにばらまかれる
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: intent.dir, power: 3, x: player.prevX, y: player.prevY });
 
+            const power = Math.max(1, Math.min(3, intent.power || 1));
+            const pushCost = (config.CHIP_COST_BY_POWER && config.CHIP_COST_BY_POWER['push']) ? config.CHIP_COST_BY_POWER['push'][power - 1] : 3;
+            const consumedChips = pushCost * 2;
 
+            // 隣接判定 (初期位置で隣接していたか)
+            const startDist = Math.abs(opponent.prevX - player.prevX) + Math.abs(opponent.prevY - player.prevY);
+            if (startDist === 1) {
+                const pushBonus = (player.modifiers && player.modifiers.pushPowerBonus) || 0;
+                let finalDist = power + 1 + pushBonus; // 強化pushなので base: power + 1
 
+                // 高リスク攻撃：power=3 push +1
+                if (player.selectedBuff === 'high_risk' && power === 3) {
+                    finalDist += 1;
+                }
+
+                const tIntent = opponent.intent || { type: 'none' };
+                // 相手の押し出しによる相殺
+                if (tIntent.type === 'push' && tIntent.dir !== intent.dir) {
+                    const tPower = Math.max(1, Math.min(3, tIntent.power || 1));
+                    finalDist = Math.max(0, finalDist - tPower);
+                }
+
+                // 相手の防御による軽減
+                if (tIntent.type === 'defense') {
+                    finalDist = Math.max(0, finalDist - 2);
+                }
+
+                // 高リスク被撃：30% 確率でpush_powerを+1
+                if (finalDist > 0 && opponent.selectedBuff === 'high_risk' && Math.random() < 0.3) {
+                    finalDist += 1;
+                }
+
+                if (finalDist > 0) {
+                    if (intent.dir === 'up') opponent.y -= finalDist;
+                    else if (intent.dir === 'down') opponent.y += finalDist;
+                    else if (intent.dir === 'left') opponent.x -= finalDist;
+                    else if (intent.dir === 'right') opponent.x += finalDist;
+
+                    events.push({ type: 'pushed', targetId: opponent.id, dir: intent.dir, dist: finalDist });
+                    events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "SUPER PUSH!" });
+                }
+            }
+
+            // 消費したチップのばらまき処理 (items に追加)
+            if (items) {
+                const chipValue = config.CHIP_ITEM_VALUE || 5;
+                const numItems = Math.max(1, Math.round(consumedChips / chipValue));
+
+                for (let i = 0; i < numItems; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = 1.0 + Math.random() * 1.5;
+                    let tx = Math.round(player.x + Math.cos(angle) * dist);
+                    let ty = Math.round(player.y + Math.sin(angle) * dist);
+
+                    tx = Math.max(0, Math.min(config.GRID_SIZE - 1, tx));
+                    ty = Math.max(0, Math.min(config.GRID_SIZE - 1, ty));
+
+                    items.push({
+                        id: Date.now() + Math.random() + i,
+                        type: 'chips',
+                        x: tx,
+                        y: ty
+                    });
+                }
+                events.push({ type: 'vfx', vfxType: 'bump', targetId: player.id, text: "GOLDEN LAUNCH!" });
+            }
         }
         else if (skillId === 'fighter_skill' || charaIndex === 3 || player.charaName === 'Fighter') {
             // 格闘家キャラ: 自身を中心として3x3範囲へ、相手のスタミナを大きく削る攻撃
@@ -90,7 +157,7 @@ const Skills = {
 
             // 相手が自身を中心とした3x3範囲内（自身を含まない）にいるか判定
             if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0)) {
-                // 相手が範囲内にいる場合、スタミナを大きく削る（固定値3）
+                // 相手が範囲内にいる場合、スタミナを大きく削る(固定値3)
                 const dmg = 3;
                 const oppIntent = opponent.intent || { type: 'none' };
                 let finalDmg = dmg;
