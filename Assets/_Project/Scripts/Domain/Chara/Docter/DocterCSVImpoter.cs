@@ -9,7 +9,7 @@ public class DocterCSVImporter : MonoBehaviour
     [SerializeField] private string csvUrl;
 
     [Header("ドクターのStatsData")]
-    [SerializeField] private DocterStatsData docterStatsData;
+    [SerializeField] private FighterStatsData fighterStatsData;
 
     [ContextMenu("Import Docter CSV")]
     public void Import()
@@ -46,7 +46,7 @@ public class DocterCSVImporter : MonoBehaviour
             values.Add(cols[1].Trim());
         }
 
-        docterStatsData.SetData(keys, values);
+        fighterStatsData.SetData(keys, values);
         Debug.Log("ドクターステータスCSV読み込み完了");
     }
     [ContextMenu("Debug Docter Stats")]
@@ -54,13 +54,13 @@ public class DocterCSVImporter : MonoBehaviour
     {
         Debug.Log("=== Docter Stats Debug ===");
 
-        Debug.Log("資金: " + docterStatsData.GetInt("資金"));
-        Debug.Log("チップ: " + docterStatsData.GetInt("チップ"));
-        Debug.Log("スタミナ（体幹）: " + docterStatsData.GetInt("スタミナ（体幹）"));
-        Debug.Log("突進: " + docterStatsData.GetInt("突進"));
-        Debug.Log("防御: " + docterStatsData.GetInt("防御"));
-        Debug.Log("スキル: " + docterStatsData.GetString("スキル"));
-        Debug.Log("スキル内容: " +  docterStatsData.GetString("スキル内容"));
+        Debug.Log("資金: " + fighterStatsData.GetInt("資金"));
+        Debug.Log("チップ: " + fighterStatsData.GetInt("チップ"));
+        Debug.Log("スタミナ（体幹）: " + fighterStatsData.GetInt("スタミナ（体幹）"));
+        Debug.Log("突進: " + fighterStatsData.GetInt("突進"));
+        Debug.Log("防御: " + fighterStatsData.GetInt("防御"));
+        Debug.Log("スキル: " + fighterStatsData.GetString("スキル"));
+        Debug.Log("スキル内容: " + fighterStatsData.GetString("スキル内容"));
 
         Debug.Log("=== End ===");
     }
