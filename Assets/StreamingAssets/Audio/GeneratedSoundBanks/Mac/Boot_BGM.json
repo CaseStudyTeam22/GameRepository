@@ -1,0 +1,128 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2107380706",
+    "Type": "User",
+    "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
+    "Language": "SFX",
+    "Hash": "{87D660B2-A6D8-2FBA-4288-EC80C21B74BF}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\Boot_BGM",
+    "ShortName": "Boot_BGM",
+    "Path": "Boot_BGM.bnk",
+    "Media": [
+     {
+      "Id": "143921451",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "025_dr_bpm160_4-4_rock.wav",
+      "CachePath": "6B/{6B6BD8F9-555E-8AEE-A9D5-8C2C32F2B9CF}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "1967054745",
+      "Name": "Play_BGM_Swtich_Cue",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_BGM_Swtich_Cue",
+      "GUID": "{6A7310ED-DF0C-4989-B030-88FADFA93DFB}",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0",
+      "ActionSetState": [
+       {
+        "GroupId": "762757699",
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
+        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+       }
+      ]
+     },
+     {
+      "Id": "2188851721",
+      "Name": "Play_BGM_Swtich_Offset",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_BGM_Swtich_Offset",
+      "GUID": "{98D336B6-3990-456B-8FB7-369671D458D1}",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0",
+      "ActionSetState": [
+       {
+        "GroupId": "762757699",
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
+        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+       }
+      ]
+     },
+     {
+      "Id": "1193902085",
+      "Name": "Play_Main",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_Main",
+      "GUID": "{91159A1C-B4A0-487B-84AE-1F62BD19A298}",
+      "DurationType": "Infinite",
+      "SwitchContainers": [
+       {
+        "SwitchValue": {
+         "GroupType": "State",
+         "GroupId": "762757699",
+         "Id": "2937832959",
+         "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+        },
+        "MediaRefs": [
+         {
+          "Id": "143921451"
+         }
+        ]
+       }
+      ],
+      "ActionSetState": [
+       {
+        "GroupId": "762757699",
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
+        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+       }
+      ]
+     }
+    ],
+    "StateGroups": [
+     {
+      "Id": "762757699",
+      "Name": "Gameplay_State",
+      "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State",
+      "GUID": "{338D5290-DE91-4896-97B4-3147ABCAB62B}",
+      "States": [
+       {
+        "Id": "748895195",
+        "Name": "None",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\None",
+        "GUID": "{561120D3-89ED-41E1-8732-9D339D14E845}"
+       },
+       {
+        "Id": "2937832959",
+        "Name": "Battle",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
+        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
+       },
+       {
+        "Id": "3041563226",
+        "Name": "Silence",
+        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Silence",
+        "GUID": "{BDF73118-FFF7-4E1F-80C3-819D4EA3BFE7}"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{7CA46329-C963-914A-2CD8-589241617CD5}"
+ }
+}

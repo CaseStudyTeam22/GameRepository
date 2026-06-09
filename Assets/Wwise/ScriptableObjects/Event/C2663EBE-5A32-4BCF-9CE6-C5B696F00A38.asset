@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04d8f5cc6e2e2ec43bc97f3be98c3eed, type: 3}
+  m_Name: C2663EBE-5A32-4BCF-9CE6-C5B696F00A38
+  m_EditorClassIdentifier: 
+  objectName: Play_start
+  id: 2230670290
+  guid: C2663EBE-5A32-4BCF-9CE6-C5B696F00A38
+  IsInUserDefinedSoundBank: 1
