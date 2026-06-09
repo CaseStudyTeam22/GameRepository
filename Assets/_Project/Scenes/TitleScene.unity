@@ -604,8 +604,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b088ca18ca1ef1746824cebc806fbcf6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  csvUrl: 
-  fighterStatsData: {fileID: 11400000, guid: 202315a1f2aa9da42abcff71ad9076c4, type: 2}
+  csvUrl: 'https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=573545404 '
+  docterStatsData: {fileID: 11400000, guid: 708c6010ae4738849b064b269ff85029, type: 2}
 --- !u!4 &2008712621
 Transform:
   m_ObjectHideFlags: 0
