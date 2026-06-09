@@ -18,7 +18,6 @@ namespace AK
         static const AkUniqueID PLAY_BGM_SWTICH_CUE = 1967054745U;
         static const AkUniqueID PLAY_BGM_SWTICH_OFFSET = 2188851721U;
         static const AkUniqueID PLAY_MAIN = 1193902085U;
-        static const AkUniqueID PLAY_START = 2230670290U;
         static const AkUniqueID STOP_MAIN = 3435675815U;
     } // namespace EVENTS
 
@@ -41,15 +40,8 @@ namespace AK
     namespace BANKS
     {
         static const AkUniqueID INIT = 1355168291U;
-        static const AkUniqueID BOOT_BGM = 2107380706U;
-        static const AkUniqueID BOOT_SE = 433450704U;
-        static const AkUniqueID BOOTSTRAP_SE = 1975480976U;
-        static const AkUniqueID LODDY_BGM = 1755959872U;
-        static const AkUniqueID LODDY_SE = 4027732094U;
-        static const AkUniqueID RESULT_BGM = 3527993881U;
-        static const AkUniqueID RESULT_SE = 2182916605U;
-        static const AkUniqueID TITLE_BGM = 571634470U;
-        static const AkUniqueID TITLE_SE = 1098883604U;
+        static const AkUniqueID BGM = 412724365U;
+        static const AkUniqueID SE = 1584861537U;
     } // namespace BANKS
 
     namespace BUSSES

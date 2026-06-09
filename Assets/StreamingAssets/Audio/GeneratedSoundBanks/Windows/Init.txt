@@ -3,7 +3,7 @@ State Group	ID	Name			Wwise Object Path	Notes
 
 State	ID	Name	State Group			Notes
 	748895195	None	Gameplay_State			
-	2937832959	Battle	Gameplay_State			
+	2764240573	Combat	Gameplay_State			
 	3041563226	Silence	Gameplay_State			
 
 Audio Bus	ID	Name			Wwise Object Path	Notes

@@ -18,7 +18,7 @@
      {
       "Id": "3435675815",
       "Name": "Stop_Main",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Stop_Main",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Stop_Main",
       "GUID": "{68A092B9-B96D-48CB-A140-960A361DFAF1}",
       "MaxAttenuation": "0",
       "DurationType": "OneShot",
@@ -28,6 +28,6 @@
     ]
    }
   ],
-  "FileHash": "{F9001A70-424C-81FC-0192-891082C17A79}"
+  "FileHash": "{D7FB9D95-3239-C4F9-53D0-6747B6060DD6}"
  }
 }

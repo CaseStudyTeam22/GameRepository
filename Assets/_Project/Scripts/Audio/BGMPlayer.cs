@@ -72,14 +72,14 @@ namespace GamblingAction.Audio
             }
             else if (phase == EGamePhase.RoundOver || phase == EGamePhase.GameOver)
             {
-                WwiseGameSyncAPI.SetState(k_StateGroup, k_StateSilence);
+                AkUnitySoundEngine.SetState(k_StateGroup, k_StateSilence);
                 m_IsWaitingForBeat1 = false;
                 m_PlayingID = 0u;
                 Debug.Log("[BGMPlayer] BGMí‚é~");
             }
             else
             {
-                WwiseGameSyncAPI.SetState(k_StateGroup, k_StateSilence);
+                AkUnitySoundEngine.SetState(k_StateGroup, k_StateSilence);
                 m_IsWaitingForBeat1 = false;
                 m_PlayingID = 0u;
             }
@@ -93,7 +93,7 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            m_PlayingID = WwiseSoundAPI.Instance.PlayTracked(m_BGMEvent, gameObject);
+            m_PlayingID = m_BGMEvent.Post(gameObject);
             m_IsWaitingForBeat1 = false;
             Debug.Log("[BGMPlayer] BGMçƒê∂ñΩóﬂÇî≠çs");
         }

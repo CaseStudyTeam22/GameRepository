@@ -6,9 +6,9 @@
   <RootOutputPath>StreamingAssets/Audio/GeneratedSoundBanks</RootOutputPath>
   <CreatedPicker>true</CreatedPicker>
   <CreateWwiseGlobal>true</CreateWwiseGlobal>
-  <CreateWwiseListener>false</CreateWwiseListener>
+  <CreateWwiseListener>true</CreateWwiseListener>
   <ObjectReferenceAutoCleanup>true</ObjectReferenceAutoCleanup>
-  <LoadSoundEngineInEditMode>false</LoadSoundEngineInEditMode>
+  <LoadSoundEngineInEditMode>true</LoadSoundEngineInEditMode>
   <ShowMissingRigidBodyWarning>true</ShowMissingRigidBodyWarning>
   <ShowSpatialAudioWarningMsg>true</ShowSpatialAudioWarningMsg>
   <WwiseInstallationPathMac />

@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcbc6cc88b739ed4cb0be339e8ae3c1c, type: 3}
   m_Name: 41121AD7-38B7-401C-874C-5C2FAF544D70
   m_EditorClassIdentifier: 
-  objectName: Boot_BGM
-  id: 2107380706
+  objectName: BGM
+  id: 412724365
   guid: 41121AD7-38B7-401C-874C-5C2FAF544D70

@@ -5,183 +5,112 @@
 			<ChildrenList>
 				<Folder Name="BGM" ID="{54D555D7-C39C-4874-8C80-EC7167884C2F}" ShortID="987364767">
 					<ChildrenList>
-						<Folder Name="Title" ID="{4ECBA2B0-5D93-43C6-9D3B-6EF4409CC651}" ShortID="610660497">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="10"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
-						</Folder>
-						<Folder Name="Boot" ID="{A85D844E-2730-4B59-973A-B3CA117FC8CA}" ShortID="986568584">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="1"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
+						<Event Name="Play_Main" ID="{91159A1C-B4A0-487B-84AE-1F62BD19A298}">
 							<ChildrenList>
-								<Event Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}">
-									<ChildrenList>
-										<Action Name="" ID="{2024AFC0-49EF-4D93-AAF5-3B640337163E}" ShortID="1050663688">
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="BGM_Swtich_Cue" ID="{553B4211-45B2-4C00-856A-365EF2079FED}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-										<Action Name="" ID="{B2C17BF0-C103-45E8-AA57-6DF2C813783F}" ShortID="718801195">
-											<PropertyList>
-												<Property Name="ActionType" Type="int16" Value="22"/>
-											</PropertyList>
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-									</ChildrenList>
-								</Event>
-								<Event Name="Play_Main" ID="{91159A1C-B4A0-487B-84AE-1F62BD19A298}">
-									<ChildrenList>
-										<Action Name="" ID="{625C81F7-D0B6-4EF9-B14B-187BC1FC9773}" ShortID="504484114">
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="BGM_Swtich" ID="{C89C3003-4061-4C0A-9020-FC6315C39EA1}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-										<Action Name="" ID="{BD26D6D6-C1EC-4CAD-8C47-BE865773441C}" ShortID="925154163">
-											<PropertyList>
-												<Property Name="ActionType" Type="int16" Value="22"/>
-											</PropertyList>
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-									</ChildrenList>
-								</Event>
-								<Event Name="Stop_Main" ID="{68A092B9-B96D-48CB-A140-960A361DFAF1}">
-									<ChildrenList>
-										<Action Name="" ID="{C015E0A2-48C7-43B6-8E2A-D97C86C54BA8}" ShortID="207523910">
-											<PropertyList>
-												<Property Name="ActionType" Type="int16" Value="2"/>
-											</PropertyList>
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="MainBgm" ID="{58951FDD-8F62-4324-8D73-117DDA2185CE}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-									</ChildrenList>
-								</Event>
-								<Event Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}">
-									<ChildrenList>
-										<Action Name="" ID="{5F945C0C-21F1-4EA3-AC82-D60CEB618095}" ShortID="245353968">
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="BGM_Swtich_Offset" ID="{DE67A132-7FB8-474B-A04B-696A2882FAA4}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-										<Action Name="" ID="{D466CDFC-B143-4D3C-B593-37C6C4C29E43}" ShortID="1058742664">
-											<PropertyList>
-												<Property Name="ActionType" Type="int16" Value="22"/>
-											</PropertyList>
-											<ReferenceList>
-												<Reference Name="Target">
-													<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
-												</Reference>
-											</ReferenceList>
-										</Action>
-									</ChildrenList>
-								</Event>
+								<Action Name="" ID="{625C81F7-D0B6-4EF9-B14B-187BC1FC9773}" ShortID="504484114">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich" ID="{C89C3003-4061-4C0A-9020-FC6315C39EA1}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{BD26D6D6-C1EC-4CAD-8C47-BE865773441C}" ShortID="925154163">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
 							</ChildrenList>
-						</Folder>
-						<Folder Name="Lobby" ID="{4872BA4D-4A88-4F74-B5D9-FFD419BE370A}" ShortID="848378964">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="4"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
-						</Folder>
-						<Folder Name="Result" ID="{72770790-D3DB-40F3-8C5D-F956684F2BC2}" ShortID="148828213">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="6"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
-						</Folder>
+						</Event>
+						<Event Name="Stop_Main" ID="{68A092B9-B96D-48CB-A140-960A361DFAF1}">
+							<ChildrenList>
+								<Action Name="" ID="{C015E0A2-48C7-43B6-8E2A-D97C86C54BA8}" ShortID="207523910">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="2"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="MainBgm" ID="{58951FDD-8F62-4324-8D73-117DDA2185CE}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_BGM_Swtich_Cue" ID="{6A7310ED-DF0C-4989-B030-88FADFA93DFB}">
+							<ChildrenList>
+								<Action Name="" ID="{2024AFC0-49EF-4D93-AAF5-3B640337163E}" ShortID="1050663688">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich_Cue" ID="{553B4211-45B2-4C00-856A-365EF2079FED}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{B2C17BF0-C103-45E8-AA57-6DF2C813783F}" ShortID="718801195">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
+						<Event Name="Play_BGM_Swtich_Offset" ID="{98D336B6-3990-456B-8FB7-369671D458D1}">
+							<ChildrenList>
+								<Action Name="" ID="{5F945C0C-21F1-4EA3-AC82-D60CEB618095}" ShortID="245353968">
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="BGM_Swtich_Offset" ID="{DE67A132-7FB8-474B-A04B-696A2882FAA4}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+								<Action Name="" ID="{D466CDFC-B143-4D3C-B593-37C6C4C29E43}" ShortID="1058742664">
+									<PropertyList>
+										<Property Name="ActionType" Type="int16" Value="22"/>
+									</PropertyList>
+									<ReferenceList>
+										<Reference Name="Target">
+											<ObjectRef Name="Battle" ID="{670E6716-8B91-4556-908C-D3818EDECAE2}" WorkUnitID="{295C31A8-0399-4D2F-BE2E-E41CA338FBE1}"/>
+										</Reference>
+									</ReferenceList>
+								</Action>
+							</ChildrenList>
+						</Event>
 					</ChildrenList>
 				</Folder>
 				<Folder Name="SE" ID="{944C5C12-A59F-4F27-8197-672ABB6C637B}" ShortID="954298627">
 					<ChildrenList>
-						<Folder Name="Boot" ID="{519D54BE-9EDF-4FD3-90CC-8B2CD9015933}" ShortID="1006160989">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="1"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
+						<Folder Name="Beat" ID="{7CD0A077-3B54-4D16-B4F2-25FD0B739131}" ShortID="244768117">
 							<ChildrenList>
-								<Folder Name="Beat" ID="{7CD0A077-3B54-4D16-B4F2-25FD0B739131}" ShortID="244768117">
+								<Event Name="Play_Beat_4" ID="{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}">
 									<ChildrenList>
-										<Event Name="Play_Beat_4" ID="{2E40E9D0-22B5-4F60-86EE-B39184A83B3F}">
-											<ChildrenList>
-												<Action Name="" ID="{0E64E527-8492-4712-A5D5-CF597EC2741A}" ShortID="875132760">
-													<ReferenceList>
-														<Reference Name="Target">
-															<ObjectRef Name="Beat_4" ID="{0D98371A-4812-47C3-A5E4-2AD750048801}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
-														</Reference>
-													</ReferenceList>
-												</Action>
-											</ChildrenList>
-										</Event>
-										<Event Name="Play_Beat_1_to_3" ID="{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}">
-											<ChildrenList>
-												<Action Name="" ID="{F7B72F62-5031-4AB5-B6C6-215C2C81A5DA}" ShortID="609758130">
-													<ReferenceList>
-														<Reference Name="Target">
-															<ObjectRef Name="Beat_1_to_3" ID="{AF7807DD-2BBF-477E-A1DA-541D0A3E28AB}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
-														</Reference>
-													</ReferenceList>
-												</Action>
-											</ChildrenList>
-										</Event>
-									</ChildrenList>
-								</Folder>
-							</ChildrenList>
-						</Folder>
-						<Folder Name="Title" ID="{5EBE97BF-822C-4300-8D71-422392579259}" ShortID="858458516">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="10"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
-						</Folder>
-						<Folder Name="Lobby" ID="{4EE00036-EAB6-405A-AB5B-E67B532818CC}" ShortID="409802453">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="4"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
-						</Folder>
-						<Folder Name="Bootstrap" ID="{B4D8DF4F-5F68-4C73-B74E-B076F3A1C0EF}" ShortID="432431250">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="19"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
-							<ChildrenList>
-								<Event Name="Play_start" ID="{C2663EBE-5A32-4BCF-9CE6-C5B696F00A38}">
-									<ChildrenList>
-										<Action Name="" ID="{4B8F20B7-CA03-4EC6-8CB1-7EB9303D840A}" ShortID="98739199">
+										<Action Name="" ID="{0E64E527-8492-4712-A5D5-CF597EC2741A}" ShortID="875132760">
 											<ReferenceList>
 												<Reference Name="Target">
-													<ObjectRef Name="start" ID="{9C45FD91-BB44-40FC-A51F-C43E40D65CFE}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+													<ObjectRef Name="Beat_4" ID="{0D98371A-4812-47C3-A5E4-2AD750048801}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
+												</Reference>
+											</ReferenceList>
+										</Action>
+									</ChildrenList>
+								</Event>
+								<Event Name="Play_Beat_1_to_3" ID="{B2A1332E-F4AF-4603-BF3B-A352CCAF6FB0}">
+									<ChildrenList>
+										<Action Name="" ID="{F7B72F62-5031-4AB5-B6C6-215C2C81A5DA}" ShortID="609758130">
+											<ReferenceList>
+												<Reference Name="Target">
+													<ObjectRef Name="Beat_1_to_3" ID="{AF7807DD-2BBF-477E-A1DA-541D0A3E28AB}" WorkUnitID="{2BF70021-3C41-427A-850F-013BDDCE65AA}"/>
 												</Reference>
 											</ReferenceList>
 										</Action>
 									</ChildrenList>
 								</Event>
 							</ChildrenList>
-						</Folder>
-						<Folder Name="Result" ID="{86A0E132-0CBC-42B1-ABC2-7AD50E0069D4}" ShortID="848028448">
-							<PropertyList>
-								<Property Name="Color" Type="int16" Value="6"/>
-								<Property Name="OverrideColor" Type="bool" Value="True"/>
-							</PropertyList>
 						</Folder>
 					</ChildrenList>
 				</Folder>
