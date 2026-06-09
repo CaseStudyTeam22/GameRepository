@@ -1,0 +1,22 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "571634470",
+    "Type": "User",
+    "GUID": "{752FD817-B701-4124-B874-11729DF57DB9}",
+    "Color": "10",
+    "Language": "SFX",
+    "Hash": "{70DE7A94-6F7A-0C6E-889A-0047B16C4F0E}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\Title_BGM",
+    "ShortName": "Title_BGM",
+    "Path": "Title_BGM.bnk"
+   }
+  ],
+  "FileHash": "{A713A47D-CB2A-14FB-6D12-D350CF0F1E0B}"
+ }
+}

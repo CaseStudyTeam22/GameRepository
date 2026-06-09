@@ -1,0 +1,16 @@
+Event	ID	Name			Wwise Object Path	Notes
+	1193902085	Play_Main			\Default Work Unit\BGM\Boot\Play_Main	
+	1967054745	Play_BGM_Swtich_Cue			\Default Work Unit\BGM\Boot\Play_BGM_Swtich_Cue	
+	2188851721	Play_BGM_Swtich_Offset			\Default Work Unit\BGM\Boot\Play_BGM_Swtich_Offset	
+
+State Group	ID	Name			Wwise Object Path	Notes
+	762757699	Gameplay_State			\Default Work Unit\Gameplay_State	
+
+State	ID	Name	State Group			Notes
+	748895195	None	Gameplay_State			
+	2937832959	Battle	Gameplay_State			
+	3041563226	Silence	Gameplay_State			
+
+In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	143921451	025_dr_bpm160_4-4_rock	.cache\6B\{6B6BD8F9-555E-8AEE-A9D5-8C2C32F2B9CF}.wem		\Containers\Default Work Unit\BGM\Boot\BGM_Swtich\BGM_Loop\SubBGM02\025_dr_bpm160_4-4_rock		4233696
+

@@ -1,0 +1,22 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1755959872",
+    "Type": "User",
+    "GUID": "{70CFAF6C-106A-4178-9A58-07FB5786B781}",
+    "Color": "4",
+    "Language": "SFX",
+    "Hash": "{C8FF4484-1362-EA02-2F1A-4971D4AB5BD9}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\Loddy_BGM",
+    "ShortName": "Loddy_BGM",
+    "Path": "Loddy_BGM.bnk"
+   }
+  ],
+  "FileHash": "{B89A033E-85B3-3EE2-EF38-9913C141BC62}"
+ }
+}
