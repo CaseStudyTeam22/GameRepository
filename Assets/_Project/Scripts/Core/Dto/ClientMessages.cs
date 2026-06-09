@@ -17,6 +17,11 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("buffId")] public string BuffId;
 	}
 
+	public class MissionSelectedMessage
+	{
+		[JsonProperty("missionId")] public string MissionId;
+	}
+
 	public class SelectCharaMessage
 	{
 		[JsonProperty("index")] public int Index;
@@ -48,6 +53,7 @@ namespace GamblingAction.Core.Dto
 		public const string EnterLobby     = "enter_lobby";
 		public const string ExchangeChips  = "exchange_chips";
 		public const string BuffSelected   = "buff_selected";
+		public const string MissionSelected = "mission_selected";
 		public const string MissionCompleted = "mission_completed";
 		// 盤面・キャラ生成を終え、ラウンドを始められる状態になったことを通知する。
 		public const string RoundReady     = "round_ready";
