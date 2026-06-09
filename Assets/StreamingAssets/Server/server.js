@@ -52,6 +52,10 @@ let finalRaiseResponderId = null;
 // 提案・応答それぞれの制限時間タイマー句柄。
 let finalRaiseOfferTimer = null;
 let finalRaisePendingTimer = null;
+// 優勢側を記録する変数
+let finalRaiseFavoredRole = null;
+// ファイナルレイズ時のターンカウント
+let finalRaiseTurnCount = 0;
 
 function resetPlayerPos(id) {
     const p = players[id];
@@ -60,8 +64,12 @@ function resetPlayerPos(id) {
     p.x = startPos.x; p.y = startPos.y;
     p.color = p.role === 'P1' ? '#00f2fe' : '#ff4444';
     p.stamina = Config.INITIAL_STAMINA;
-    p.falling = false; p.intent = null; p.chips = Config.INITIAL_CHIPS;
+    p.falling = false; p.intent = null;
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
+
+    if (!isFinalDuel) {
+        p.chips = Config.INITIAL_CHIPS;
+    }
 }
 
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
@@ -154,6 +162,28 @@ setInterval(() => {
 
     if (currentBeat === 4) {
         cycleCount++;
+
+        // ファイナルレイズ進行中はターンカウントを増やし、20ターン経過しても決着がつかなければ優勢側を勝者とする。
+        if (isFinalDuel) {
+            finalRaiseTurnCount++;
+
+            // 20ターン経過しても決着がつかなかった場合、優勢側を勝者とする。
+            if (finalRaiseTurnCount >= 20) {
+                const winner =
+                    Object.values(players)
+                        .find(p => p.role === finalRaiseFavoredRole);
+
+                winner.score = Config.MAX_WINS;
+
+                handleRoundConcluded(
+                    winner.id,
+                    Object.keys(players).find(id => id !== winner.id)
+                );
+
+                return;
+            }
+        }
+
         if (cycleCount % Config.ITEM_SPAWN_INTERVAL === 0) spawnItem();
         const intents = {};
         for (let id in players) intents[id] = players[id].intent || { type: 'none' };
@@ -693,13 +723,21 @@ function startLanBroadcast() {
 
 // 1 ラウンドの決着がついた直後に呼ばれる。
 // ファイナルレイズ進行中なら即 game_over。
-// 通常ラウンドで勝者が 2 勝目を取った瞬間に提案フェーズへ入り、それ以外は次ラウンドへ。
+// 通常ラウンドで2-1または1-2になった瞬間に提案フェーズへ入り、それ以外は次ラウンドへ。
 function handleRoundConcluded(winnerId, loserId) {
     const winner = players[winnerId];
-    if (!winner) return;
+    const loser = players[loserId];
 
+    if (!winner || !loser) return;
+    
+    // ファイナルレイズの勝者は即全勝扱いで試合終了。通常戦の途中でファイナルレイズに入ることがあるため、ここでスコアを最大値まで上げる。
     if (isFinalDuel) {
-        // ファイナルレイズ本番：勝者が全勝。
+        winner.score = Config.MAX_WINS;
+    }
+
+    // 勝者のスコアが最大値に達したら試合終了。ファイナルレイズの勝者はここで全勝扱いになる。
+    if (winner.score >= Config.MAX_WINS) {
+        // 試合終了。勝者の役職を通知してからリセットする。
         io.emit('game_over', { winnerRole: winner.role });
         // 試合終了に伴い、Lobby に戻ったときに前回状態が残らないよう全てリセットする。
         resetMatchState();
@@ -707,12 +745,26 @@ function handleRoundConcluded(winnerId, loserId) {
         return;
     }
 
-    if (winner.score >= 2) {
-        // 2 勝に到達。まず通常通り決着パネルを見せてから、敗者にファイナルレイズの提案権を与える。
-        // 通常ラウンドと違い、ここでは beginRound は呼ばない（提案/応答の決定を待つ）。
-        io.emit('round_over', { winnerRole: winner.role });
-        setTimeout(() => startFinalRaiseOffer(winnerId, loserId), 3000);
-        return;
+    const playerList = Object.values(players);
+
+    // 通常戦の途中で 2-1 または 1-2 になったら、ファイナルレイズの提案フェーズへ
+    if (playerList.length === 2) {
+        const player1 = playerList[0];
+        const player2 = playerList[1];
+
+        const scoreDifference = Math.abs(player1.score - player2.score);
+
+        // 2-1 または 1-2 のスコアになったとき、負けてるプレイヤー側にファイナルレイズの提案権を与える。
+        if (scoreDifference === 1 && (player1.score === 2 || player2.score === 2)) {
+            // 提案者を決定する
+            const proposer = player1.score < player2.score ? player1 : player2;
+            // 応答者を決定する
+            const responder = player1.score > player2.score ? player1 : player2;
+
+            io.emit('round_over', { winnerRole: winner.role });
+            setTimeout(() => startFinalRaiseOffer(responder.id, proposer.id), 3000);
+            return;
+        }
     }
 
     io.emit('round_over', { winnerRole: winner.role });
@@ -769,12 +821,9 @@ function cancelFinalRaise(reason) {
 
     const winner = winnerId ? players[winnerId] : null;
     io.emit('final_raise_canceled', { reason });
-    if (winner) {
-        io.emit('game_over', { winnerRole: winner.role });
-        // 試合終了に伴い、Lobby に戻ったときに前回状態が残らないよう全てリセットする。
-        resetMatchState();
-        io.emit('sync_state', { players });
-    }
+
+    // 通常戦続行
+    setTimeout(beginRound, 3000);
 }
 
 // 勝者が受諾した。ファイナルレイズ本番ラウンドを開始する。
@@ -784,10 +833,34 @@ function startFinalDuel() {
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
     isFinalDuel = true;
+    finalRaiseTurnCount = 0;
 
     io.emit('final_raise_started');
     // 通常ラウンドと同じ準備フローに合わせるため、少し間を置いてから beginRound へ。
     setTimeout(beginRound, 3000);
+
+    const playerList = Object.values(players);
+
+    if (playerList.length !== 2) {
+        return;
+    }
+
+    const player1 = playerList[0];
+    const player2 = playerList[1];
+
+    // 優勢側を記録
+    const favored = player1.score > player2.score ? player1 : player2;
+    finalRaiseFavoredRole = favored.role;
+
+    // 劣勢側
+    const underdog = player1.score < player2.score ? player1 : player2;
+
+    // 優勢側へバフを付与
+
+    // 劣勢側の所持金を全てチップ化
+    underdog.chips += underdog.money;
+    underdog.money = 0;
+    io.emit('sync_state', { players });
 }
 
 // 試合中の数値・進行状態を初期化する（プレイヤー数値、ファイナルレイズ、対局フラグ）。

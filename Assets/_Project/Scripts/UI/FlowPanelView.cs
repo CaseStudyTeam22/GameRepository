@@ -33,7 +33,7 @@ namespace GamblingAction.UI
 
 		[Header("Tuning")]
 		[FormerlySerializedAs("totalRounds")]
-		[SerializeField] private int m_TotalRounds = 3;
+		[SerializeField] private int m_TotalRounds = 5;
 		[Tooltip("決着パネル（RoundOver）を表示しておく秒数。経過後に自動で隠す。サーバの次ラウンド開始待ち（3 秒）に合わせる")]
 		[SerializeField] private float m_RoundOverDisplaySeconds = 3f;
 		[FormerlySerializedAs("executeFlashSeconds")]
