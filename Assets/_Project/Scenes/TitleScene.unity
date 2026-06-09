@@ -135,6 +135,22 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 478
       objectReference: {fileID: 0}
+    - target: {fileID: 659924968286190260, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_text
+      value: "\u30BF\u30A4\u30C8\u30EB"
+      objectReference: {fileID: 0}
+    - target: {fileID: 659924968286190260, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 14179d2d9c823d54797ae9a252624a1e, type: 2}
+    - target: {fileID: 659924968286190260, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -6857731404697015575, guid: 14179d2d9c823d54797ae9a252624a1e, type: 2}
+    - target: {fileID: 659924968286190260, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1641133658380904870, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
       propertyPath: m_Name
       value: TitleUI
@@ -223,9 +239,29 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
       value: LobbyScene
       objectReference: {fileID: 0}
+    - target: {fileID: 5009594115769138176, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_text
+      value: "\u30B9\u30BF\u30FC\u30C8"
+      objectReference: {fileID: 0}
+    - target: {fileID: 5009594115769138176, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: e3fee44967697a942ad9e64524a74d55, type: 2}
+    - target: {fileID: 5009594115769138176, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -7298878649548900223, guid: e3fee44967697a942ad9e64524a74d55, type: 2}
+    - target: {fileID: 5009594115769138176, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5785154277291582035, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: -0.0024414062
+      objectReference: {fileID: 0}
+    - target: {fileID: 5785154277291582035, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0.0025634766
       objectReference: {fileID: 0}
     - target: {fileID: 6746425049946355273, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
       propertyPath: m_AnchoredPosition.x

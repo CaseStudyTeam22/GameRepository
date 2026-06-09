@@ -113,8 +113,14 @@ Thumbs.db
 # Project-specific (GamblingAction)
 # ──────────────────────────────────────────────
 
-# Server (StreamingAssets) — node deps installed on first run via start_server.bat
+# Server (StreamingAssets) の node 依存。リポジトリには含めず、初回のみ
+# Unity メニュー「Tools > GamblingAction > サーバー依存を導入」で npm install して取得する。
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node_modules/
 # metaファイルが追跡されてしまうと、Unityを開いた際にnode_modulesの空フォルダが生成されるため追跡の対象外とする
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node_modules.meta
 /[Aa]ssets/[Ss]treamingAssets/[Ss]erver/package-lock.json
+
+# Portable Node ランタイム。git で配るとライン終端変換で壊れるため追跡しない。
+# チーム共有ドライブからダウンロードしてこのパスに直接配置する。
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node.exe
+/[Aa]ssets/[Ss]treamingAssets/[Ss]erver/node.exe.meta

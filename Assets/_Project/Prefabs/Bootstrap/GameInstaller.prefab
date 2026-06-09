@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a3868b62e588aa4488380f7ccd7faa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ServerUrl: http://localhost:3000
+  m_ServerUrl: auto
   m_VerboseProbeLogs: 1
   m_AutoReady: 0
   m_AutoReadyAsAI: 0

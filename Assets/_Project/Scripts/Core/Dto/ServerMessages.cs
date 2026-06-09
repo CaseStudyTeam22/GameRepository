@@ -43,6 +43,28 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("index")]    public int Index;
 	}
 
+	// ファイナルレイズの提案フェーズ開始。敗者（proposerRole）が発起するかを決める。
+	public class FinalRaiseOfferMessage
+	{
+		[JsonProperty("proposerRole")]  public string ProposerRole;
+		[JsonProperty("responderRole")] public string ResponderRole;
+		[JsonProperty("timeoutMs")]     public int TimeoutMs;
+	}
+
+	// 敗者が発起した後の、勝者の応答待ちフェーズ。
+	public class FinalRaisePendingMessage
+	{
+		[JsonProperty("proposerRole")]  public string ProposerRole;
+		[JsonProperty("responderRole")] public string ResponderRole;
+		[JsonProperty("timeoutMs")]     public int TimeoutMs;
+	}
+
+	// ファイナルレイズが中断された理由（拒否 / タイムアウト / 切断）。
+	public class FinalRaiseCanceledMessage
+	{
+		[JsonProperty("reason")] public string Reason;
+	}
+
 	public static class ServerEvents
 	{
 		public const string Init                 = "init";
@@ -66,5 +88,13 @@ namespace GamblingAction.Core.Dto
 		public const string PrepareRound         = "prepare_round";
 		// 誰かが Lobby でキャラを選択した。相手側の表示同期に使う。
 		public const string CharaSelected        = "chara_selected";
+		// 2 勝が決まった瞬間に敗者へ送る、ファイナルレイズの発起確認。
+		public const string FinalRaiseOffer      = "final_raise_offer";
+		// 敗者が発起したあと、勝者の応答を待つフェーズ。
+		public const string FinalRaisePending    = "final_raise_pending";
+		// 拒否・タイムアウト・切断でファイナルレイズが中断された通知。直後に game_over が来る。
+		public const string FinalRaiseCanceled   = "final_raise_canceled";
+		// 勝者が受諾し、ファイナルレイズ本番ラウンドへ入る通知。
+		public const string FinalRaiseStarted    = "final_raise_started";
 	}
 }
