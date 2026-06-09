@@ -975,6 +975,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2441522686580701580, guid: 7fa2cf700273af742991ea83815db014, type: 3}
+      propertyPath: m_TotalRounds
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 1793614204653652201, guid: 7fa2cf700273af742991ea83815db014, type: 3}
       propertyPath: m_IsActive
       value: 0

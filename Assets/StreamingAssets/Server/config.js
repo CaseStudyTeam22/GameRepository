@@ -45,6 +45,12 @@ module.exports = {
     CHIP_ITEM_VALUE: 5,
     MONEY_ITEM_VALUE: 500,
 
+    // 勝利条件：3点先取
+    // ファイナルレイズは、お互いどちらかが2-1になったときに発動する
+    MAX_WINS: 3,
+    FINAL_RAISE_TRIGGER_SCORE_WINNER: 2,
+    FINAL_RAISE_TRIGGER_SCORE_LOSER: 1,
+
     // ファイナルレイズの提案・応答それぞれの制限時間（ミリ秒）。
     // 無応答はキャンセル扱いで通常の game_over へ進む。
     FINAL_RAISE_TIMEOUT_MS: 20000
