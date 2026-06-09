@@ -62,70 +62,46 @@ const Skills = {
 
         // スキルID（推奨）またはインデックスによる分岐
         if (skillId === 'heal_instant' || charaIndex === 1 || player.charaName === 'Doctor') {
-            // 医師キャラ: 定力回復
+            // 医師: 定力回復
             const healAmount = (player.skillData && player.skillData.staminaRec) || 2;
             const baseMax = player.maxStamina || config.MAX_STAMINA;
             const maxStamina = player.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
-            
+
             player.stamina = Math.min(maxStamina, player.stamina + healAmount);
-            
+
             // 演出用イベントの追加
             events.push({ type: 'vfx', vfxType: 'rest_vfx', targetId: player.id });
             events.push({ type: 'vfx', vfxType: 'bump', targetId: player.id, text: `HEAL +${healAmount}` });
         }
-        else if (skillId === 'double_cost_power' || charaIndex === 2 || player.charaName === 'DoubleEdge') {
-            // 両刃キャラ: 定力を削る特殊攻撃
+        else if (skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche') {
+            // 成金: 本来のpushの行動の2倍のチップを消費して強化pushを出せる。また、消費したチップはフィールドにばらまかれる
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: intent.dir, power: 3, x: player.prevX, y: player.prevY });
-            
-            const startDist = Math.abs(opponent.x - player.x) + Math.abs(opponent.y - player.y);
-            if (startDist === 1) {
-                let dmg = 2; // 固定ダメージ 2
-                const oppIntent = opponent.intent || { type: 'none' };
-                if (oppIntent.type === 'defense') {
-                    dmg = Math.floor(dmg * (1 - config.EFFECTS.defense.reduction));
-                }
-                opponent.stamina = Math.max(0, opponent.stamina - dmg);
-                events.push({ type: 'hit', targetId: opponent.id, damage: dmg });
-                events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "STRIKE!" });
-            }
+
+
+
         }
         else if (skillId === 'fighter_skill' || charaIndex === 3 || player.charaName === 'Fighter') {
-            // 格闘家キャラ: 前方3x3範囲へのアタック攻撃
+            // 格闘家キャラ: 自身を中心として3x3範囲へ、相手のスタミナを大きく削る攻撃
             const dir = intent.dir;
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: dir, power: 2, x: player.prevX, y: player.prevY });
 
-            if (dir) {
-                let minX = 0, maxX = 0, minY = 0, maxY = 0;
-                switch (dir) {
-                    case 'up':
-                        minX = player.x - 1; maxX = player.x + 1;
-                        minY = player.y - 3; maxY = player.y - 1;
-                        break;
-                    case 'down':
-                        minX = player.x - 1; maxX = player.x + 1;
-                        minY = player.y + 1; maxY = player.y + 3;
-                        break;
-                    case 'left':
-                        minX = player.x - 3; maxX = player.x - 1;
-                        minY = player.y - 1; maxY = player.y + 1;
-                        break;
-                    case 'right':
-                        minX = player.x + 1; maxX = player.x + 3;
-                        minY = player.y - 1; maxY = player.y + 1;
-                        break;
+            const dx = opponent.x - player.x;
+            const dy = opponent.y - player.y;
+
+            // 相手が自身を中心とした3x3範囲内（自身を含まない）にいるか判定
+            if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0)) {
+                // 相手が範囲内にいる場合、スタミナを大きく削る（固定値3）
+                const dmg = 3;
+                const oppIntent = opponent.intent || { type: 'none' };
+                let finalDmg = dmg;
+
+                if (oppIntent.type === 'defense') {
+                    finalDmg = Math.floor(dmg * (1 - config.EFFECTS.defense.reduction));
                 }
 
-                // 相手が前方の縦3横3マス内にいるか判定
-                if (opponent.x >= minX && opponent.x <= maxX && opponent.y >= minY && opponent.y <= maxY) {
-                    let dmg = 2; // 固定ダメージ 2
-                    const oppIntent = opponent.intent || { type: 'none' };
-                    if (oppIntent.type === 'defense') {
-                        dmg = Math.floor(dmg * (1 - config.EFFECTS.defense.reduction));
-                    }
-                    opponent.stamina = Math.max(0, opponent.stamina - dmg);
-                    events.push({ type: 'hit', targetId: opponent.id, damage: dmg });
-                    events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "FIGHTER STRIKE!" });
-                }
+                opponent.stamina = Math.max(0, opponent.stamina - finalDmg);
+                events.push({ type: 'hit', targetId: opponent.id, damage: finalDmg });
+                events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "FIGHTER STRIKE!" });
             }
         }
         else {
