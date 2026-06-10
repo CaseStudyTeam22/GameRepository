@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
+//UIコントローラ
 namespace GamblingAction.UI
 {
 	public class FlowPanelView : MonoBehaviour
