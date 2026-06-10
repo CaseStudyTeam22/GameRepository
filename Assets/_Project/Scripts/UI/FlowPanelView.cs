@@ -3,11 +3,13 @@ using GamblingAction.Domain;
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
-//UIコントローラ
+
 namespace GamblingAction.UI
 {
 	public class FlowPanelView : MonoBehaviour
@@ -54,33 +56,84 @@ namespace GamblingAction.UI
 		// GameConfig.P2Color（#ff4444）に合わせる
 		private Color m_P2SlotColor = new Color(1f, 68f / 255f, 68f / 255f, 1f);
 
+		[Header("Controller UI チューニング")]
+		[Tooltip("左スティックを最大に傾けたときのスライダー変化速度（chips/秒）")]
+		[SerializeField] private float m_SliderSpeed = 8f;
+
+		// ─────────────────────────────────────────────────────────────
+		// 定数（コントローラー UI 用）
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>スティック入力のデッドゾーン（これ未満は無入力と見なす）</summary>
+		private const float m_StickDeadZone = 0.3f;
+
+		/// <summary>バフボタン選択移動のクールダウン（秒）。連続入力チカチカ防止用</summary>
+		private const float m_NavCooldown = 0.2f;
+
+		// ─────────────────────────────────────────────────────────────
+		// 既存 UI 参照（変更なし）
+		// ─────────────────────────────────────────────────────────────
+
 		private IGameState m_State;
 
-		private Slider m_ExchangeSlider;
+		private Slider   m_ExchangeSlider;
 		private TMP_Text m_ExchangeAmountText;
-		private Button m_ExchangeConfirmButton;
-		private Button m_HighRiskButton;
-		private Button m_LowRiskButton;
-		private Button m_SkipBuffButton;
+		private Button   m_ExchangeConfirmButton;
+		private Button   m_HighRiskButton;
+		private Button   m_LowRiskButton;
+		private Button   m_SkipBuffButton;
 
-		private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
-		private TMP_Text m_P2Name, m_P2Money;
-		private Image[] m_NormalBeats;
-		private Image m_FinalBeat;
-		private TMP_Text m_ExecuteText;
-		private TMP_Text m_ReadyText, m_CountdownText;
+		private TMP_Text    m_P1Name, m_P1Money, m_P1Chips;
+		private TMP_Text    m_P2Name, m_P2Money;
+		private Image[]     m_NormalBeats;
+		private Image       m_FinalBeat;
+		private TMP_Text    m_ExecuteText;
+		private TMP_Text    m_ReadyText, m_CountdownText;
 		private RectTransform m_TimeBarFill;
-		private TMP_Text m_RoundText;
+		private TMP_Text    m_RoundText;
 
-		private Image m_PrepareTimebar;
+		private Image    m_PrepareTimebar;
 		private TMP_Text m_PrepareTimeText;
 
-		private int m_RoundCount;
+		private int       m_RoundCount;
 		private Coroutine m_CountdownCo;
 		private Coroutine m_ExecuteFlashCo;
 		private Coroutine m_RoundOverHideCo;
 		private Coroutine m_PrepareCountdownCo;
-		private Vector2 m_TimeBarFillFullSize;
+		private Vector2   m_TimeBarFillFullSize;
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 用フィールド（追加）
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>左スティック + 十字キーを統合した Vector2 アクション</summary>
+		private InputAction m_NavigateAction;
+
+		/// <summary>B ボタン（buttonEast）による決定アクション</summary>
+		private InputAction m_ConfirmUiAction;
+
+		/// <summary>
+		/// バフ選択ボタン配列。
+		/// [0]=HighRiskButton / [1]=LowRiskButton / [2]=SkipBuffButton の順。
+		/// FindFlowControls 後に構築する。
+		/// </summary>
+		private Button[] m_BuffButtons;
+
+		/// <summary>バフ選択フェーズで現在フォーカスしているボタンのインデックス</summary>
+		private int m_SelectedBuffIndex;
+
+		/// <summary>バフ選択移動のクールダウン残り時間（秒）</summary>
+		private float m_NavCooldownRemaining;
+
+		// ─────────────────────────────────────────────────────────────
+		// ライフサイクル
+		// ─────────────────────────────────────────────────────────────
+
+		private void Awake()
+		{
+			BuildUiActions();
+			RegisterUiCallbacks();
+		}
 
 		private void Start()
 		{
@@ -95,6 +148,9 @@ namespace GamblingAction.UI
 			FindStageControls();
 			WireButtons();
 
+			// FindFlowControls でボタン参照が揃ってからバッファを構築する
+			m_BuffButtons = new[] { m_HighRiskButton, m_LowRiskButton, m_SkipBuffButton };
+
 			m_State.OnPhaseChanged   += HandlePhase;
 			m_State.OnPlayersChanged += HandlePlayersChanged;
 			m_State.OnPlayersChanged += UpdateExchangeRange;
@@ -104,6 +160,8 @@ namespace GamblingAction.UI
 			HandlePlayersChanged();
 			UpdateExchangeRange();
 			UpdateBeatVisual();
+
+			EnableUiActions();
 		}
 
 		private void OnDestroy()
@@ -113,7 +171,188 @@ namespace GamblingAction.UI
 			m_State.OnPlayersChanged -= HandlePlayersChanged;
 			m_State.OnPlayersChanged -= UpdateExchangeRange;
 			m_State.OnBeatChanged    -= HandleBeatChanged;
+
+			DisableUiActions();
+			DisposeUiActions();
 		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：InputAction 構築
+		// ─────────────────────────────────────────────────────────────
+
+		private void BuildUiActions()
+		{
+			// 左スティックと十字キーの両方を 1 つの Vector2 Action に統合する
+			m_NavigateAction = new InputAction("UINavigate", InputActionType.Value, expectedControlType: "Vector2");
+			m_NavigateAction.AddBinding("<Gamepad>/leftStick");
+			m_NavigateAction.AddCompositeBinding("Dpad")
+				.With("Up",    "<Gamepad>/dpad/up")
+				.With("Down",  "<Gamepad>/dpad/down")
+				.With("Left",  "<Gamepad>/dpad/left")
+				.With("Right", "<Gamepad>/dpad/right");
+
+			// B ボタン（buttonEast）で決定する
+			// Xbox = B / Switch Pro = A（右側ボタン）
+			m_ConfirmUiAction = new InputAction("UIConfirm", InputActionType.Button);
+			m_ConfirmUiAction.AddBinding("<Gamepad>/buttonEast");
+		}
+
+		private void RegisterUiCallbacks()
+		{
+			// B ボタン押下時に現在フェーズに応じた決定処理を行う
+			m_ConfirmUiAction.performed += _ => OnConfirmUi();
+		}
+
+		private void EnableUiActions()
+		{
+			m_NavigateAction.Enable();
+			m_ConfirmUiAction.Enable();
+		}
+
+		private void DisableUiActions()
+		{
+			m_NavigateAction?.Disable();
+			m_ConfirmUiAction?.Disable();
+		}
+
+		private void DisposeUiActions()
+		{
+			m_NavigateAction?.Dispose();
+			m_ConfirmUiAction?.Dispose();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：毎フレーム処理
+		// ─────────────────────────────────────────────────────────────
+
+		private void Update()
+		{
+			if (m_State == null) return;
+
+			m_NavCooldownRemaining -= Time.deltaTime;
+
+			Vector2 nav = m_NavigateAction.ReadValue<Vector2>();
+
+			switch (m_State.Phase)
+			{
+				case EGamePhase.Exchange:
+					HandleSliderInput(nav.x);
+					break;
+
+				case EGamePhase.BuffSelection:
+					HandleBuffNavigation(nav.x);
+					break;
+			}
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：換金スライダー操作
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>
+		/// 左スティック左右 / 十字キー左右でスライダー値を連続増減する。
+		/// スティックの傾き量に比例して変化速度が変わる。
+		/// 決定済み（ConfirmButton が非アクティブ）の場合は操作不可。
+		/// </summary>
+		private void HandleSliderInput(float axisX)
+		{
+			if (m_ExchangeSlider == null) return;
+			if (m_ExchangeConfirmButton != null && !m_ExchangeConfirmButton.interactable) return;
+			if (Mathf.Abs(axisX) < m_StickDeadZone) return;
+
+			float delta = axisX * m_SliderSpeed * Time.deltaTime;
+			m_ExchangeSlider.value = Mathf.Clamp(
+				m_ExchangeSlider.value + delta,
+				m_ExchangeSlider.minValue,
+				m_ExchangeSlider.maxValue
+			);
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：バフ選択ナビゲーション
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>
+		/// 左スティック左右 / 十字キー左右でバフボタンの選択カーソルを移動する。
+		/// クールダウンで連続入力時のチカチカを防止する。
+		/// </summary>
+		private void HandleBuffNavigation(float axisX)
+		{
+			if (m_NavCooldownRemaining > 0f) return;
+			if (Mathf.Abs(axisX) < m_StickDeadZone) return;
+
+			int direction = axisX > 0 ? 1 : -1;
+			int next = Mathf.Clamp(m_SelectedBuffIndex + direction, 0, m_BuffButtons.Length - 1);
+			if (next == m_SelectedBuffIndex) return;
+
+			m_SelectedBuffIndex    = next;
+			m_NavCooldownRemaining = m_NavCooldown;
+			FocusBuffButton(m_SelectedBuffIndex);
+		}
+
+		/// <summary>
+		/// 指定インデックスのバフボタンに EventSystem のフォーカスを移す。
+		/// Unity の Button の選択時ハイライトが自動で適用される。
+		/// </summary>
+		private void FocusBuffButton(int index)
+		{
+			if (m_BuffButtons == null) return;
+			if (index < 0 || index >= m_BuffButtons.Length) return;
+
+			var button = m_BuffButtons[index];
+			if (button == null) return;
+
+			if (EventSystem.current != null)
+				EventSystem.current.SetSelectedGameObject(button.gameObject);
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：B ボタン決定
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>
+		/// B ボタン押下時に現在のフェーズに応じた決定処理を行う。
+		/// </summary>
+		private void OnConfirmUi()
+		{
+			if (m_State == null) return;
+
+			switch (m_State.Phase)
+			{
+				case EGamePhase.Exchange:
+					ConfirmExchange();
+					break;
+
+				case EGamePhase.BuffSelection:
+					ConfirmBuffSelection();
+					break;
+			}
+		}
+
+		/// <summary>換金量を確定して ExchangeConfirmButton を押す。決定済みの場合は無視。</summary>
+		private void ConfirmExchange()
+		{
+			if (m_ExchangeConfirmButton == null) return;
+			if (!m_ExchangeConfirmButton.interactable) return;
+			m_ExchangeConfirmButton.onClick.Invoke();
+		}
+
+		/// <summary>現在フォーカス中のバフボタンを押す。非アクティブの場合は無視。</summary>
+		private void ConfirmBuffSelection()
+		{
+			if (m_BuffButtons == null) return;
+			if (m_SelectedBuffIndex < 0 || m_SelectedBuffIndex >= m_BuffButtons.Length) return;
+
+			var button = m_BuffButtons[m_SelectedBuffIndex];
+			if (button == null) return;
+			if (!button.interactable) return;
+
+			button.onClick.Invoke();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 既存メソッド群（変更なし）
+		// ─────────────────────────────────────────────────────────────
 
 		private void FindFlowControls()
 		{
@@ -227,8 +466,7 @@ namespace GamblingAction.UI
 			SetActive(m_BuffPanel,      phase == EGamePhase.BuffSelection);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
 
-			// 決着パネルは固定秒数だけ表示して自動で隠す（次ラウンドの生成より前に消す）。
-			// それ以外のフェーズに入ったら取りこぼし防止で即座に隠す。
+			// 決着パネルは固定秒数だけ表示して自動で隠す
 			if (phase == EGamePhase.RoundOver)
 				ShowRoundOverThenHide();
 			else
@@ -237,7 +475,6 @@ namespace GamblingAction.UI
 			bool stageVisible = phase == EGamePhase.Countdown || phase == EGamePhase.Battle;
 			SetActive(m_MainGameStage, stageVisible);
 
-			// チップ交換 / カード選択フェーズだけ制限時間パネルを出してカウントダウンする。
 			if (phase == EGamePhase.Exchange || phase == EGamePhase.BuffSelection)
 				StartPrepareCountdown();
 			else
@@ -255,6 +492,11 @@ namespace GamblingAction.UI
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
 				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;
+
+				// バフ選択フェーズ開始時に先頭ボタンにフォーカスを移す（コントローラー用）
+				m_SelectedBuffIndex    = 0;
+				m_NavCooldownRemaining = 0f;
+				FocusBuffButton(m_SelectedBuffIndex);
 			}
 
 			if (phase == EGamePhase.Countdown)
@@ -269,22 +511,19 @@ namespace GamblingAction.UI
 			}
 
 			if (phase == EGamePhase.Battle)
-			{
 				UpdateBeatVisual();
-			}
 
 			if (phase == EGamePhase.GameOver)
 			{
 				m_RoundCount = 0;
-                StartCoroutine(GoToResultSceneAfterDelay(5f));
-            }
+				StartCoroutine(GoToResultSceneAfterDelay(5f));
+			}
 		}
 
 		private void HandlePlayersChanged()
 		{
 			if (m_State == null) return;
 
-			// 左スロット=自分、右スロット=相手で固定（role に依存しない）
 			var me       = m_State.Me;
 			var opponent = m_State.Opponent;
 
@@ -302,7 +541,6 @@ namespace GamblingAction.UI
 				return;
 			}
 
-			// 色は role 固定（ワールドのプレイヤー色と一致させる）。スロット位置は self/opponent。
 			Color slotColor = dto.Role == "P2" ? m_P2SlotColor : m_P1SlotColor;
 
 			if (nameText != null)
@@ -379,7 +617,6 @@ namespace GamblingAction.UI
 			m_ExecuteFlashCo = null;
 		}
 
-		// 決着パネルを表示し、固定秒数後に自動で隠す。
 		private void ShowRoundOverThenHide()
 		{
 			SetActive(m_RoundOverPanel, true);
@@ -404,8 +641,6 @@ namespace GamblingAction.UI
 			SetActive(m_RoundOverPanel, false);
 		}
 
-		// チップ交換 / カード選択フェーズの制限時間カウントダウンを開始する。
-		// サーバ側の制限時間と同じ秒数をクライアントでも独立に数えて表示する（表示専用）。
 		private void StartPrepareCountdown()
 		{
 			if (m_PreparingCountdownPanel == null) return;
@@ -496,13 +731,13 @@ namespace GamblingAction.UI
 			m_CountdownCo = null;
 		}
 
-        private IEnumerator GoToResultSceneAfterDelay(float delay)
-        {
-            yield return new WaitForSeconds(delay);
-            SceneManager.LoadScene("ResultScene");
-        }
+		private IEnumerator GoToResultSceneAfterDelay(float delay)
+		{
+			yield return new WaitForSeconds(delay);
+			SceneManager.LoadScene("ResultScene");
+		}
 
-        private void UpdateRoundText()
+		private void UpdateRoundText()
 		{
 			if (m_RoundText == null) return;
 			int shown = Mathf.Clamp(m_RoundCount, 1, m_TotalRounds);
