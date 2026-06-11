@@ -260,6 +260,7 @@ setInterval(() => {
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
                             handleRoundConcluded(winnerId, loserId);
+                            io.emit('sync_state', { players });
                         }
                     }, 1500);
                 }
@@ -958,7 +959,7 @@ function beginFinalRaisePending() {
     }, Config.FINAL_RAISE_TIMEOUT_MS);
 }
 
-// ファイナルレイズの中断（拒否・タイムアウト・切断）。通常の game_over へ流す。
+// ファイナルレイズの中断（拒否・タイムアウト・切断）。通常戦 へ流す。
 function cancelFinalRaise(reason) {
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
     if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
@@ -1026,9 +1027,14 @@ function resetMatchState() {
     if (missionTimer) { clearTimeout(missionTimer); missionTimer = null; }
     if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
 
+    cycleCount = 0;
+    timeLeft = Config.GAME_DURATION;
+
     isFinalDuel = false;
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
+    finalRaiseFavoredRole = null;
+    finalRaiseTurnCount = 0;
     if (lobbyCountdownTimer) { clearTimeout(lobbyCountdownTimer); lobbyCountdownTimer = null; }
 
     for (let id in players) {

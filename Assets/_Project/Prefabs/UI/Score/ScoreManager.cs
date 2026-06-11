@@ -26,7 +26,13 @@ namespace GamblingAction.UI
 		[SerializeField, Tooltip("対象プレイヤーが見つからない場合に表示する文字列")]
 		private string m_MissingPlayerText = "-";
 
-		private IGameState m_State;
+        [SerializeField] 
+		private Vector2 m_LeftPosition;
+        
+		[SerializeField] 
+		private Vector2 m_RightPosition;
+
+        private IGameState m_State;
 
 		private void Start()
 		{
@@ -55,6 +61,8 @@ namespace GamblingAction.UI
 		{
 			SetScoreText(m_P1ScoreText, TryGetScore(m_P1Role));
 			SetScoreText(m_P2ScoreText, TryGetScore(m_P2Role));
+
+			UpdatePosition();
 		}
 
 		private int? TryGetScore(string role)
@@ -77,5 +85,31 @@ namespace GamblingAction.UI
 			if (text == null) return;
 			text.text = score.HasValue ? score.Value.ToString() : m_MissingPlayerText;
 		}
+
+		// スコア表示の位置を、現在のプレイヤーIDに応じて更新する
+		private void UpdatePosition()
+		{
+			if (m_State?.Me == null)
+				return;
+
+			var p1Rect = m_P1ScoreText != null
+				? m_P1ScoreText.GetComponent<RectTransform>()
+				: null;
+
+			var p2Rect = m_P2ScoreText != null
+				? m_P2ScoreText.GetComponent<RectTransform>()
+				: null;
+
+            if (m_State.Me.Role == m_P1Role)
+            {
+                p1Rect.anchoredPosition = m_LeftPosition;
+                p2Rect.anchoredPosition = m_RightPosition;
+            }
+            else
+            {
+                p1Rect.anchoredPosition = m_RightPosition;
+                p2Rect.anchoredPosition = m_LeftPosition;
+            }
+        }
 	}
 }

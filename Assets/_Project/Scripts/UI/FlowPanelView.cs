@@ -37,8 +37,6 @@ namespace GamblingAction.UI
 		[SerializeField] private float m_PrepareSeconds = 20f;
 
 		[Header("Tuning")]
-		[FormerlySerializedAs("totalRounds")]
-		[SerializeField] private int m_TotalRounds = 5;
 		[Tooltip("決着パネル（RoundOver）を表示しておく秒数。経過後に自動で隠す。サーバの次ラウンド開始待ち（3 秒）に合わせる")]
 		[SerializeField] private float m_RoundOverDisplaySeconds = 3f;
 		[FormerlySerializedAs("executeFlashSeconds")]
@@ -638,7 +636,7 @@ namespace GamblingAction.UI
 			}
 
 			yield return new WaitForSeconds(0.8f);
-
+            
 			for (int i = 3; i >= 1; i--)
 			{
 				if (m_CountdownText != null) m_CountdownText.text = i.ToString();
@@ -663,8 +661,7 @@ namespace GamblingAction.UI
         private void UpdateRoundText()
 		{
 			if (m_RoundText == null) return;
-			int shown = Mathf.Clamp(m_RoundCount, 1, m_TotalRounds);
-			m_RoundText.text = $"Round {shown}/{m_TotalRounds}";
+			m_RoundText.text = $"Round {m_RoundCount}";
 		}
 
 		private void UpdateExchangeRange()

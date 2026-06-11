@@ -428,6 +428,8 @@ MonoBehaviour:
   m_P1Role: P1
   m_P2Role: P2
   m_MissingPlayerText: '-'
+  m_LeftPosition: {x: -600, y: -100}
+  m_RightPosition: {x: 850, y: -100}
 --- !u!1 &8081991451530938699
 GameObject:
   m_ObjectHideFlags: 0
