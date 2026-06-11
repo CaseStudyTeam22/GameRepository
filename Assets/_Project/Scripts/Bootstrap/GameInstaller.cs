@@ -110,10 +110,6 @@ namespace GamblingAction.Bootstrap
 			m_State.OnRoundOver         += w => Debug.Log($"[Probe] round_over winner={w}");
 			m_State.OnGameOver          += w => Debug.Log($"[Probe] game_over winner={w}");
 			m_State.OnPlayerLeft        += id => Debug.Log($"[Probe] player_left {id}");
-			m_State.OnFinalRaiseOffer    += m => Debug.Log($"[Probe] final_raise_offer proposer={m.ProposerRole} responder={m.ResponderRole}");
-			m_State.OnFinalRaisePending  += m => Debug.Log($"[Probe] final_raise_pending proposer={m.ProposerRole} responder={m.ResponderRole}");
-			m_State.OnFinalRaiseCanceled += m => Debug.Log($"[Probe] final_raise_canceled reason={m.Reason}");
-			m_State.OnFinalRaiseStarted  += () => Debug.Log($"[Probe] final_raise_started");
 		}
 
 		private void OnDestroy()

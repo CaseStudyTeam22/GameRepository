@@ -1,0 +1,8 @@
+Event	ID	Name			Wwise Object Path	Notes
+	18931912	Play_Beat_1_to_3			\Default Work Unit\SE\Beat\Play_Beat_1_to_3	
+	3323077879	Play_Beat_4			\Default Work Unit\SE\Beat\Play_Beat_4	
+
+In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	631089131	Beat_1_to_3	.cache\83\{83A0A2CA-6A00-2AB4-7814-416FE71D4948}.wem		\Containers\Default Work Unit\SE\Beat\Beat_1_to_3		25628
+	881716113	Beat_4	.cache\D8\{D8D47FD6-E2D6-DD71-5FBF-419DA6CC4215}.wem		\Containers\Default Work Unit\SE\Beat\Beat_4		26758
+

@@ -46,9 +46,7 @@ namespace GamblingAction.Net
 
 			if (startResult == HostServerProcess.StartResult.Success)
 			{
-				// Windows では "localhost" が ::1（IPv6）に解決されることがあり、
-				// 環境によっては socket.io 接続が成立せず無応答になる。明示的に IPv4 を指定する。
-				ResolvedUrl = $"http://127.0.0.1:{HostServerProcess.ServerPort}";
+				ResolvedUrl = $"http://localhost:{HostServerProcess.ServerPort}";
 				IsHost = true;
 				Debug.Log($"[NetworkBootstrap] ホスト確定: {ResolvedUrl}");
 				return ResolvedUrl;
@@ -70,11 +68,10 @@ namespace GamblingAction.Net
 					Debug.Log($"[NetworkBootstrap] 再探索でホスト発見: {ResolvedUrl}");
 					return ResolvedUrl;
 				}
-				// 通知が間に合っていない／同一マシン内ローカルテストなどでも繋がるよう 127.0.0.1 にフォールバック。
-				// "localhost" だと Windows で IPv6 解決され接続が無応答になることがあるため、IPv4 を明示する。
-				ResolvedUrl = $"http://127.0.0.1:{HostServerProcess.ServerPort}";
+				// 通知が間に合っていない／同一マシン内ローカルテストなどでも繋がるよう localhost にフォールバック。
+				ResolvedUrl = $"http://localhost:{HostServerProcess.ServerPort}";
 				IsHost = false;
-				Debug.LogWarning($"[NetworkBootstrap] 通知が届かないため 127.0.0.1 フォールバック: {ResolvedUrl}");
+				Debug.LogWarning($"[NetworkBootstrap] 通知が届かないため localhost フォールバック: {ResolvedUrl}");
 				return ResolvedUrl;
 			}
 

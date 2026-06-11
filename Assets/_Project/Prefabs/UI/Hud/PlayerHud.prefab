@@ -160,7 +160,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 1
+  m_PresetInfoIsWorld: 0
 --- !u!114 &2906756943997487064
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -190,8 +190,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c382330d006fb30498468e843b67a1e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_StaminaBar: {fileID: 5087661424685971933}
-  m_BillboardToCamera: 1
+  staminaBar: {fileID: 5087661424685971933}
+  billboardToCamera: 1
 --- !u!1 &3806257234400346342
 GameObject:
   m_ObjectHideFlags: 0
@@ -394,12 +394,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ba40ebc8a6b0904591c048affebdf07, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_CellTemplate: {fileID: 6987979173984577463}
-  m_CellsRoot: {fileID: 4500530029241596800}
-  m_HealthyColor: {r: 0, g: 1, b: 0, a: 1}
-  m_LowColor: {r: 1, g: 0.27, b: 0.27, a: 1}
-  m_EmptyColor: {r: 0.13, g: 0.13, b: 0.13, a: 1}
-  m_LowThreshold: 1
+  cellTemplate: {fileID: 6987979173984577463}
+  cellsRoot: {fileID: 4500530029241596800}
+  healthyColor: {r: 0, g: 1, b: 0, a: 1}
+  lowColor: {r: 1, g: 0.27, b: 0.27, a: 1}
+  emptyColor: {r: 0.13, g: 0.13, b: 0.13, a: 1}
+  lowThreshold: 1
 --- !u!1 &7276551021105515514
 GameObject:
   m_ObjectHideFlags: 0

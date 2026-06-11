@@ -17,11 +17,6 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("buffId")] public string BuffId;
 	}
 
-	public class MissionSelectedMessage
-	{
-		[JsonProperty("missionId")] public string MissionId;
-	}
-
 	public class SelectCharaMessage
 	{
 		[JsonProperty("index")] public int Index;
@@ -34,18 +29,6 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("power")] public int Power;
 	}
 
-	// 敗者がファイナルレイズを発起するか・諦めるかを送る。
-	public class FinalRaiseProposeMessage
-	{
-		[JsonProperty("accept")] public bool Accept;
-	}
-
-	// 勝者がファイナルレイズを受諾するか・拒否するかを送る。
-	public class FinalRaiseRespondMessage
-	{
-		[JsonProperty("accept")] public bool Accept;
-	}
-
 	public static class ClientEvents
 	{
 		public const string PlayerReady    = "player_ready";
@@ -53,17 +36,12 @@ namespace GamblingAction.Core.Dto
 		public const string EnterLobby     = "enter_lobby";
 		public const string ExchangeChips  = "exchange_chips";
 		public const string BuffSelected   = "buff_selected";
-		public const string MissionSelected = "mission_selected";
 		public const string MissionCompleted = "mission_completed";
 		// 盤面・キャラ生成を終え、ラウンドを始められる状態になったことを通知する。
 		public const string RoundReady     = "round_ready";
 		// Lobby でのキャラ選択。対局開始前に変更できる。
 		public const string SelectChara    = "select_chara";
 		public const string SetIntent      = "set_intent";
-		// ファイナルレイズの発起確認に対する敗者の回答。
-		public const string FinalRaisePropose = "final_raise_propose";
-		// ファイナルレイズの受諾確認に対する勝者の回答。
-		public const string FinalRaiseRespond = "final_raise_respond";
 		public const string Shutdown       = "shutdown";
 	}
 

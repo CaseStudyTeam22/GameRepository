@@ -8,13 +8,10 @@ namespace GamblingAction.Audio
         [Header("SE")]
         [Tooltip("1-3拍目に鳴らすSE")]
         [SerializeField] private AK.Wwise.Event m_BeatSE;
-        [Tooltip("4拍目に鳴らすSE")]
+        [Tooltip("BeatsPerBar拍目に鳴らすSE")]
         [SerializeField] private AK.Wwise.Event m_BarSE;
 
         private IBeatClock m_BeatClock;
-        private uint m_CurrentPlayingID_Beat;
-        private uint m_CurrentPlayingID_Bar;
-
 
         private void Start()
         {
@@ -22,7 +19,7 @@ namespace GamblingAction.Audio
 
             if (beatClock == null)
             {
-                Debug.LogError("[BeatSEPlayer] BeatClockが見つかりません。");
+                Debug.LogError("[BeatSEPlayer] BeatClockが見つかりません。シーンにBeatManagerが存在するか確認してください。");
                 return;
             }
 
@@ -40,8 +37,6 @@ namespace GamblingAction.Audio
             }
 
             m_BeatClock.OnBeat -= HandleBeat;
-
-            WwiseSoundAPI.Instance?.StopAll(gameObject);
         }
 
         // OnBeatから拍番号に応じて再生
@@ -50,22 +45,11 @@ namespace GamblingAction.Audio
             // 4拍目と1～3拍目
             if (beat == m_BeatClock.BeatsPerBar)
             {
-                if (WwiseSoundAPI.Instance == null)
-                {
-                    Debug.LogWarning("[BarSEPlayer] WwiseSoundAPIのInstanceがnullです。");
-                    return;
-                }
-
-                m_CurrentPlayingID_Bar = WwiseSoundAPI.Instance.PlayTracked(m_BarSE, gameObject);
+                m_BarSE.Post(gameObject);
             }
             else
             {
-                if (WwiseSoundAPI.Instance == null)
-                {
-                    Debug.LogWarning("[BeatSEPlayer] WwiseSoundAPIのInstanceがnullです。");
-                    return;
-                }
-                m_CurrentPlayingID_Beat = WwiseSoundAPI.Instance.PlayTracked(m_BeatSE, gameObject);
+                m_BeatSE.Post(gameObject);
             }
         }
     }

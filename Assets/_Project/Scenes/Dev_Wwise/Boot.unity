@@ -437,31 +437,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 28
+      value: 13.5
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 5
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -13.15
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7053843
+      value: -0.8811196
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.049325276
+      value: -0.27781585
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.7053843
+      value: 0.36497176
       objectReference: {fileID: 0}
     - target: {fileID: 5859323127898063221, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.049325276
+      value: -0.11507512
       objectReference: {fileID: 0}
     - target: {fileID: 8642117371325207905, guid: cdea1921b3671ae4eae0e397623334ce, type: 3}
       propertyPath: DefaultVelocity.y
@@ -1324,13 +1324,6 @@ MonoBehaviour:
   m_TilePrefabLight: {fileID: 8029973604916602477, guid: a0823cf66cae2f64a80df30cca05d7fd, type: 3}
   m_TilePrefabDark: {fileID: 8029973604916602477, guid: 69af20b1d4da24c42839b620478c3665, type: 3}
   m_GenerateTilesOnAwake: 1
-  m_PlayIntro: 1
-  m_IntroDropHeight: 5
-  m_IntroTileDuration: 0.4
-  m_IntroDelayPerDistance: 0.12
-  m_IntroDelayJitter: 0
-  m_IntroEase: 27
-  m_IntroCenter: {x: 0, y: 0, z: 0}
 --- !u!4 &1925288801
 Transform:
   m_ObjectHideFlags: 0

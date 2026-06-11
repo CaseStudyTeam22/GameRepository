@@ -25,9 +25,6 @@ namespace GamblingAction.Core.Dto
 
 		[JsonProperty("characterId")] public string CharacterId; // キャラクター識別ID
 
-		[JsonProperty("mission")] public MissionDto Mission; // 現在のミッション
-		[JsonProperty("availableMissions")] public List<MissionDto> AvailableMissions; // 選択可能なミッション候補
-
 		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
 		// 上記の合体値用フィールド
 		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
@@ -91,13 +88,9 @@ namespace GamblingAction.Core.Dto
 
 	public class MissionDto
 	{
-		[JsonProperty("id")]           public string Id;
-		[JsonProperty("type")]         public EMissionType Type;
-		[JsonProperty("description")]  public string Description;
-		[JsonProperty("targetCount")]  public int TargetCount;
-		[JsonProperty("currentCount")] public int CurrentCount;
-		[JsonProperty("rewardType")]   public string RewardType;
-		[JsonProperty("rewardValue")]  public int RewardValue;
-		[JsonProperty("isCleared")]    public bool IsCleared;
+		public EMissionType Type;
+    	public int TargetCount;
+    	public int CurrentCount;
+    	public bool IsCleared;
 	}
 }
