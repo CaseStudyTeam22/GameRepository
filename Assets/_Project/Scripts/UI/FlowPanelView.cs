@@ -94,6 +94,8 @@ namespace GamblingAction.UI
 		private Coroutine m_ExecuteFlashCo;
 		private Coroutine m_RoundOverHideCo;
 		private Coroutine m_PrepareCountdownCo;
+		private Coroutine m_GameOverTransitionCo;
+		private bool m_IsStarted;
 		private Vector2 m_TimeBarFillFullSize;
 
 		private void Start()
@@ -119,15 +121,23 @@ namespace GamblingAction.UI
 			HandlePlayersChanged();
 			UpdateExchangeRange();
 			UpdateBeatVisual();
+			m_IsStarted = true;
 		}
 
 		private void OnDestroy()
 		{
-			if (m_State == null) return;
-			m_State.OnPhaseChanged   -= HandlePhase;
-			m_State.OnPlayersChanged -= HandlePlayersChanged;
-			m_State.OnPlayersChanged -= UpdateExchangeRange;
-			m_State.OnBeatChanged    -= HandleBeatChanged;
+			if (m_State != null)
+			{
+				m_State.OnPhaseChanged   -= HandlePhase;
+				m_State.OnPlayersChanged -= HandlePlayersChanged;
+				m_State.OnPlayersChanged -= UpdateExchangeRange;
+				m_State.OnBeatChanged    -= HandleBeatChanged;
+			}
+			if (m_GameOverTransitionCo != null)
+			{
+				StopCoroutine(m_GameOverTransitionCo);
+				m_GameOverTransitionCo = null;
+			}
 		}
 
 		private void FindFlowControls()
@@ -279,7 +289,7 @@ namespace GamblingAction.UI
 		private void HandlePhase(EGamePhase phase)
 		{
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
-			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
+			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver && m_IsStarted);
 
 			// ミッションHUDを表示するフェーズの制御（Countdown / Battle 中）
 			bool showMissionHUD = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
@@ -348,8 +358,23 @@ namespace GamblingAction.UI
 			if (phase == EGamePhase.GameOver)
 			{
 				m_RoundCount = 0;
-                StartCoroutine(GoToResultSceneAfterDelay(5f));
-            }
+				if (m_IsStarted)
+				{
+					if (m_GameOverTransitionCo != null)
+					{
+						StopCoroutine(m_GameOverTransitionCo);
+					}
+					m_GameOverTransitionCo = StartCoroutine(GoToResultSceneAfterDelay(5f));
+				}
+			}
+			else
+			{
+				if (m_GameOverTransitionCo != null)
+				{
+					StopCoroutine(m_GameOverTransitionCo);
+					m_GameOverTransitionCo = null;
+				}
+			}
 		}
 
 		private void HandlePlayersChanged()
