@@ -1,15 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using GamblingAction.Net;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GamblingAction.Domain
 {
 	public class GameState : IGameState, IDisposable
 	{
+		private static readonly string[] CharacterSheetUrls = new string[]
+		{
+			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=0",         // Normal
+			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=111111111", // Doctor
+			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=222222222", // DoubleEdge
+			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=333333333"  // Fighter
+		};
+
 		private readonly INetClient m_Net;
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
@@ -82,7 +92,7 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
 		}
 
-		public void SubmitReady(bool isAI)
+		public async void SubmitReady(bool isAI)
 		{
 			var charaData = new CharaDataMessage
 			{
@@ -100,8 +110,7 @@ namespace GamblingAction.Domain
 				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
 			};
 
-			// ===== TODO: 下記、スプシから読み込むように学校で変更すること =====
-
+			// デフォルト値の設定
 			if (m_SelectedCharaIndex == 1)
 			{
 				charaData.Name = "Doctor";
@@ -123,16 +132,11 @@ namespace GamblingAction.Domain
 			{
 				charaData.Name = "DoubleEdge";
 				charaData.MaxStamina = 5;
-				charaData.InitMoney = 8000; // 初期資金が少なめ
+				charaData.InitMoney = 8000;
 				charaData.InitChips = 0;
 				charaData.PushPower = 0;
 				charaData.MoveSpeed = 0;
-				// キャラ別に発動コストを変更したい場合はこれをいじってね
-				//charaData.MoveCost = new[] { 1, 3, 5 };
-				//charaData.PushCost = new[] { 3, 5, 9 },
-				//charaData.AttackCost = new[] { 3, 5, 9 },
-				//charaData.DefenseCost = new[] { 2, 2, 2 },
-				charaData.SkillCost = new[] { 0, 0, 0 }; // スキルコスト0
+				charaData.SkillCost = new[] { 0, 0, 0 };
 				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
 			}
 			else if (m_SelectedCharaIndex == 3)
@@ -143,13 +147,62 @@ namespace GamblingAction.Domain
 				charaData.InitChips = 0;
 				charaData.PushPower = 0;
 				charaData.MoveSpeed = 0;
-				// キャラ別に発動コストを変更したい場合はこれをいじってね
-				//charaData.MoveCost = new[] { 1, 3, 5 };
-				//charaData.PushCost = new[] { 3, 5, 9 },
-				//charaData.AttackCost = new[] { 3, 5, 9 },
-				//charaData.DefenseCost = new[] { 2, 2, 2 },
 				charaData.SkillCost = new[] { 3, 3, 3 };
 				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
+			}
+
+			// CSV読み込みによる上書き
+			// コストのスケーリングはとりあえず読み取ったものから1x,2x,3xする
+			// 足りない項目はたす
+			// 英字はなにかと、読み取る順番はcsvのカンマ区切りでないとだめかどうか？
+			if (m_SelectedCharaIndex >= 0 && m_SelectedCharaIndex < CharacterSheetUrls.Length)
+			{
+				string url = CharacterSheetUrls[m_SelectedCharaIndex];
+				var csvData = await LoadCSVFromUrlAsync(url);
+				if (csvData != null)
+				{
+					if (csvData.TryGetValue("キャラクター名", out var name) || csvData.TryGetValue("Name", out name))
+						charaData.Name = name;
+
+					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaStr) || csvData.TryGetValue("MaxStamina", out maxStaminaStr))
+						if (int.TryParse(maxStaminaStr, out var maxStamina)) charaData.MaxStamina = maxStamina;
+
+					if (csvData.TryGetValue("資金", out var initMoneyStr) || csvData.TryGetValue("InitMoney", out initMoneyStr))
+						if (int.TryParse(initMoneyStr, out var initMoney)) charaData.InitMoney = initMoney;
+
+					if (csvData.TryGetValue("チップ", out var initChipsStr) || csvData.TryGetValue("InitChips", out initChipsStr))
+						if (int.TryParse(initChipsStr, out var initChips)) charaData.InitChips = initChips;
+
+					if (csvData.TryGetValue("突進", out var pushPowerStr) || csvData.TryGetValue("PushPower", out pushPowerStr))
+						if (int.TryParse(pushPowerStr, out var pushPower)) charaData.PushPower = pushPower;
+
+					//if (csvData.TryGetValue("移動速度", out var moveSpeedStr) || csvData.TryGetValue("MoveSpeed", out moveSpeedStr))
+					//	if (int.TryParse(moveSpeedStr, out var moveSpeed)) charaData.MoveSpeed = moveSpeed;
+
+					if (csvData.TryGetValue("移動コスト", out var moveCostStr) || csvData.TryGetValue("MoveCost", out moveCostStr))
+						charaData.MoveCost = ParseIntArray(moveCostStr, charaData.MoveCost);
+
+					if (csvData.TryGetValue("突進コスト", out var pushCostStr) || csvData.TryGetValue("PushCost", out pushCostStr))
+						charaData.PushCost = ParseIntArray(pushCostStr, charaData.PushCost);
+
+					if (csvData.TryGetValue("攻撃コスト", out var attackCostStr) || csvData.TryGetValue("AttackCost", out attackCostStr))
+						charaData.AttackCost = ParseIntArray(attackCostStr, charaData.AttackCost);
+
+					if (csvData.TryGetValue("防御コスト", out var defenseCostStr) || csvData.TryGetValue("DefenseCost", out defenseCostStr))
+						charaData.DefenseCost = ParseIntArray(defenseCostStr, charaData.DefenseCost);
+
+					if (csvData.TryGetValue("スキルコスト", out var skillCostStr) || csvData.TryGetValue("SkillCost", out skillCostStr))
+						charaData.SkillCost = ParseIntArray(skillCostStr, charaData.SkillCost);
+
+					if (csvData.TryGetValue("スキル", out var skillId) || csvData.TryGetValue("SkillId", out skillId))
+						charaData.Skills.Id = skillId;
+
+					//if (csvData.TryGetValue("スキルスタミナ回復", out var staminaRecStr) || csvData.TryGetValue("SkillStaminaRec", out staminaRecStr))
+					//	if (int.TryParse(staminaRecStr, out var staminaRec)) charaData.Skills.StaminaRec = staminaRec;
+
+					//if (csvData.TryGetValue("スキルチップコスト", out var chipCostStr) || csvData.TryGetValue("SkillChipCost", out chipCostStr))
+					//	if (int.TryParse(chipCostStr, out var chipCost)) charaData.Skills.ChipCost = chipCost;
+				}
 			}
 
 			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage 
@@ -157,6 +210,57 @@ namespace GamblingAction.Domain
 				IsAI = isAI,
 				CharaData = charaData
 			});
+		}
+
+		private async Task<Dictionary<string, string>> LoadCSVFromUrlAsync(string url)
+		{
+			if (string.IsNullOrEmpty(url) || url.Contains("YOUR_SPREADSHEET_ID"))
+			{
+				return null;
+			}
+
+			using var req = UnityWebRequest.Get(url);
+			var operation = req.SendWebRequest();
+			while (!operation.isDone)
+			{
+				await Task.Yield();
+			}
+
+			if (req.result != UnityWebRequest.Result.Success)
+			{
+				Debug.LogError($"CSV読み込み失敗: {req.error} (URL: {url})");
+				return null;
+			}
+
+			var dict = new Dictionary<string, string>();
+			var lines = req.downloadHandler.text.Split('\n');
+			foreach (var line in lines)
+			{
+				var cols = line.Split(',');
+				if (cols.Length < 2) continue;
+
+				string key = cols[0].Trim();
+				string val = cols[1].Trim();
+				dict[key] = val;
+			}
+
+			return dict;
+		}
+
+		private int[] ParseIntArray(string val, int[] defaultValue)
+		{
+			if (string.IsNullOrEmpty(val)) return defaultValue;
+			var parts = val.Split(new[] { '/', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length == 0) return defaultValue;
+			var result = new List<int>();
+			foreach (var part in parts)
+			{
+				if (int.TryParse(part.Trim(), out var parsed))
+				{
+					result.Add(parsed);
+				}
+			}
+			return result.Count > 0 ? result.ToArray() : defaultValue;
 		}
 
 		public void SubmitUnready()
