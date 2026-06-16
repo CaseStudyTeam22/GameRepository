@@ -100,6 +100,8 @@ namespace GamblingAction.Domain
 				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
 			};
 
+			// ===== TODO: 下記、スプシから読み込むように学校で変更すること =====
+
 			if (m_SelectedCharaIndex == 1)
 			{
 				charaData.Name = "Doctor";
@@ -148,28 +150,6 @@ namespace GamblingAction.Domain
 				//charaData.DefenseCost = new[] { 2, 2, 2 },
 				charaData.SkillCost = new[] { 3, 3, 3 };
 				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
-
-				// スプレッドシートアセットからロードを試みる
-				var stats = Resources.Load<FighterStatsData>("FighterStatsData");
-				if (stats != null)
-				{
-					int staminaVal = stats.GetInt("スタミナ（体幹）");
-					int moneyVal = stats.GetInt("資金");
-					int chipsVal = stats.GetInt("チップ");
-					int chargeVal = stats.GetInt("突進"); // 突進＝プッシュ力
-
-					if (staminaVal > 0) charaData.MaxStamina = staminaVal;
-					if (moneyVal > 0) charaData.InitMoney = moneyVal;
-					if (chipsVal > 0) charaData.InitChips = chipsVal;
-					if (chargeVal > 0) charaData.PushPower = chargeVal;
-
-					string charaName = stats.GetString("キャラクター名");
-					if (!string.IsNullOrEmpty(charaName)) charaData.Name = charaName;
-				}
-				else
-				{
-					Debug.LogWarning("[GameState] FighterStatsData asset not found, using default Fighter settings.");
-				}
 			}
 
 			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage 

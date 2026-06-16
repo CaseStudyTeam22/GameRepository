@@ -24,9 +24,9 @@ const io = new Server(server, {
 app.use(express.static(path.join(__dirname, 'public')));
 
 let players = {};
-let items = []; 
+let items = [];
 let currentBeat = 0;
-let cycleCount = 0; 
+let cycleCount = 0;
 let timeLeft = Config.GAME_DURATION;
 let gameActive = false;
 
@@ -142,7 +142,7 @@ function handleAIExchange(id) {
 setInterval(() => {
     if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
-    
+
     // 时间到，判定平局或结束
     if (timeLeft <= 0) {
         gameActive = false;
@@ -163,7 +163,7 @@ setInterval(() => {
     if (currentBeat === 4) {
         cycleCount++;
         if (cycleCount % Config.ITEM_SPAWN_INTERVAL === 0) spawnItem();
-        
+
         // --- 防御的プログラミング: intent の構造を保証する ---
         const intents = {};
         for (let id in players) {
@@ -178,7 +178,7 @@ setInterval(() => {
                 intents[id] = { type: 'none', dir: 'up', power: 1 };
             }
         }
-        
+
         const result = Engine.resolveActions(players, intents, items);
         players = result.players;
         items = result.items;
@@ -199,13 +199,13 @@ setInterval(() => {
                             p.mission.currentCount += ev.amount;
                             console.log(`[Mission Progress] ${p.role}: ${p.mission.currentCount} / ${p.mission.targetCount} (${ev.missionType})`);
 
-                             if (p.mission.currentCount >= p.mission.targetCount) {
+                            if (p.mission.currentCount >= p.mission.targetCount) {
                                 p.mission.currentCount = p.mission.targetCount;
                                 p.mission.isCleared = true;
-                                
+
                                 const rType = p.mission.rewardType || 'Chips';
                                 const rVal = p.mission.rewardValue || 0;
-                                
+
                                 if (rType === 'Chips') {
                                     p.chips += rVal;
                                 } else if (rType === 'MaxStaminaBonus') {
@@ -218,7 +218,7 @@ setInterval(() => {
                                 } else if (rType === 'DefenseBonus') {
                                     p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
                                 }
-                                
+
                                 console.log(`[Mission CLEARED] ${p.role} completed mission. Reward: ${rType} x${rVal}`);
                                 // 演出イベントはここでは配列に追加して後で結合する
                                 appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
@@ -237,17 +237,17 @@ setInterval(() => {
             const p = players[id];
             if (p && (p.x < 0 || p.x >= Config.GRID_SIZE || p.y < 0 || p.y >= Config.GRID_SIZE)) {
                 if (!p.falling) {
-                    p.falling = true; 
+                    p.falling = true;
                     io.emit('sync_state', { players });
-                    
+
                     // 1500ms 後の判定判定時にプレイヤーがまだ存在するか再確認する（防御的プログラミング）
                     setTimeout(() => {
                         if (!players[id]) return; // 判定前に切断された場合は処理を中断
-                        
+
                         gameActive = false;
                         const loserId = id;
                         const winnerId = Object.keys(players).find(oid => oid !== loserId);
-                        
+
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
                             handleRoundConcluded(winnerId, loserId);
@@ -291,7 +291,7 @@ function handleAIDecision(id) {
     const canAllIn = me.chips >= 9;
     const canRaise = me.chips >= 5;
     const canSmall = me.chips >= 3;
-    const canMove  = me.chips >= 1;
+    const canMove = me.chips >= 1;
     const staminaAdvantage = me.stamina - opponent.stamina;
 
     // --- 附近道具扫描：找离我最近的道具 ---
@@ -311,10 +311,10 @@ function handleAIDecision(id) {
 
     // --- 对手边缘分析：哪一侧离平台边界最近，就是最理想的推出方向 ---
     const GS = Config.GRID_SIZE;
-    const distLeft  = opponent.x;
+    const distLeft = opponent.x;
     const distRight = GS - 1 - opponent.x;
-    const distUp    = opponent.y;
-    const distDown  = GS - 1 - opponent.y;
+    const distUp = opponent.y;
+    const distDown = GS - 1 - opponent.y;
     const minEdge = Math.min(distLeft, distRight, distUp, distDown);
     // 对手离某条边的最短距离，决定最佳推出方向
     let killDir = 'left';
@@ -324,10 +324,10 @@ function handleAIDecision(id) {
     else killDir = 'left';
     // 要把对手推向 killDir，AI 需要站在对手的反方向
     const idealSpot = { x: opponent.x, y: opponent.y };
-    if (killDir === 'left')  idealSpot.x = opponent.x + 1;
+    if (killDir === 'left') idealSpot.x = opponent.x + 1;
     else if (killDir === 'right') idealSpot.x = opponent.x - 1;
-    else if (killDir === 'up')    idealSpot.y = opponent.y + 1;
-    else if (killDir === 'down')  idealSpot.y = opponent.y - 1;
+    else if (killDir === 'up') idealSpot.y = opponent.y + 1;
+    else if (killDir === 'down') idealSpot.y = opponent.y - 1;
 
     // --- 1. 紧贴对手（dist === 1）---
     if (dist === 1) {
@@ -475,10 +475,10 @@ io.on('connection', (socket) => {
     const existingPlayers = Object.values(players);
     const hasP1 = existingPlayers.some(p => p.role === 'P1');
     const role = hasP1 ? 'P2' : 'P1';
-    
+
     const isP1 = role === 'P1';
-    players[socket.id] = { 
-        id: socket.id, role: role, x: isP1 ? 1 : 6, y: isP1 ? 6 : 1, 
+    players[socket.id] = {
+        id: socket.id, role: role, x: isP1 ? 1 : 6, y: isP1 ? 6 : 1,
         intent: null, ready: false, exchanged: false, score: 0,
         money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
         isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
@@ -500,7 +500,7 @@ io.on('connection', (socket) => {
             defenseReductionBonus: 0.0
         }
     };
-    
+
     console.log(`[Server] Player joined: ${socket.id} as ${role}`);
     socket.emit('init', { id: socket.id, players, gridSize: Config.GRID_SIZE });
     io.emit('sync_state', { players });
@@ -512,21 +512,21 @@ io.on('connection', (socket) => {
             // 接管模式：将当前玩家标记为 AI
             p.isAI = !!(data && data.isAI);
             if (p.isAI) p.personality = ['Aggressive', 'Balanced', 'Conservative'][Math.floor(Math.random() * 3)];
-            
+
             // --- クライアントからアップロードされたキャラクターデータをクランプして保持する ---
             if (data && data.charaData) {
                 const chara = data.charaData;
-                
+
                 // 定力上限のクランプ
                 const maxStaminaLimit = (Config.LIMITS && Config.LIMITS.MAX_STAMINA_LIMIT) || 8;
                 p.maxStamina = Math.min(maxStaminaLimit, Math.max(3, parseInt(chara.maxStamina) || 5));
-                
+
                 // 初期資金・初期チップ・プッシュ力・移動速度のバリデーションとクランプ
                 const moneyLimit = 20000;
                 const chipsLimit = 15;
                 p.initMoney = Math.min(moneyLimit, Math.max(100, parseInt(chara.initMoney) || Config.INITIAL_MONEY));
                 p.initChips = Math.min(chipsLimit, Math.max(0, parseInt(chara.initChips) || Config.INITIAL_CHIPS));
-                
+
                 const pushLimit = 3;
                 const speedLimit = 3;
                 p.basePushPower = Math.min(pushLimit, Math.max(-2, parseInt(chara.pushPower) || 0));
@@ -542,12 +542,12 @@ io.on('connection', (socket) => {
                 };
 
                 p.chipCosts = {
-                    move:    parseCosts(chara.moveCost, Config.CHIP_COST_BY_POWER.move),
-                    push:    parseCosts(chara.pushCost, Config.CHIP_COST_BY_POWER.push),
-                    attack:  parseCosts(chara.attackCost, Config.CHIP_COST_BY_POWER.attack),
+                    move: parseCosts(chara.moveCost, Config.CHIP_COST_BY_POWER.move),
+                    push: parseCosts(chara.pushCost, Config.CHIP_COST_BY_POWER.push),
+                    attack: parseCosts(chara.attackCost, Config.CHIP_COST_BY_POWER.attack),
                     defense: parseCosts(chara.defenseCost, Config.CHIP_COST_BY_POWER.defense),
-                    skill:   parseCosts(chara.skillCost, Config.CHIP_COST_BY_POWER.skill),
-                    rest:    parseCosts(chara.restCost, Config.CHIP_COST_BY_POWER.rest)
+                    skill: parseCosts(chara.skillCost, Config.CHIP_COST_BY_POWER.skill),
+                    rest: parseCosts(chara.restCost, Config.CHIP_COST_BY_POWER.rest)
                 };
 
                 // スキルパラメータのクランプ
@@ -559,7 +559,7 @@ io.on('connection', (socket) => {
                 };
                 p.charaName = chara.name || 'Unknown';
             }
-            
+
             console.log(`[Server] Player ${p.role} is ready (AI: ${p.isAI}, Chara: ${p.charaName}, Stamina: ${p.maxStamina})`);
 
             const pList = Object.values(players);
@@ -694,14 +694,14 @@ io.on('connection', (socket) => {
     });
 
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
-    socket.on('disconnect', () => { 
+    socket.on('disconnect', () => {
         console.log(`[Server] Player left: ${socket.id}`);
         // 切断者がファイナルレイズの当事者ならフローを中断する。
         if (socket.id === finalRaiseProposerId || socket.id === finalRaiseResponderId) {
             cancelFinalRaise('disconnect');
         }
-        delete players[socket.id]; 
-        io.emit('player_left', socket.id); 
+        delete players[socket.id];
+        io.emit('player_left', socket.id);
         io.emit('sync_state', { players });
     });
 });
@@ -767,13 +767,13 @@ function checkAllBuffsSelected() {
                 changed = true;
             }
         });
-        
+
         if (changed) io.emit('sync_state', { players });
 
         // 如果全员（包括 AI）都选好了，开始等待ミッション選択
         if (pList.every(pl => pl.buffReady)) {
             console.log('[Server] All players selected buffs. Waiting for mission selections...');
-            
+
             // AIがランダムにミッション選択
             let changed = false;
             pList.forEach(pl => {
@@ -784,13 +784,13 @@ function checkAllBuffsSelected() {
                     }
                 }
             });
-            
+
             if (changed) io.emit('sync_state', { players });
-            
+
             // ミッション選択フェーズの制限時間タイマーを設定
             if (missionTimer) clearTimeout(missionTimer);
             missionTimer = setTimeout(autoMissionTimedOut, MISSION_PHASE_MS);
-            
+
             // 全員がミッション選択完了したか確認
             setTimeout(checkAllMissionsSelected, 1500);
         }
@@ -799,24 +799,24 @@ function checkAllBuffsSelected() {
 
 // AIがミッションをランダムに選択（将来的に重み付けする可能性を考慮して関数化）
 function selectRandomMissionForAI(player) {
-	if (player.availableMissions && player.availableMissions.length > 0) {
-		const randomIndex = Math.floor(Math.random() * player.availableMissions.length);
-		player.mission = JSON.parse(JSON.stringify(player.availableMissions[randomIndex]));
-		return true;
-	}
-	return false;
+    if (player.availableMissions && player.availableMissions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * player.availableMissions.length);
+        player.mission = JSON.parse(JSON.stringify(player.availableMissions[randomIndex]));
+        return true;
+    }
+    return false;
 }
 
 function checkAllMissionsSelected() {
     const pList = Object.values(players);
     if (pList.length < 2) return; // プレイヤーが揃っていない場合は開始しない
-    
+
     // 全員がミッション選択済み（またはAI）か確認
     if (pList.every(pl => pl.mission !== null && pl.mission !== undefined)) {
         // 全員がミッション選択完了
         if (missionTimer) { clearTimeout(missionTimer); missionTimer = null; }
         console.log('[Server] All players selected missions. Starting match countdown...');
-        
+
         // カード選択フェーズを抜けるので制限時間タイマーを止める。
         if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
         io.emit('start_match_countdown');
@@ -828,7 +828,7 @@ function checkAllMissionsSelected() {
 function autoMissionTimedOut() {
     missionTimer = null;
     let changed = false;
-    
+
     for (let id in players) {
         const p = players[id];
         // ミッション未選択のプレイヤーに最初の候補を自動割当
@@ -838,7 +838,7 @@ function autoMissionTimedOut() {
             changed = true;
         }
     }
-    
+
     if (changed) io.emit('sync_state', { players });
     checkAllMissionsSelected();
 }
@@ -1040,10 +1040,10 @@ function resetMatchState(isMatchStart = false) {
     finalRaiseResponderId = null;
     if (lobbyCountdownTimer) { clearTimeout(lobbyCountdownTimer); lobbyCountdownTimer = null; }
 
-    for (let id in players) { 
+    for (let id in players) {
         const p = players[id];
         p.score = 0;
-        
+
         if (isMatchStart) {
             p.money = p.initMoney !== undefined ? p.initMoney : Config.INITIAL_MONEY;
             p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
@@ -1060,14 +1060,14 @@ function resetMatchState(isMatchStart = false) {
             p.initMoney = Config.INITIAL_MONEY;
             p.initChips = Config.INITIAL_CHIPS;
         }
-        
+
         p.mission = null;
         p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
         p.roundReady = false; p.intent = null;
         // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
         // 前回の ready / 入室状態が残らないようにする。
         p.ready = false; p.isAI = false; p.inLobby = false;
-        
+
         // スキル関連とステータス補正（Modifiers）の初期化
         p.modifiers = {
             maxStaminaBonus: 0,
@@ -1076,8 +1076,8 @@ function resetMatchState(isMatchStart = false) {
             chipCostMultiplier: 1.0,
             defenseReductionBonus: 0.0
         };
-        
-        resetPlayerPos(id); 
+
+        resetPlayerPos(id);
     }
 }
 
@@ -1090,10 +1090,10 @@ function resetMatch() {
 function generateMissions() {
     const types = [0, 1, 2, 4]; // Move:0, Push:1, Defense:2, GainChip:4
     const missions = [];
-    
+
     // 基本的な3種類からランダムに選ぶ（重複なし）
     const shuffled = types.slice().sort(() => 0.5 - Math.random());
-    
+
     for (let i = 0; i < 3; i++) {
         const type = shuffled[i];
         let targetCount = 0;
@@ -1126,6 +1126,8 @@ function generateMissions() {
         let rewardType = 'Chips';
         let rewardValue = baseChipsReward;
 
+        // 現状は1/2でチップorステータスだが
+        // 将来的に選択したリスクに応じてここが変わる形となる。
         if (Math.random() < 0.5) {
             const statusRewards = ['MaxStaminaBonus', 'MoveSpeedBonus', 'PushPowerBonus', 'DefenseBonus'];
             rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
