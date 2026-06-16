@@ -22,7 +22,7 @@ const Engine = {
             const power = Math.max(1, Math.min(3, intent.power || 1));
 
             // 筹码消耗：按 power 查表
-            const costTable = Config.CHIP_COST_BY_POWER[intent.type];
+            const costTable = (p.chipCosts && p.chipCosts[intent.type]) || Config.CHIP_COST_BY_POWER[intent.type];
             let chipCost = costTable ? costTable[power - 1] : 0;
             
             // スキルによるコスト計算フックの適用
@@ -51,15 +51,17 @@ const Engine = {
 
             // 计算预想目标：push 自己前进 1 格；move 前进 power 格（遇障碍/越界会在后面限制）
             if (intent.type === 'push') {
+                const basePush = p.basePushPower || 0;
                 const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-                const finalPushDist = Math.max(1, 1 + pushBonus);
+                const finalPushDist = Math.max(1, power + basePush + pushBonus);
                 if (intent.dir === 'up') p.targetY -= finalPushDist;
                 else if (intent.dir === 'down') p.targetY += finalPushDist;
                 else if (intent.dir === 'left') p.targetX -= finalPushDist;
                 else if (intent.dir === 'right') p.targetX += finalPushDist;
             } else if (intent.type === 'move') {
+                const baseSpeed = p.baseMoveSpeed || 0;
                 const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
-                const finalPower = Math.max(1, power + speedBonus);
+                const finalPower = Math.max(1, power + baseSpeed + speedBonus);
                 if (intent.dir === 'up') p.targetY -= finalPower;
                 else if (intent.dir === 'down') p.targetY += finalPower;
                 else if (intent.dir === 'left') p.targetX -= finalPower;
@@ -76,8 +78,9 @@ const Engine = {
             if (intent.type !== 'move') return;
             const other = p.id === p1Id ? p2 : p1;
             const power = Math.max(1, Math.min(3, intent.power || 1));
+            const baseSpeed = p.baseMoveSpeed || 0;
             const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
-            const finalPower = Math.max(1, power + speedBonus);
+            const finalPower = Math.max(1, power + baseSpeed + speedBonus);
             // 从 prev 出发逐格推进，遇到对方（用其 prev 位置判定，避免交错冲突）或越界则停止
             let cx = p.prevX, cy = p.prevY;
             let dx = 0, dy = 0;
@@ -102,16 +105,22 @@ const Engine = {
         const isTargetConflict = (p1.targetX === p2.targetX && p1.targetY === p2.targetY);
         const isHeadOn = (p1.targetX === p2.prevX && p1.targetY === p2.prevY && p2.targetX === p1.prevX && p2.targetY === p1.prevY);
 
-        // 拳力：push 的档位 1/2/3 直接对应拳力；非 push 为 0
-        const getPF = (intent) => intent.type === 'push' ? Math.max(1, Math.min(3, intent.power || 1)) : 0;
+        // 拳力：push の档位 1/2/3 直接对应拳力；非 push 为 0
+        const getPF = (p, intent) => {
+            if (intent.type !== 'push') return 0;
+            const power = Math.max(1, Math.min(3, intent.power || 1));
+            const basePush = p.basePushPower || 0;
+            const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+            return power + basePush + pushBonus;
+        };
 
         if (isTargetConflict) {
             const p1Moved = (p1.targetX !== p1.prevX || p1.targetY !== p1.prevY);
             const p2Moved = (p2.targetX !== p2.prevX || p2.targetY !== p2.prevY);
 
             if (p1Moved && p2Moved) {
-                const pf1 = getPF(i1);
-                const pf2 = getPF(i2);
+                const pf1 = getPF(p1, i1);
+                const pf2 = getPF(p2, i2);
 
                 if (pf1 > 0 && pf2 > 0) {
                     if (pf1 === pf2 && Math.abs(p1.priority - p2.priority) <= 1) {
@@ -154,8 +163,8 @@ const Engine = {
             }
         }
         else if (isHeadOn) {
-            const pf1 = getPF(i1);
-            const pf2 = getPF(i2);
+            const pf1 = getPF(p1, i1);
+            const pf2 = getPF(p2, i2);
 
             if (pf1 > 0 && pf2 > 0) {
                 if (pf1 === pf2 && Math.abs(p1.priority - p2.priority) <= 1) {
@@ -213,13 +222,14 @@ const Engine = {
             // 严格邻位判定：只有起始相邻，动作才生效
             if (intent.type === 'push' && startDist === 1) {
                 events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p.id, dir: intent.dir, power: intent.power, x: p.prevX, y: p.prevY });
+                const basePush = p.basePushPower || 0;
                 const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-                let finalDist = power + pushBonus;
+                let finalDist = power + basePush + pushBonus;
                 // 高风险攻击方：power=3 时推距 +1
                 if (p.selectedBuff === 'high_risk' && power === 3) finalDist += 1;
                 const tIntent = intents[target.id] || { type: 'none' };
                 if (tIntent.type === 'push' && tIntent.dir !== intent.dir) {
-                    const tPower = Math.max(1, Math.min(3, tIntent.power || 1));
+                    const tPower = getPF(target, tIntent);
                     finalDist = Math.max(0, finalDist - tPower);
                 }
                 if (tIntent.type === 'defense') finalDist = 0;

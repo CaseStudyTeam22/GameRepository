@@ -88,6 +88,15 @@ namespace GamblingAction.Domain
 			{
 				Name = "Normal",
 				MaxStamina = 5,
+				InitMoney = 10000,
+				InitChips = 0,
+				PushPower = 0,
+				MoveSpeed = 0,
+				MoveCost = new[] { 1, 3, 5 },
+				PushCost = new[] { 3, 5, 9 },
+				AttackCost = new[] { 3, 5, 9 },
+				DefenseCost = new[] { 2, 2, 2 },
+				SkillCost = new[] { 3, 5, 9 },
 				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
 			};
 
@@ -95,19 +104,72 @@ namespace GamblingAction.Domain
 			{
 				charaData.Name = "Doctor";
 				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				// キャラ別に発動コストを変更したい場合はこれをいじってね
+				// クライアント側の挙動はちゃんと確認できたけど、サーバー側でちゃんと動いてるかはわからんね。多分大丈夫だけど。
+				charaData.MoveCost = new[] { 3, 6, 9 };
+				//charaData.PushCost = new[] { 3, 5, 9 },
+				//charaData.AttackCost = new[] { 3, 5, 9 },
+				//charaData.DefenseCost = new[] { 2, 2, 2 },
+				charaData.SkillCost = new[] { 3, 3, 3 }; // スキルコスト3固定
 				charaData.Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 3 };
 			}
 			else if (m_SelectedCharaIndex == 2)
 			{
 				charaData.Name = "DoubleEdge";
 				charaData.MaxStamina = 5;
+				charaData.InitMoney = 8000; // 初期資金が少なめ
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				// キャラ別に発動コストを変更したい場合はこれをいじってね
+				//charaData.MoveCost = new[] { 1, 3, 5 };
+				//charaData.PushCost = new[] { 3, 5, 9 },
+				//charaData.AttackCost = new[] { 3, 5, 9 },
+				//charaData.DefenseCost = new[] { 2, 2, 2 },
+				charaData.SkillCost = new[] { 0, 0, 0 }; // スキルコスト0
 				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
 			}
 			else if (m_SelectedCharaIndex == 3)
 			{
 				charaData.Name = "Fighter";
 				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				// キャラ別に発動コストを変更したい場合はこれをいじってね
+				//charaData.MoveCost = new[] { 1, 3, 5 };
+				//charaData.PushCost = new[] { 3, 5, 9 },
+				//charaData.AttackCost = new[] { 3, 5, 9 },
+				//charaData.DefenseCost = new[] { 2, 2, 2 },
+				charaData.SkillCost = new[] { 3, 3, 3 };
 				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
+
+				// スプレッドシートアセットからロードを試みる
+				var stats = Resources.Load<FighterStatsData>("FighterStatsData");
+				if (stats != null)
+				{
+					int staminaVal = stats.GetInt("スタミナ（体幹）");
+					int moneyVal = stats.GetInt("資金");
+					int chipsVal = stats.GetInt("チップ");
+					int chargeVal = stats.GetInt("突進"); // 突進＝プッシュ力
+
+					if (staminaVal > 0) charaData.MaxStamina = staminaVal;
+					if (moneyVal > 0) charaData.InitMoney = moneyVal;
+					if (chipsVal > 0) charaData.InitChips = chipsVal;
+					if (chargeVal > 0) charaData.PushPower = chargeVal;
+
+					string charaName = stats.GetString("キャラクター名");
+					if (!string.IsNullOrEmpty(charaName)) charaData.Name = charaName;
+				}
+				else
+				{
+					Debug.LogWarning("[GameState] FighterStatsData asset not found, using default Fighter settings.");
+				}
 			}
 
 			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage 
@@ -350,19 +412,18 @@ namespace GamblingAction.Domain
 		{
 			if (player == null) return;
 
-			// スタミナの補正計算
-			int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
-
-			// 現在との差分を計算
-			int diff = modifiedStamina - player.Stamina;
-			player.MaxStamina += diff; // 最大値更新
-			
-			if (diff < 0 && player.Stamina > player.MaxStamina)
+			if (player.Modifiers != null)
 			{
-				player.Stamina = player.MaxStamina;
+				Debug.Log($"[GameState] PlayerStats Refreshed via Server Modifiers: {player.Id}, " +
+				          $"MaxStamina={player.MaxStamina}, " +
+				          $"MaxStaminaBonus={player.Modifiers.MaxStaminaBonus}, " +
+				          $"MoveSpeedBonus={player.Modifiers.MoveSpeedBonus}, " +
+				          $"PushPowerBonus={player.Modifiers.PushPowerBonus}");
 			}
-			
-			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
+			else
+			{
+				Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
+			}
 		}
 
 		private void SetPhase(EGamePhase phase)

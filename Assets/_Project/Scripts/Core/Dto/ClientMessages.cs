@@ -13,6 +13,18 @@ namespace GamblingAction.Core.Dto
 	{
 		[JsonProperty("name")] public string Name;
 		[JsonProperty("maxStamina")] public int MaxStamina;
+		[JsonProperty("initMoney")] public int InitMoney;
+		[JsonProperty("initChips")] public int InitChips;
+		[JsonProperty("pushPower")] public int PushPower;
+		[JsonProperty("moveSpeed")] public int MoveSpeed;
+
+		[JsonProperty("moveCost")] public int[] MoveCost;
+		[JsonProperty("pushCost")] public int[] PushCost;
+		[JsonProperty("attackCost")] public int[] AttackCost;
+		[JsonProperty("defenseCost")] public int[] DefenseCost;
+		[JsonProperty("skillCost")] public int[] SkillCost;
+		[JsonProperty("restCost")] public int[] RestCost;
+
 		[JsonProperty("skills")] public CharaSkillDataMessage Skills;
 	}
 

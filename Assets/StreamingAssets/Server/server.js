@@ -68,7 +68,7 @@ function resetPlayerPos(id) {
     const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
     const bonus = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
     p.stamina = maxStamina + bonus;
-    p.falling = false; p.intent = null; p.chips = Config.INITIAL_CHIPS;
+    p.falling = false; p.intent = null; p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
 }
 
@@ -199,11 +199,27 @@ setInterval(() => {
                             p.mission.currentCount += ev.amount;
                             console.log(`[Mission Progress] ${p.role}: ${p.mission.currentCount} / ${p.mission.targetCount} (${ev.missionType})`);
 
-                            if (p.mission.currentCount >= p.mission.targetCount) {
+                             if (p.mission.currentCount >= p.mission.targetCount) {
                                 p.mission.currentCount = p.mission.targetCount;
                                 p.mission.isCleared = true;
-                                p.chips += (p.mission.rewardValue || 0);
-                                console.log(`[Mission CLEARED] ${p.role} completed mission.`);
+                                
+                                const rType = p.mission.rewardType || 'Chips';
+                                const rVal = p.mission.rewardValue || 0;
+                                
+                                if (rType === 'Chips') {
+                                    p.chips += rVal;
+                                } else if (rType === 'MaxStaminaBonus') {
+                                    p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + rVal;
+                                    p.stamina += rVal; // Also increase current stamina
+                                } else if (rType === 'MoveSpeedBonus') {
+                                    p.modifiers.moveSpeedBonus = (p.modifiers.moveSpeedBonus || 0) + rVal;
+                                } else if (rType === 'PushPowerBonus') {
+                                    p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
+                                } else if (rType === 'DefenseBonus') {
+                                    p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
+                                }
+                                
+                                console.log(`[Mission CLEARED] ${p.role} completed mission. Reward: ${rType} x${rVal}`);
                                 // 演出イベントはここでは配列に追加して後で結合する
                                 appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                             }
@@ -470,6 +486,11 @@ io.on('connection', (socket) => {
         charaIndex: 0,
         charaName: 'Normal',
         maxStamina: Config.MAX_STAMINA,
+        initMoney: Config.INITIAL_MONEY,
+        initChips: Config.INITIAL_CHIPS,
+        basePushPower: 0,
+        baseMoveSpeed: 0,
+        chipCosts: JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER)),
         skillData: null,
         modifiers: {
             maxStaminaBonus: 0,
@@ -500,9 +521,37 @@ io.on('connection', (socket) => {
                 const maxStaminaLimit = (Config.LIMITS && Config.LIMITS.MAX_STAMINA_LIMIT) || 8;
                 p.maxStamina = Math.min(maxStaminaLimit, Math.max(3, parseInt(chara.maxStamina) || 5));
                 
+                // 初期資金・初期チップ・プッシュ力・移動速度のバリデーションとクランプ
+                const moneyLimit = 20000;
+                const chipsLimit = 15;
+                p.initMoney = Math.min(moneyLimit, Math.max(100, parseInt(chara.initMoney) || Config.INITIAL_MONEY));
+                p.initChips = Math.min(chipsLimit, Math.max(0, parseInt(chara.initChips) || Config.INITIAL_CHIPS));
+                
+                const pushLimit = 3;
+                const speedLimit = 3;
+                p.basePushPower = Math.min(pushLimit, Math.max(-2, parseInt(chara.pushPower) || 0));
+                p.baseMoveSpeed = Math.min(speedLimit, Math.max(-2, parseInt(chara.moveSpeed) || 0));
+
+                // 各アクションごとのチップ消費コストテーブルのクランプ
+                const costLimit = (Config.LIMITS && Config.LIMITS.SKILL_CHIP_COST_LIMIT) || 15;
+                const parseCosts = (costArr, defaultCosts) => {
+                    if (Array.isArray(costArr) && costArr.length === 3) {
+                        return costArr.map(c => Math.min(costLimit, Math.max(0, parseInt(c) || 0)));
+                    }
+                    return JSON.parse(JSON.stringify(defaultCosts));
+                };
+
+                p.chipCosts = {
+                    move:    parseCosts(chara.moveCost, Config.CHIP_COST_BY_POWER.move),
+                    push:    parseCosts(chara.pushCost, Config.CHIP_COST_BY_POWER.push),
+                    attack:  parseCosts(chara.attackCost, Config.CHIP_COST_BY_POWER.attack),
+                    defense: parseCosts(chara.defenseCost, Config.CHIP_COST_BY_POWER.defense),
+                    skill:   parseCosts(chara.skillCost, Config.CHIP_COST_BY_POWER.skill),
+                    rest:    parseCosts(chara.restCost, Config.CHIP_COST_BY_POWER.rest)
+                };
+
                 // スキルパラメータのクランプ
                 const recLimit = (Config.LIMITS && Config.LIMITS.SKILL_STAMINA_REC_LIMIT) || 3;
-                const costLimit = (Config.LIMITS && Config.LIMITS.SKILL_CHIP_COST_LIMIT) || 15;
                 p.skillData = {
                     id: chara.skills?.id || null,
                     staminaRec: Math.min(recLimit, parseInt(chara.skills?.staminaRec) || 0),
@@ -974,7 +1023,7 @@ function startFinalDuel() {
 // 試合中の数値・進行状態を初期化する（プレイヤー数値、ファイナルレイズ、対局フラグ）。
 // Lobby 関連フラグ（ready / inLobby / isAI / roundReady / buffReady）もここで初期化する。
 // 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
-function resetMatchState() {
+function resetMatchState(isMatchStart = false) {
     gameActive = false; items = []; currentBeat = 0;
 
     // 全ての進行管理タイマーをリセット
@@ -993,7 +1042,25 @@ function resetMatchState() {
 
     for (let id in players) { 
         const p = players[id];
-        p.score = 0; p.money = Config.INITIAL_MONEY; p.chips = Config.INITIAL_CHIPS;
+        p.score = 0;
+        
+        if (isMatchStart) {
+            p.money = p.initMoney !== undefined ? p.initMoney : Config.INITIAL_MONEY;
+            p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
+        } else {
+            p.money = Config.INITIAL_MONEY;
+            p.chips = Config.INITIAL_CHIPS;
+            p.charaIndex = 0;
+            p.charaName = 'Normal';
+            p.maxStamina = Config.MAX_STAMINA;
+            p.basePushPower = 0;
+            p.baseMoveSpeed = 0;
+            p.chipCosts = JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER));
+            p.skillData = null;
+            p.initMoney = Config.INITIAL_MONEY;
+            p.initChips = Config.INITIAL_CHIPS;
+        }
+        
         p.mission = null;
         p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
         p.roundReady = false; p.intent = null;
@@ -1002,8 +1069,6 @@ function resetMatchState() {
         p.ready = false; p.isAI = false; p.inLobby = false;
         
         // スキル関連とステータス補正（Modifiers）の初期化
-        p.maxStamina = Config.MAX_STAMINA;
-        p.skillData = null;
         p.modifiers = {
             maxStaminaBonus: 0,
             pushPowerBonus: 0,
@@ -1017,7 +1082,7 @@ function resetMatchState() {
 }
 
 function resetMatch() {
-    resetMatchState();
+    resetMatchState(true);
     // 直接チップ交換へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
     beginRound();
 }
@@ -1032,30 +1097,39 @@ function generateMissions() {
     for (let i = 0; i < 3; i++) {
         const type = shuffled[i];
         let targetCount = 0;
-        let rewardValue = 0;
+        let baseChipsReward = 0;
         let description = "";
 
         switch (type) {
             case 0: // Move
                 targetCount = 5 + Math.floor(Math.random() * 6); // 5-10 cells
-                rewardValue = targetCount * 2; // チップ報酬
+                baseChipsReward = targetCount * 2; // チップ報酬
                 description = `フィールドを ${targetCount} マス移動しよう`;
                 break;
             case 1: // Push
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 pushes
-                rewardValue = targetCount * 5;
+                baseChipsReward = targetCount * 5;
                 description = `相手を計 ${targetCount} 回プッシュしよう`;
                 break;
             case 2: // Defense
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 defenses
-                rewardValue = targetCount * 4;
+                baseChipsReward = targetCount * 4;
                 description = `防御を計 ${targetCount} 回使用しよう`;
                 break;
             case 4: // GainChip
                 targetCount = 2 + Math.floor(Math.random() * 4); // 2-5 chips
-                rewardValue = Math.floor(targetCount * 3);
+                baseChipsReward = Math.floor(targetCount * 3);
                 description = `チップを計 ${targetCount} 回獲得しよう`;
                 break;
+        }
+
+        let rewardType = 'Chips';
+        let rewardValue = baseChipsReward;
+
+        if (Math.random() < 0.5) {
+            const statusRewards = ['MaxStaminaBonus', 'MoveSpeedBonus', 'PushPowerBonus', 'DefenseBonus'];
+            rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
+            rewardValue = 1; // 補正値は基本1
         }
 
         missions.push({
@@ -1064,6 +1138,7 @@ function generateMissions() {
             description: description,
             targetCount: targetCount,
             currentCount: 0,
+            rewardType: rewardType,
             rewardValue: rewardValue,
             isCleared: false
         });
