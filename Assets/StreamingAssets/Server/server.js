@@ -650,6 +650,8 @@ io.on('connection', (socket) => {
         if (expectedChips < cost) return;
         p.selectedBuff = data.buffId;
         p.buffReady = true;
+        // リスク決定時にミッションを生成する
+        p.availableMissions = generateMissions(p.selectedBuff);
         io.emit('sync_state', { players });
         checkAllBuffsSelected();
     });
@@ -712,9 +714,9 @@ function checkAllExchanged() {
         // チップ交換フェーズを抜けるので制限時間タイマーを止める。
         if (exchangeTimer) { clearTimeout(exchangeTimer); exchangeTimer = null; }
 
-        // 各プレイヤーにミッションの選択肢を生成
+        // 各プレイヤーのミッション状態を初期化（生成はリスク選択確定時に行う）
         pList.forEach(p => {
-            p.availableMissions = generateMissions();
+            p.availableMissions = [];
             p.mission = null;
         });
 
@@ -742,6 +744,8 @@ function autoBuffTimedOut() {
         else if (expectedChips >= 5) pick = 'low_risk';
         if (pick) p.selectedBuff = pick;
         p.buffReady = true;
+        // リスク決定時にミッションを生成する
+        p.availableMissions = generateMissions(p.selectedBuff);
         changed = true;
     }
     if (changed) io.emit('sync_state', { players });
@@ -764,6 +768,8 @@ function checkAllBuffsSelected() {
                 else if (expectedChips >= 5) pick = 'low_risk';
                 if (pick) pl.selectedBuff = pick;
                 pl.buffReady = true;
+                // リスク決定時にミッションを生成する
+                pl.availableMissions = generateMissions(pl.selectedBuff);
                 changed = true;
             }
         });
@@ -1087,7 +1093,7 @@ function resetMatch() {
     beginRound();
 }
 
-function generateMissions() {
+function generateMissions(selectedBuff) {
     const types = [0, 1, 2, 4]; // Move:0, Push:1, Defense:2, GainChip:4
     const missions = [];
 
@@ -1126,12 +1132,20 @@ function generateMissions() {
         let rewardType = 'Chips';
         let rewardValue = baseChipsReward;
 
-        // 現状は1/2でチップorステータスだが
-        // 将来的に選択したリスクに応じてここが変わる形となる。
-        if (Math.random() < 0.5) {
+        // 選択されたリスク（バフ）に応じて報酬を決定する
+        if (selectedBuff === 'high_risk') {
+            // High Risk: ステータス報酬確定
             const statusRewards = ['MaxStaminaBonus', 'MoveSpeedBonus', 'PushPowerBonus', 'DefenseBonus'];
             rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
             rewardValue = 1; // 補正値は基本1
+        } else if (selectedBuff === 'low_risk') {
+            // Low Risk: チップ報酬確定
+            rewardType = 'Chips';
+            rewardValue = baseChipsReward;
+        } else {
+            // Skip または未設定（フォールバック）: チップ報酬とする
+            rewardType = 'Chips';
+            rewardValue = baseChipsReward;
         }
 
         missions.push({

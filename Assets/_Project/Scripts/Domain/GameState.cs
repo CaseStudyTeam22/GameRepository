@@ -219,32 +219,40 @@ namespace GamblingAction.Domain
 				return null;
 			}
 
-			using var req = UnityWebRequest.Get(url);
-			var operation = req.SendWebRequest();
-			while (!operation.isDone)
+			try
 			{
-				await Task.Yield();
-			}
+				using var req = UnityWebRequest.Get(url);
+				var operation = req.SendWebRequest();
+				while (!operation.isDone)
+				{
+					await Task.Yield();
+				}
 
-			if (req.result != UnityWebRequest.Result.Success)
+				if (req.result != UnityWebRequest.Result.Success)
+				{
+					Debug.LogError($"CSV読み込み失敗: {req.error} (URL: {url})");
+					return null;
+				}
+
+				var dict = new Dictionary<string, string>();
+				var lines = req.downloadHandler.text.Split('\n');
+				foreach (var line in lines)
+				{
+					var cols = line.Split(',');
+					if (cols.Length < 2) continue;
+
+					string key = cols[0].Trim();
+					string val = cols[1].Trim();
+					dict[key] = val;
+				}
+
+				return dict;
+			}
+			catch (Exception ex)
 			{
-				Debug.LogError($"CSV読み込み失敗: {req.error} (URL: {url})");
+				Debug.LogError($"CSV読み込み中に例外が発生しました: {ex.Message} (URL: {url})");
 				return null;
 			}
-
-			var dict = new Dictionary<string, string>();
-			var lines = req.downloadHandler.text.Split('\n');
-			foreach (var line in lines)
-			{
-				var cols = line.Split(',');
-				if (cols.Length < 2) continue;
-
-				string key = cols[0].Trim();
-				string val = cols[1].Trim();
-				dict[key] = val;
-			}
-
-			return dict;
 		}
 
 		private int[] ParseIntArray(string val, int[] defaultValue)
