@@ -483,6 +483,12 @@ setInterval(() => { if (gameActive && timeLeft > 0) timeLeft--; }, 1000);
 
 io.on('connection', (socket) => {
     const existingPlayers = Object.values(players);
+    // すでにプレイヤーが2名接続されている場合は、新規の接続を拒否する
+    if (existingPlayers.length >= 2) {
+        console.warn(`[Server] Rejecting connection from ${socket.id}: Server is full.`);
+        socket.disconnect(true);
+        return;
+    }
     const hasP1 = existingPlayers.some(p => p.role === 'P1');
     const role = hasP1 ? 'P2' : 'P1';
 
@@ -874,9 +880,11 @@ function startLanBroadcast() {
         try { sock.setBroadcast(true); } catch (_) { /* OS によっては失敗するが致命ではない */ }
         const send = () => {
             const ip = pickLanIPv4();
-            // 形式: <MAGIC>|<IPv4>|<TCP_PORT>|<PID>
+            const playerCount = Object.keys(players).length;
+            // 形式: <MAGIC>|<IPv4>|<TCP_PORT>|<PID>|<PLAYER_COUNT>
             // PID は自プロセス発信分の自己受信を除外するためにクライアント側で照合する。
-            const payload = `${LAN_DISCOVERY_MAGIC}|${ip}|3000|${process.pid}`;
+            // PLAYER_COUNT は接続数が満員のホストへの自動接続を避けるために送信する。
+            const payload = `${LAN_DISCOVERY_MAGIC}|${ip}|3000|${process.pid}|${playerCount}`;
             const buf = Buffer.from(payload, 'utf8');
             sock.send(buf, 0, buf.length, LAN_DISCOVERY_PORT, '255.255.255.255', (err) => {
                 if (err) console.warn('[LanDiscovery] broadcast send error:', err.message);

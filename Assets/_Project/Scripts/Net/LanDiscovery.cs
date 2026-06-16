@@ -24,7 +24,8 @@ namespace GamblingAction.Net
 		{
 			public readonly string HostIp;
 			public readonly int Port;
-			public Result(string ip, int port) { HostIp = ip; Port = port; }
+			public readonly int PlayerCount;
+			public Result(string ip, int port, int playerCount) { HostIp = ip; Port = port; PlayerCount = playerCount; }
 			public bool IsValid => !string.IsNullOrEmpty(HostIp);
 		}
 
@@ -72,11 +73,13 @@ namespace GamblingAction.Net
 					if (r.Buffer == null || r.Buffer.Length == 0) continue;
 
 					string text = Encoding.UTF8.GetString(r.Buffer);
-					if (!TryParse(text, out string ip, out int port, out int pid)) continue;
+					if (!TryParse(text, out string ip, out int port, out int pid, out int playerCount)) continue;
 					if (excludeOwnPid != 0 && pid == excludeOwnPid) continue;
+					// 満員のホスト（プレイヤーがすでに2人接続されている）は自動接続対象外とする
+					if (playerCount >= 2) continue;
 					// 念のため：パケットに書かれた IP が空なら受信元 IP を使う。
 					if (string.IsNullOrEmpty(ip)) ip = r.RemoteEndPoint.Address.ToString();
-					return new Result(ip, port);
+					return new Result(ip, port, playerCount);
 				}
 			}
 			finally
@@ -87,19 +90,31 @@ namespace GamblingAction.Net
 			return default;
 		}
 
-		// "GAMBLINGACTION|MAGIC|IP|PORT|PID" を解析する。
-		private static bool TryParse(string text, out string ip, out int port, out int pid)
+		// "GAMBLINGACTION|MAGIC|IP|PORT|PID|PLAYER_COUNT" を解析する。
+		private static bool TryParse(string text, out string ip, out int port, out int pid, out int playerCount)
 		{
-			ip = null; port = 0; pid = 0;
+			ip = null; port = 0; pid = 0; playerCount = 0;
 			if (string.IsNullOrEmpty(text)) return false;
 			if (!text.StartsWith(k_Magic, StringComparison.Ordinal)) return false;
 
-			// MAGIC 内部にも '|' を含むため、末尾 3 要素（IP / PORT / PID）から取る。
+			// MAGIC 内部にも '|' を含むため、末尾から解析する。
 			string[] parts = text.Split('|');
 			if (parts.Length < 5) return false;
-			ip = parts[parts.Length - 3];
-			if (!int.TryParse(parts[parts.Length - 2], out port)) return false;
-			if (!int.TryParse(parts[parts.Length - 1], out pid)) return false;
+
+			if (parts.Length >= 6)
+			{
+				ip = parts[parts.Length - 4];
+				if (!int.TryParse(parts[parts.Length - 3], out port)) return false;
+				if (!int.TryParse(parts[parts.Length - 2], out pid)) return false;
+				if (!int.TryParse(parts[parts.Length - 1], out playerCount)) return false;
+			}
+			else
+			{
+				ip = parts[parts.Length - 3];
+				if (!int.TryParse(parts[parts.Length - 2], out port)) return false;
+				if (!int.TryParse(parts[parts.Length - 1], out pid)) return false;
+				playerCount = 0;
+			}
 			return true;
 		}
 	}
