@@ -5,21 +5,24 @@ using UnityEngine.UI;
 namespace GamblingAction.UI
 {
 	/// <summary>
-	/// ボタン（Selectable）が選択されたときに、
+	/// ボタン（Selectable）が「選択」または「マウスホバー」されたときに、
 	/// 拡大アニメーションとふちの発光（Outline）を行うコンポーネント。
 	///
 	/// 【使い方】
-	///   選択時に強調したいボタンの GameObject にアタッチするだけ。
-	///   EventSystem.SetSelectedGameObject でフォーカスされると自動で反応する。
-	///   （マウスホバーではなく「選択」状態に反応する点に注意）
+	///   強調したいボタンの GameObject にアタッチするだけ。
+	///   - コントローラー：EventSystem.SetSelectedGameObject でフォーカスされると反応（OnSelect）
+	///   - マウス：カーソルを乗せると反応（OnPointerEnter）
 	///
 	/// 【仕組み】
-	///   - ISelectHandler   : 選択された瞬間に拡大＋発光 ON
-	///   - IDeselectHandler : 選択が外れた瞬間に元へ戻す
+	///   - ISelectHandler / IDeselectHandler   : コントローラー選択の ON/OFF
+	///   - IPointerEnterHandler / IPointerExitHandler : マウスホバーの ON/OFF
+	///   選択状態 or ホバー状態のどちらかが立っていれば強調表示する。
 	///   Outline コンポーネントが無ければ自動で追加する。
 	/// </summary>
 	[RequireComponent(typeof(RectTransform))]
-	public class ButtonFocusHighlight : MonoBehaviour, ISelectHandler, IDeselectHandler
+	public class ButtonFocusHighlight : MonoBehaviour,
+		ISelectHandler, IDeselectHandler,
+		IPointerEnterHandler, IPointerExitHandler
 	{
 		// ─────────────────────────────────────────────────────────────
 		// シリアライズフィールド
@@ -48,15 +51,22 @@ namespace GamblingAction.UI
 
 		private RectTransform m_Rect;
 		private Outline       m_Outline;
+		private Button        m_Button;
 
 		/// <summary>元のスケール（戻すとき用に保持）</summary>
 		private Vector3 m_BaseScale;
 
-		/// <summary>現在の目標スケール（選択中は拡大、非選択時は等倍）</summary>
+		/// <summary>現在の目標スケール（強調中は拡大、非強調時は等倍）</summary>
 		private Vector3 m_TargetScale;
 
-		/// <summary>選択中かどうか</summary>
+		/// <summary>コントローラーで選択中か</summary>
 		private bool m_IsSelected;
+
+		/// <summary>マウスがホバー中か</summary>
+		private bool m_IsHovered;
+
+		/// <summary>選択 or ホバーのどちらかが立っていれば強調表示する。</summary>
+		private bool IsHighlighted => m_IsSelected || m_IsHovered;
 
 		// ─────────────────────────────────────────────────────────────
 		// ライフサイクル
@@ -65,6 +75,7 @@ namespace GamblingAction.UI
 		private void Awake()
 		{
 			m_Rect      = GetComponent<RectTransform>();
+			m_Button    = GetComponent<Button>();
 			m_BaseScale = m_Rect.localScale;
 			m_TargetScale = m_BaseScale;
 
@@ -79,31 +90,64 @@ namespace GamblingAction.UI
 
 		private void OnDisable()
 		{
-			// 無効化されたとき強制的に元へ戻す（選択状態が残らないように）
-			m_IsSelected      = false;
-			m_TargetScale     = m_BaseScale;
+			// 無効化されたとき強制的に元へ戻す（強調状態が残らないように）
+			m_IsSelected   = false;
+			m_IsHovered    = false;
+			m_TargetScale  = m_BaseScale;
 			if (m_Rect != null)    m_Rect.localScale = m_BaseScale;
 			if (m_Outline != null) m_Outline.enabled = false;
 		}
 
 		// ─────────────────────────────────────────────────────────────
-		// 選択・選択解除ハンドラ
+		// 選択・選択解除ハンドラ（コントローラー）
 		// ─────────────────────────────────────────────────────────────
 
 		/// <summary>EventSystem に選択された瞬間に呼ばれる。</summary>
 		public void OnSelect(BaseEventData eventData)
 		{
-			m_IsSelected  = true;
-			m_TargetScale = m_BaseScale * m_SelectedScale;
-			if (m_Outline != null) m_Outline.enabled = true;
+			m_IsSelected = true;
+			RefreshHighlight();
 		}
 
 		/// <summary>選択が外れた瞬間に呼ばれる。</summary>
 		public void OnDeselect(BaseEventData eventData)
 		{
-			m_IsSelected  = false;
-			m_TargetScale = m_BaseScale;
-			if (m_Outline != null) m_Outline.enabled = false;
+			m_IsSelected = false;
+			RefreshHighlight();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// ホバーハンドラ（マウス）
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>マウスカーソルが乗った瞬間に呼ばれる。</summary>
+		public void OnPointerEnter(PointerEventData eventData)
+		{
+			m_IsHovered = true;
+			RefreshHighlight();
+		}
+
+		/// <summary>マウスカーソルが外れた瞬間に呼ばれる。</summary>
+		public void OnPointerExit(PointerEventData eventData)
+		{
+			m_IsHovered = false;
+			RefreshHighlight();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 強調表示の更新
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>
+		/// 選択・ホバー状態に応じて拡大目標と発光の ON/OFF を更新する。
+		/// 押せない（interactable == false）ボタンは強調しない。
+		/// </summary>
+		private void RefreshHighlight()
+		{
+			bool active = IsHighlighted && (m_Button == null || m_Button.interactable);
+
+			m_TargetScale = active ? m_BaseScale * m_SelectedScale : m_BaseScale;
+			if (m_Outline != null) m_Outline.enabled = active;
 		}
 
 		// ─────────────────────────────────────────────────────────────
@@ -119,8 +163,9 @@ namespace GamblingAction.UI
 				m_ScaleSpeed * Time.deltaTime
 			);
 
-			// 選択中はふちの色をパルス（明滅）させる
-			if (m_IsSelected && m_Outline != null && m_PulseSpeed > 0f)
+			// 強調中はふちの色をパルス（明滅）させる
+			bool active = IsHighlighted && (m_Button == null || m_Button.interactable);
+			if (active && m_Outline != null && m_PulseSpeed > 0f)
 			{
 				// 0.5〜1.0 の範囲でアルファを揺らす
 				float alpha = 0.5f + 0.5f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * m_PulseSpeed));

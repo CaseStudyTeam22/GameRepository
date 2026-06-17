@@ -145,6 +145,17 @@ namespace GamblingAction.UI
 		/// </summary>
 		private float m_SliderAccum;
 
+		/// <summary>
+		/// 直近の入力がコントローラーだったか。
+		/// コントローラー入力（スティック/B）で true、マウス移動で false。
+		/// true のときだけボタンへ EventSystem フォーカスを当てる
+		/// （マウス操作中にコントローラー選択が残って二重に光るのを防ぐ）。
+		/// </summary>
+		private bool m_ControllerActive;
+
+		/// <summary>マウス移動検知用：前フレームのマウス座標</summary>
+		private Vector3 m_LastMousePos;
+
 		// ─────────────────────────────────────────────────────────────
 		// ライフサイクル
 		// ─────────────────────────────────────────────────────────────
@@ -267,6 +278,11 @@ namespace GamblingAction.UI
 
 			Vector2 nav = m_NavigateAction.ReadValue<Vector2>();
 
+			// 直近の入力デバイスを判定する
+			// コントローラー：スティックがデッドゾーンを超えたら true
+			// マウス：座標が動いたら false（マウス操作に切り替わったとみなす）
+			DetectActiveDevice(nav);
+
 			switch (m_State.Phase)
 			{
 				case EGamePhase.Exchange:
@@ -281,6 +297,36 @@ namespace GamblingAction.UI
 						HandleBuffNavigation(nav.x);
 					break;
 			}
+		}
+
+		/// <summary>
+		/// 直近に使われた入力デバイスを判定して m_ControllerActive を更新する。
+		/// マウスが動いたらコントローラーの選択フォーカスを解除し、
+		/// マウスホバーだけが光るようにする（二重発光防止）。
+		/// </summary>
+		private void DetectActiveDevice(Vector2 nav)
+		{
+			// スティックがデッドゾーンを超えていればコントローラー操作
+			if (Mathf.Abs(nav.x) >= m_StickDeadZone || Mathf.Abs(nav.y) >= m_StickDeadZone)
+			{
+				m_ControllerActive = true;
+			}
+
+			// マウスが動いたらマウス操作に切り替える
+			Vector3 mousePos = Mouse.current != null
+				? (Vector3)Mouse.current.position.ReadValue()
+				: m_LastMousePos;
+			if ((mousePos - m_LastMousePos).sqrMagnitude > 1f)
+			{
+				if (m_ControllerActive)
+				{
+					m_ControllerActive = false;
+					// コントローラーの選択を解除して、残った発光を消す
+					if (EventSystem.current != null)
+						EventSystem.current.SetSelectedGameObject(null);
+				}
+			}
+			m_LastMousePos = mousePos;
 		}
 
 		/// <summary>ミッション選択パネルが現在アクティブかどうか。</summary>
@@ -605,14 +651,11 @@ namespace GamblingAction.UI
 						m_ExchangeAmountText.text = $"{(int)v} chips (¥{(int)v * 100})";
 				});
 
+			// マウスは 1 クリックで確定、コントローラーは B で確定（どちらも同じ本処理を呼ぶ）。
+			// マウスホバー / コントローラー選択時の拡大＋発光は ButtonFocusHighlight が担当する。
+
 			if (m_ExchangeConfirmButton != null)
-				m_ExchangeConfirmButton.onClick.AddListener(() =>
-				{
-					int amount = m_ExchangeSlider != null ? (int)m_ExchangeSlider.value : 0;
-					m_PendingExchange = amount;
-					m_State.SubmitExchange(amount);
-					m_ExchangeConfirmButton.interactable = false;
-				});
+				m_ExchangeConfirmButton.onClick.AddListener(DoExchangeConfirm);
 
 			if (m_HighRiskButton != null) m_HighRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.HighRisk));
 			if (m_LowRiskButton != null)  m_LowRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.LowRisk));
@@ -624,16 +667,32 @@ namespace GamblingAction.UI
 				{
 					int index = i;
 					if (m_MissionOptionButtons[i] == null) continue;
-					m_MissionOptionButtons[i].onClick.AddListener(() =>
-					{
-						var me = m_State.Me;
-						if (me != null && me.AvailableMissions != null && index < me.AvailableMissions.Count)
-						{
-							m_State.SubmitMission(me.AvailableMissions[index].Id);
-							SetActive(m_MissionSelectionPanel, false);
-						}
-					});
+					m_MissionOptionButtons[i].onClick.AddListener(() => DoSubmitMission(index));
 				}
+			}
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// ボタン本処理
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>換金確定の本処理。</summary>
+		private void DoExchangeConfirm()
+		{
+			int amount = m_ExchangeSlider != null ? (int)m_ExchangeSlider.value : 0;
+			m_PendingExchange = amount;
+			m_State.SubmitExchange(amount);
+			m_ExchangeConfirmButton.interactable = false;
+		}
+
+		/// <summary>ミッション選択の本処理。</summary>
+		private void DoSubmitMission(int index)
+		{
+			var me = m_State.Me;
+			if (me != null && me.AvailableMissions != null && index < me.AvailableMissions.Count)
+			{
+				m_State.SubmitMission(me.AvailableMissions[index].Id);
+				SetActive(m_MissionSelectionPanel, false);
 			}
 		}
 
@@ -695,10 +754,13 @@ namespace GamblingAction.UI
 				UpdateBuffPanelUI();
 				UpdateMissionSelectionUI();
 
-				// コントローラー用：先頭の選択可能ボタンにフォーカスを移す
+				// コントローラー用：先頭の選択可能ボタンにフォーカスを移す。
+				// マウス操作中（m_ControllerActive == false）は初期フォーカスを出さない
+				// （マウスを乗せていないのに 1 枚光るのを防ぐ）。
 				m_NavCooldownRemaining = 0f;
 				m_SelectedBuffIndex    = FindFirstSelectable(m_BuffButtons, requireActive: false);
-				FocusButton(m_BuffButtons, m_SelectedBuffIndex);
+				if (m_ControllerActive)
+					FocusButton(m_BuffButtons, m_SelectedBuffIndex);
 			}
 
 			if (phase == EGamePhase.Countdown)
@@ -835,10 +897,12 @@ namespace GamblingAction.UI
 					}
 				}
 
-				// コントローラー用：先頭の選択可能なミッションボタンにフォーカスを移す
+				// コントローラー用：先頭の選択可能なミッションボタンにフォーカスを移す。
+				// マウス操作中は初期フォーカスを出さない（マウスを乗せた 1 枚だけ光らせる）。
 				m_NavCooldownRemaining = 0f;
 				m_SelectedMissionIndex = FindFirstSelectable(m_MissionOptionButtons, requireActive: true);
-				FocusButton(m_MissionOptionButtons, m_SelectedMissionIndex);
+				if (m_ControllerActive)
+					FocusButton(m_MissionOptionButtons, m_SelectedMissionIndex);
 			}
 		}
 
