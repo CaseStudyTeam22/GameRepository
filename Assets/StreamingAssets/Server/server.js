@@ -260,6 +260,7 @@ setInterval(() => {
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
                             handleRoundConcluded(winnerId, loserId);
+                            io.emit('sync_state', { players });
                         }
                     }, 1500);
                 }
@@ -835,6 +836,25 @@ const LAN_BROADCAST_INTERVAL_MS = 1000;
 // 自機の LAN 上の IPv4 アドレスを返す。複数 NIC があれば最初の非ループバック v4 を採用する。
 function pickLanIPv4() {
     const ifaces = os.networkInterfaces();
+    // 1次フィルター: 明らかに仮想と思われるアダプターを除外して探索
+    for (const name of Object.keys(ifaces)) {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('virtual') ||
+            lowerName.includes('vbox') ||
+            lowerName.includes('vmware') ||
+            lowerName.includes('docker') ||
+            lowerName.includes('wsl') ||
+            lowerName.includes('vethernet') ||
+            lowerName.includes('loopback')) {
+            continue;
+        }
+        for (const info of ifaces[name] || []) {
+            if (info.family === 'IPv4' && !info.internal) {
+                return info.address;
+            }
+        }
+    }
+    // フォールバック: 見つからなければ名前制限なしで再探索
     for (const name of Object.keys(ifaces)) {
         for (const info of ifaces[name] || []) {
             if (info.family === 'IPv4' && !info.internal) {
@@ -844,7 +864,6 @@ function pickLanIPv4() {
     }
     return '127.0.0.1';
 }
-
 function startLanBroadcast() {
     const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
     sock.on('error', (err) => {
@@ -958,7 +977,7 @@ function beginFinalRaisePending() {
     }, Config.FINAL_RAISE_TIMEOUT_MS);
 }
 
-// ファイナルレイズの中断（拒否・タイムアウト・切断）。通常の game_over へ流す。
+// ファイナルレイズの中断（拒否・タイムアウト・切断）。通常戦 へ流す。
 function cancelFinalRaise(reason) {
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
     if (finalRaisePendingTimer) { clearTimeout(finalRaisePendingTimer); finalRaisePendingTimer = null; }
@@ -1026,9 +1045,14 @@ function resetMatchState() {
     if (missionTimer) { clearTimeout(missionTimer); missionTimer = null; }
     if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
 
+    cycleCount = 0;
+    timeLeft = Config.GAME_DURATION;
+
     isFinalDuel = false;
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
+    finalRaiseFavoredRole = null;
+    finalRaiseTurnCount = 0;
     if (lobbyCountdownTimer) { clearTimeout(lobbyCountdownTimer); lobbyCountdownTimer = null; }
 
     for (let id in players) {

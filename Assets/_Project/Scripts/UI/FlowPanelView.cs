@@ -1094,7 +1094,7 @@ namespace GamblingAction.UI
 			}
 
 			yield return new WaitForSeconds(0.8f);
-
+            
 			for (int i = 3; i >= 1; i--)
 			{
 				if (m_CountdownText != null) m_CountdownText.text = i.ToString();

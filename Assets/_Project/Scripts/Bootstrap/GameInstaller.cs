@@ -87,7 +87,8 @@ namespace GamblingAction.Bootstrap
 				m_BootstrapCts = new CancellationTokenSource();
 				m_NetworkBootstrap = new NetworkBootstrap();
 				url = await m_NetworkBootstrap.ResolveAsync(m_BootstrapCts.Token);
-				if (string.IsNullOrEmpty(url))
+                Debug.Log($"Resolved URL = {url}");
+                if (string.IsNullOrEmpty(url))
 				{
 					Debug.LogError("[GameInstaller] 接続先 URL を解決できませんでした。");
 					return;
