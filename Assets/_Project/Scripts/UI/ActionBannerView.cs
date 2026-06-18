@@ -82,6 +82,8 @@ namespace GamblingAction.UI
 
             // alpha=0 で非表示。GameObject は active 維持（コルーチンを止めないため）。
             m_CanvasGroup.alpha = 0f;
+            m_CanvasGroup.interactable = false;
+            m_CanvasGroup.blocksRaycasts = false;
             if (m_BackgroundFlash != null)
             {
                 var fc = m_BackgroundFlash.color;
