@@ -50,8 +50,9 @@ namespace GamblingAction.Domain
 		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
 		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		public event Action OnFinalRaiseStarted;
+        public event Action OnSuddenDeathStarted;
 
-		public GameState(INetClient net)
+        public GameState(INetClient net)
 		{
 			m_Net = net;
 			Subscribe();
@@ -152,8 +153,13 @@ namespace GamblingAction.Domain
 
 			return Mathf.RoundToInt(finalPower);
 		}
+        public void NotifySuddenDeathRequested()
+        {
+            // サーバーへリクエスト送信
+            m_Net.Emit("request_sudden_death",null);
+        }
 
-		private void Subscribe()
+        private void Subscribe()
 		{
 			m_Net.OnConnected += () =>
 			{
@@ -191,9 +197,11 @@ namespace GamblingAction.Domain
 			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
 			m_Net.On<FinalRaiseCanceledMessage>(ServerEvents.FinalRaiseCanceled, HandleFinalRaiseCanceled);
 			m_Net.On(ServerEvents.FinalRaiseStarted, HandleFinalRaiseStarted);
-		}
+            m_Net.On("sudden_death_started", () =>{Debug.Log("[GameState] sudden_death_started received");RaiseSuddenDeathStarted();});
 
-		private void HandleInit(InitMessage msg)
+        }
+
+        private void HandleInit(InitMessage msg)
 		{
 			MyId = msg.Id;
 			GridSize = msg.GridSize;
@@ -366,10 +374,15 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.FinalRaiseCanceled);
 			m_Net.Off(ServerEvents.FinalRaiseStarted);
 		}
-	}
+        public void RaiseSuddenDeathStarted()
+        {
+            OnSuddenDeathStarted?.Invoke();
+        }
 
-	// Modifierの拡張メソッド定義
-	public static class ModifierDomainExtensions
+    }
+
+    // Modifierの拡張メソッド定義
+    public static class ModifierDomainExtensions
 	{
 		public static float GetModifiedValue(this ModifierContainer container, float baseValue)
 		{
@@ -394,5 +407,8 @@ namespace GamblingAction.Domain
 		{
 			container.Modifiers?.Remove(tag);
 		}
+
 	}
+
+
 }

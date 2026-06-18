@@ -36,7 +36,9 @@ namespace GamblingAction.Domain
 		// 勝者がファイナルレイズを受諾するか（accept=true）拒否するかを送信。
 		void SubmitFinalRaiseRespond(bool accept);
 
-		event Action OnStateInitialized;
+        void NotifySuddenDeathRequested();
+
+        event Action OnStateInitialized;
 		event Action OnPlayersChanged;
 		event Action OnItemsChanged;
 		event Action OnBeatChanged;
@@ -61,5 +63,8 @@ namespace GamblingAction.Domain
 		event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		// 勝者が受諾し、ファイナルレイズ本番ラウンドへ入る通知。
 		event Action OnFinalRaiseStarted;
-	}
+        // サドンデス開始通知。ファイナルレイズとは別のフェーズ。
+        event Action OnSuddenDeathStarted;
+
+    }
 }
