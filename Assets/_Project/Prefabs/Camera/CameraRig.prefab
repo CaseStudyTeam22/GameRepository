@@ -124,7 +124,6 @@ Transform:
   - {fileID: 56125866173104649}
   - {fileID: 5467536171963952663}
   - {fileID: 6723479214147877984}
-  - {fileID: 2698089966983647997}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7329217021998746523
@@ -917,56 +916,3 @@ MonoBehaviour:
     DissipationDistance: 100
     PropagationSpeed: 343
   DefaultVelocity: {x: 0, y: -0.25, z: 0}
---- !u!1 &7929320348413176180
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2698089966983647997}
-  - component: {fileID: 2024430263844385777}
-  m_Layer: 0
-  m_Name: CamZoom
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2698089966983647997
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7929320348413176180}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3415367675524693313}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2024430263844385777
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7929320348413176180}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3995e8bb6bd9271468198c412d8f78c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_TargetCameras:
-  - {fileID: 5112628850122988725}
-  - {fileID: 8804455104191615043}
-  m_PullAmount: 3
-  m_PullDuration: 0.12
-  m_ReturnDuration: 0.6
-  m_PullEase: 6
-  m_ReturnEase: 3
-  m_StartDelay: 0
