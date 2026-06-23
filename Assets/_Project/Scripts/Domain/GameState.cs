@@ -14,6 +14,10 @@ namespace GamblingAction.Domain
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
 
+		// この端末を一意に識別するトークン。アプリ起動中は変わらない。
+		// 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
+		private readonly string m_Token = System.Guid.NewGuid().ToString("N");
+
 		public string MyId { get; private set; }
 		public int GridSize { get; private set; } = GamblingAction.Core.GameConfig.GridSize;
 		public IReadOnlyDictionary<string, PlayerDto> Players => m_Players;
@@ -158,6 +162,9 @@ namespace GamblingAction.Domain
 			m_Net.OnConnected += () =>
 			{
 				IsConnected = true;
+				// 接続が確立するたびに端末トークンを送る。
+				// サーバはこれを見て新規入室か再接続かを判定する。
+				m_Net.Emit(ClientEvents.Identify, new IdentifyMessage { Token = m_Token });
 				OnConnectionChanged?.Invoke(true);
 			};
 			m_Net.OnDisconnected += () =>
@@ -186,6 +193,7 @@ namespace GamblingAction.Domain
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
 			m_Net.On(ServerEvents.RoundStart,          () => SetPhase(EGamePhase.Battle));
 			m_Net.On(ServerEvents.CloseAll,            HandleCloseAll);
+			m_Net.On(ServerEvents.RoomFull,           HandleRoomFull);
 
 			m_Net.On<FinalRaiseOfferMessage>(ServerEvents.FinalRaiseOffer, HandleFinalRaiseOffer);
 			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
@@ -292,6 +300,12 @@ namespace GamblingAction.Domain
 		{
 			Debug.LogWarning("[GameState] Server requested close_all");
 			m_Net.Disconnect();
+		}
+
+		// 既に 2 人で埋まっているため入室を断られた。正常な 2 人対戦では起きない。
+		private void HandleRoomFull()
+		{
+			Debug.LogWarning("[GameState] 入室を断られました（既に 2 人で対戦中）");
 		}
 
 		private void ReplacePlayers(Dictionary<string, PlayerDto> incoming)

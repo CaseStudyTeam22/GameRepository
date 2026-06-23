@@ -481,24 +481,91 @@ function spawnItem() {
 
 setInterval(() => { if (gameActive && timeLeft > 0) timeLeft--; }, 1000);
 
-io.on('connection', (socket) => {
-    const existingPlayers = Object.values(players);
-    const hasP1 = existingPlayers.some(p => p.role === 'P1');
-    const role = hasP1 ? 'P2' : 'P1';
+// 一度入室したクライアントを端末ごとに一意に識別するためのトークン → socket.id の対応表。
+// クライアントは接続のたびに同じトークンを送る（端末を起動している間は変わらない）。
+// socket.id は再接続のたびに変わるため、トークンを使って「同じ人の再接続」を判定する。
+const tokenToSocketId = {};
+// 切断後、同じトークンで戻ってくるのを待つ猶予タイマー（トークン → タイマー句柄）。
+// 猶予内に戻れば席を保持し、戻らなければ正式に退室扱いにする。
+const disconnectGraceTimers = {};
+// 別端末同士の対戦中、一瞬の回線の揺れで切断→再接続が起きても席を失わないだけの猶予。
+const RECONNECT_GRACE_MS = 10000;
 
-    const isP1 = role === 'P1';
-    players[socket.id] = {
-        id: socket.id, role: role, x: isP1 ? 1 : 6, y: isP1 ? 6 : 1,
-        intent: null, ready: false, exchanged: false, score: 0,
-        money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
-        isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
-        selectedBuff: null, buffReady: false, pendingExchange: 0, inLobby: false, roundReady: false,
-        charaIndex: 0
-    };
-
-    console.log(`[Server] Player joined: ${socket.id} as ${role}`);
-    socket.emit('init', { id: socket.id, players, gridSize: Config.GRID_SIZE });
+// 切断したプレイヤーを正式に退室させる。猶予内に再接続がなかった場合に呼ぶ。
+function finalizePlayerLeave(socketId) {
+    const p = players[socketId];
+    if (!p) return;
+    console.log(`[Server] Player left (grace expired): ${socketId}`);
+    if (socketId === finalRaiseProposerId || socketId === finalRaiseResponderId) {
+        cancelFinalRaise('disconnect');
+    }
+    if (p.token && tokenToSocketId[p.token] === socketId) delete tokenToSocketId[p.token];
+    delete players[socketId];
+    io.emit('player_left', socketId);
     io.emit('sync_state', { players });
+}
+
+io.on('connection', (socket) => {
+    // 席の割り当ては接続直後ではなく identify の受信後に行う。
+    // 同じトークンなら再接続として元の席を復元し、初めてのトークンなら
+    // 空き席へ新規入室、満席なら入室を断る。
+    socket.on('identify', (data) => {
+        const token = data && data.token ? String(data.token) : null;
+
+        // 既に同じトークンの席があれば「再接続」。新しい socket.id へ席を移し替える。
+        const prevSocketId = token ? tokenToSocketId[token] : null;
+        if (prevSocketId && players[prevSocketId]) {
+            // 退室待ちの猶予タイマーが動いていれば取り消す（無事戻ってきたため）。
+            if (disconnectGraceTimers[token]) {
+                clearTimeout(disconnectGraceTimers[token]);
+                delete disconnectGraceTimers[token];
+            }
+
+            const player = players[prevSocketId];
+            delete players[prevSocketId];
+            player.id = socket.id;
+            players[socket.id] = player;
+            tokenToSocketId[token] = socket.id;
+
+            // ファイナルレイズの当事者だった場合は socket.id 参照も移し替える。
+            if (finalRaiseProposerId === prevSocketId) finalRaiseProposerId = socket.id;
+            if (finalRaiseResponderId === prevSocketId) finalRaiseResponderId = socket.id;
+
+            console.log(`[Server] Player reconnected: ${prevSocketId} -> ${socket.id} as ${player.role}`);
+            socket.emit('init', { id: socket.id, players, gridSize: Config.GRID_SIZE });
+            io.emit('sync_state', { players });
+            return;
+        }
+
+        // 新規入室。空いている役職を割り当てる。
+        const existingPlayers = Object.values(players);
+        const hasP1 = existingPlayers.some(p => p.role === 'P1');
+        const hasP2 = existingPlayers.some(p => p.role === 'P2');
+
+        // P1・P2 の両方が埋まっているのに別端末が新規入室しようとした場合は断る。
+        if (hasP1 && hasP2) {
+            console.log(`[Server] Connection refused (room full): ${socket.id}`);
+            socket.emit('room_full');
+            socket.disconnect(true);
+            return;
+        }
+
+        const role = hasP1 ? 'P2' : 'P1';
+        const isP1 = role === 'P1';
+        players[socket.id] = {
+            id: socket.id, token: token, role: role, x: isP1 ? 1 : 6, y: isP1 ? 6 : 1,
+            intent: null, ready: false, exchanged: false, score: 0,
+            money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
+            isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
+            selectedBuff: null, buffReady: false, pendingExchange: 0, inLobby: false, roundReady: false,
+            charaIndex: 0
+        };
+        if (token) tokenToSocketId[token] = socket.id;
+
+        console.log(`[Server] Player joined: ${socket.id} as ${role}`);
+        socket.emit('init', { id: socket.id, players, gridSize: Config.GRID_SIZE });
+        io.emit('sync_state', { players });
+    });
 
     socket.on('player_ready', (data) => {
         const p = players[socket.id];
@@ -643,14 +710,23 @@ io.on('connection', (socket) => {
 
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
     socket.on('disconnect', () => {
-        console.log(`[Server] Player left: ${socket.id}`);
-        // 切断者がファイナルレイズの当事者ならフローを中断する。
-        if (socket.id === finalRaiseProposerId || socket.id === finalRaiseResponderId) {
-            cancelFinalRaise('disconnect');
+        const p = players[socket.id];
+        // identify 前に切れた接続など、席を持たない場合は何もしない。
+        if (!p) return;
+
+        // すぐには退室扱いにせず、同じトークンで戻ってくるのを猶予時間だけ待つ。
+        // 別端末対戦中の一瞬の回線の揺れで席を失わないようにするため。
+        // トークンが無い（古いクライアント等）場合は猶予なしで即退室扱いにする。
+        if (p.token) {
+            console.log(`[Server] Player disconnected, waiting for reconnect: ${socket.id}`);
+            if (disconnectGraceTimers[p.token]) clearTimeout(disconnectGraceTimers[p.token]);
+            disconnectGraceTimers[p.token] = setTimeout(() => {
+                delete disconnectGraceTimers[p.token];
+                finalizePlayerLeave(socket.id);
+            }, RECONNECT_GRACE_MS);
+        } else {
+            finalizePlayerLeave(socket.id);
         }
-        delete players[socket.id];
-        io.emit('player_left', socket.id);
-        io.emit('sync_state', { players });
     });
 });
 
