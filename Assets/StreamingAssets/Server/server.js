@@ -98,13 +98,117 @@ function checkAllRoundReady() {
     }
 }
 
+function isNouveauRiche(player) {
+    if (!player) return false;
+    return player.charaIndex === 2 || player.charaName === 'NouveauRiche' || (player.skillData && player.skillData.id === 'double_cost_power');
+}
+
+function checkNouveauRicheAutoExchange() {
+    const pList = Object.values(players);
+    if (pList.length < 2) return;
+
+    const p1 = pList[0];
+    const p2 = pList[1];
+
+    const isN1 = isNouveauRiche(p1);
+    const isN2 = isNouveauRiche(p2);
+
+    if (isN1 && isN2) {
+        // 両者が成金の場合は現在所持金額の50%をそれぞれがかけてチップとする
+        if (!p1.exchanged) {
+            p1.pendingExchange = Math.floor(p1.money * 0.5);
+            p1.exchanged = true;
+            console.log(`[Server] NouveauRiche vs NouveauRiche: ${p1.role} auto-exchanged ${p1.pendingExchange}`);
+        }
+        if (!p2.exchanged) {
+            p2.pendingExchange = Math.floor(p2.money * 0.5);
+            p2.exchanged = true;
+            console.log(`[Server] NouveauRiche vs NouveauRiche: ${p2.role} auto-exchanged ${p2.pendingExchange}`);
+        }
+    } else if (isN1 && !isN2) {
+        // P1が成金、P2が通常キャラ
+        if (p2.exchanged) {
+            const A_opp = p2.pendingExchange || 0;
+            const M_nr = p1.money;
+            if (M_nr >= A_opp) {
+                // 相手キャラがかけた量の倍の金額になる(倍額が無理な場合は同額)
+                const targetAmount = M_nr >= 2 * A_opp ? 2 * A_opp : A_opp;
+                p1.pendingExchange = targetAmount;
+                p1.exchanged = true;
+                console.log(`[Server] NouveauRiche auto-exchange applied to ${p1.role}: ${p1.pendingExchange} (based on ${p2.role}'s ${A_opp})`);
+            } else {
+                // それでも相手と同じ金額が変換できない場合は自身で換金できる金額を選べる
+                if (p1.exchanged && p1.pendingExchange === 0) {
+                    p1.exchanged = false;
+                    console.log(`[Server] NouveauRiche ${p1.role} cannot afford ${A_opp}. Unlocking manual exchange.`);
+                    io.emit('sync_state', { players });
+                    
+                    if (p1.isAI) {
+                        setTimeout(() => {
+                            if (!players[p1.id] || players[p1.id].exchanged) return;
+                            const amount = Math.floor(p1.money * 0.5);
+                            p1.pendingExchange = amount;
+                            p1.exchanged = true;
+                            console.log(`[Server] NouveauRiche AI ${p1.role} selected manual exchange: ${p1.pendingExchange}`);
+                            checkAllExchanged();
+                        }, 1000);
+                    }
+                }
+            }
+        }
+    } else if (!isN1 && isN2) {
+        // P2が成金、P1が通常キャラ
+        if (p1.exchanged) {
+            const A_opp = p1.pendingExchange || 0;
+            const M_nr = p2.money;
+            if (M_nr >= A_opp) {
+                const targetAmount = M_nr >= 2 * A_opp ? 2 * A_opp : A_opp;
+                p2.pendingExchange = targetAmount;
+                p2.exchanged = true;
+                console.log(`[Server] NouveauRiche auto-exchange applied to ${p2.role}: ${p2.pendingExchange} (based on ${p1.role}'s ${A_opp})`);
+            } else {
+                if (p2.exchanged && p2.pendingExchange === 0) {
+                    p2.exchanged = false;
+                    console.log(`[Server] NouveauRiche ${p2.role} cannot afford ${A_opp}. Unlocking manual exchange.`);
+                    io.emit('sync_state', { players });
+                    
+                    if (p2.isAI) {
+                        setTimeout(() => {
+                            if (!players[p2.id] || players[p2.id].exchanged) return;
+                            const amount = Math.floor(p2.money * 0.5);
+                            p2.pendingExchange = amount;
+                            p2.exchanged = true;
+                            console.log(`[Server] NouveauRiche AI ${p2.role} selected manual exchange: ${p2.pendingExchange}`);
+                            checkAllExchanged();
+                        }, 1000);
+                    }
+                }
+            }
+        }
+    }
+}
+
 function prepareExchangePhase() {
     items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION;
     for (let id in players) {
         resetPlayerPos(id);
         players[id].exchanged = false;
-        if (players[id].isAI) handleAIExchange(id);
+
+        // 成金の場合、最初は相手の出方を待つため exchanged = true にしておく
+        if (isNouveauRiche(players[id])) {
+            players[id].exchanged = true;
+            players[id].pendingExchange = 0;
+        }
+
+        // 通常AIキャラのみ即座に両替を開始する
+        if (players[id].isAI && !isNouveauRiche(players[id])) {
+            handleAIExchange(id);
+        }
     }
+
+    // 両者が成金の場合などの即時両替をチェックする
+    checkNouveauRicheAutoExchange();
+
     io.emit('sync_state', { players });
     io.emit('sync_items', items);
     io.emit('start_exchange');
@@ -214,8 +318,6 @@ setInterval(() => {
                                 } else if (rType === 'MaxStaminaBonus') {
                                     p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + rVal;
                                     p.stamina += rVal; // Also increase current stamina
-                                } else if (rType === 'MoveSpeedBonus') {
-                                    p.modifiers.moveSpeedBonus = (p.modifiers.moveSpeedBonus || 0) + rVal;
                                 } else if (rType === 'PushPowerBonus') {
                                     p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
                                 } else if (rType === 'DefenseBonus') {
@@ -223,6 +325,9 @@ setInterval(() => {
                                 }
 
                                 console.log(`[Mission CLEARED] ${p.role} completed mission. Reward: ${rType} x${rVal}`);
+                                if (rType !== 'Chips') {
+                                    console.log(`[Server] [Buff Acquired] Player ${p.role} acquired buff: ${rType} (value: ${rVal}). Modifiers - MaxStaminaBonus: ${p.modifiers.maxStaminaBonus}, PushPowerBonus: ${p.modifiers.pushPowerBonus}, DefenseReductionBonus: ${p.modifiers.defenseReductionBonus}`);
+                                }
                                 // 演出イベントはここでは配列に追加して後で結合する
                                 appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                             }
@@ -637,6 +742,13 @@ io.on('connection', (socket) => {
     socket.on('exchange_chips', (data) => {
         const p = players[socket.id];
         if (p && !gameActive && !p.isAI) {
+            // 成金かつ相手が未決定の場合、早期の手動申請は無視する
+            if (isNouveauRiche(p)) {
+                const opponent = Object.values(players).find(pl => pl.id !== socket.id);
+                if (opponent && !opponent.exchanged) {
+                    return;
+                }
+            }
             const amount = parseInt(data.amount) || 0;
             const cost = amount;
             // この時点では所持金・チップを動かさず、選択内容だけ記録する。
@@ -731,6 +843,9 @@ io.on('connection', (socket) => {
 });
 
 function checkAllExchanged() {
+    // 成金の自動両替判定を行う
+    checkNouveauRicheAutoExchange();
+
     const pList = Object.values(players);
     if (pList.length >= 2 && pList.every(pl => pl.exchanged)) {
         // チップ交換フェーズを抜けるので制限時間タイマーを止める。
@@ -956,6 +1071,13 @@ function handleRoundConcluded(winnerId, loserId) {
     const winner = players[winnerId];
     if (!winner) return;
 
+    // 各プレイヤーが持っているチップを1:1の割合で所持金に返還する
+    for (let id in players) {
+        const p = players[id];
+        p.money += p.chips;
+        p.chips = 0;
+    }
+
     if (isFinalDuel) {
         // ファイナルレイズ本番：勝者が全勝。
         io.emit('game_over', { winnerRole: winner.role });
@@ -1161,7 +1283,7 @@ function generateMissions(selectedBuff) {
         // 選択されたリスク（バフ）に応じて報酬を決定する
         if (selectedBuff === 'high_risk') {
             // High Risk: ステータス報酬確定
-            const statusRewards = ['MaxStaminaBonus', 'MoveSpeedBonus', 'PushPowerBonus', 'DefenseBonus'];
+            const statusRewards = ['MaxStaminaBonus', 'PushPowerBonus', 'DefenseBonus'];
             rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
             rewardValue = 1; // 補正値は基本1
         } else if (selectedBuff === 'low_risk') {
