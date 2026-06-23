@@ -933,7 +933,33 @@ function handleRoundConcluded(winnerId, loserId) {
             return;
         }
     }
+    const pList = Object.values(players);
+    const p1 = pList.find(p => p.role === 'P1');
+    const p2 = pList.find(p => p.role === 'P2');
 
+    if (p1 && p2 && p1.score === 2 && p2.score === 2) {
+        console.log("[Server] Sudden Death triggered!");
+
+        //  全員を強制 All-in
+        for (let id in players) {
+            const p = players[id];
+            p.chips = Math.floor(p.money / 100); // 全額チップ化
+            p.money = 0;
+        }
+
+        io.emit('sync_state', { players });
+
+        //  クライアントへサドンデス開始イベント
+        io.emit('sudden_death_started');
+
+        //  サドンデス専用のラウンド開始
+        isFinalDuel = true;
+        finalRaiseTurnCount = 0;
+
+        // 盤面リセットして次ラウンドへ
+        setTimeout(beginRound, 2000);
+        return;
+    }
     io.emit('round_over', { winnerRole: winner.role });
     setTimeout(beginRound, 3000);
 }
@@ -1132,4 +1158,21 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[Warning] 未処理の Promise 拒否:', reason);
+});
+
+socket.on("request_sudden_death", () => {
+    console.log("[Server] sudden death requested");
+
+    // ここで資金全消費 → チップ変換を行う
+    for (let id in players) {
+        const p = players[id];
+        const amount = Math.floor(p.money / 100);
+        p.money = 0;
+        p.chips += amount;
+    }
+
+    io.emit("sync_state", { players });
+
+    // Unity にサドンデス開始を通知
+    io.emit("sudden_death_started");
 });
