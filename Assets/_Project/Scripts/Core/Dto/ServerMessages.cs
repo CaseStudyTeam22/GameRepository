@@ -96,5 +96,7 @@ namespace GamblingAction.Core.Dto
 		public const string FinalRaiseCanceled   = "final_raise_canceled";
 		// 勝者が受諾し、ファイナルレイズ本番ラウンドへ入る通知。
 		public const string FinalRaiseStarted    = "final_raise_started";
+		// 既に 2 人ぶんの席が埋まっているため入室を断られた通知。直後にサーバから切断される。
+		public const string RoomFull             = "room_full";
 	}
 }
