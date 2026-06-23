@@ -15,9 +15,12 @@ namespace GamblingAction.Domain
 		private static readonly string[] CharacterSheetUrls = new string[]
 		{
 			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=0",         // Normal
-			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=111111111", // Doctor
-			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=222222222", // DoubleEdge
-			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=333333333"  // Fighter
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=573545404", // Doctor
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=484412955", // NouveauRiche
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=369696735", // Fighter
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=34508704", // Guardian
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=2137123423", // Scammer
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=795014052"  // Debtor
 		};
 
 		private readonly INetClient m_Net;
@@ -61,6 +64,9 @@ namespace GamblingAction.Domain
 		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
 		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		public event Action OnFinalRaiseStarted;
+		/// イカサマスキル発動中に相手の intent が更新された際、イカサマプレイヤーのみに通知されるイベント。
+		/// UI表示は未実装（骨格のみ）。
+		public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
 
 		public GameState(INetClient net)
 		{
@@ -121,7 +127,7 @@ namespace GamblingAction.Domain
 				charaData.MoveSpeed = 0;
 				// キャラ別に発動コストを変更したい場合はこれをいじってね
 				// クライアント側の挙動はちゃんと確認できたけど、サーバー側でちゃんと動いてるかはわからんね。多分大丈夫だけど。
-				charaData.MoveCost = new[] { 3, 6, 9 };
+				//charaData.MoveCost = new[] { 3, 6, 9 }; // 全キャラ共通にするため無効化
 				//charaData.PushCost = new[] { 3, 5, 9 },
 				//charaData.AttackCost = new[] { 3, 5, 9 },
 				//charaData.DefenseCost = new[] { 2, 2, 2 },
@@ -130,7 +136,7 @@ namespace GamblingAction.Domain
 			}
 			else if (m_SelectedCharaIndex == 2)
 			{
-				charaData.Name = "DoubleEdge";
+				charaData.Name = "NouveauRiche";
 				charaData.MaxStamina = 5;
 				charaData.InitMoney = 8000;
 				charaData.InitChips = 0;
@@ -150,6 +156,46 @@ namespace GamblingAction.Domain
 				charaData.SkillCost = new[] { 3, 3, 3 };
 				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
 			}
+			else if (m_SelectedCharaIndex == 4)
+			{
+				// ガーディアン: スキル発動中はノックバックとダメージを完全無効化する無敵防御キャラ。
+				// 最大定力が高いが定力回復手段がないため、防御タイミングが鍵になる。
+				charaData.Name = "Guardian";
+				charaData.MaxStamina = 7;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 3;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 4, 4, 4 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "guardian_skill", StaminaRec = 0, ChipCost = 4 };
+			}
+			else if (m_SelectedCharaIndex == 5)
+			{
+				// イカサマ: 初回スキル発動のコストが高いが、以降相手のインテントをリアルタイムで碟き見ることができる。
+				// 初期資金少し多め。
+				charaData.Name = "Scammer";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 12000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 15, 15, 15 }; // 初回発動コストが重い
+				charaData.Skills = new CharaSkillDataMessage { Id = "scammer_skill", StaminaRec = 0, ChipCost = 15 };
+			}
+			else if (m_SelectedCharaIndex == 6)
+			{
+				// 債務者: チップが少ないときのみスキル発動可能。
+				// フィールド上のアイテムを一括回収し、次の突進を強化する。
+				// 初期資金が少ないので経済管理が重要になる。
+				charaData.Name = "Debtor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 6000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 1; // 突進力が少し高め
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 2, 2, 2 }; // スキルコストは低い
+				charaData.Skills = new CharaSkillDataMessage { Id = "debtor_skill", StaminaRec = 0, ChipCost = 2 };
+			}
 
 			// CSV読み込みによる上書き
 			// コストのスケーリングはとりあえず読み取ったものから1x,2x,3xする
@@ -161,47 +207,67 @@ namespace GamblingAction.Domain
 				var csvData = await LoadCSVFromUrlAsync(url);
 				if (csvData != null)
 				{
-					if (csvData.TryGetValue("キャラクター名", out var name) || csvData.TryGetValue("Name", out name))
-						charaData.Name = name;
+					int maxStamina;
+					int initMoney;
+					int initChips;
+					int pushPower;
+					int defPower;
 
-					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaStr) || csvData.TryGetValue("MaxStamina", out maxStaminaStr))
-						if (int.TryParse(maxStaminaStr, out var maxStamina)) charaData.MaxStamina = maxStamina;
+					// キャラクター名
+					if (csvData.TryGetValue("キャラクター名", out var nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+					else if (csvData.TryGetValue("Name", out nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
 
-					if (csvData.TryGetValue("資金", out var initMoneyStr) || csvData.TryGetValue("InitMoney", out initMoneyStr))
-						if (int.TryParse(initMoneyStr, out var initMoney)) charaData.InitMoney = initMoney;
+					// スタミナ（体幹）
+					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaVals) && maxStaminaVals.Length > 0)
+						if (int.TryParse(maxStaminaVals[0], out maxStamina)) charaData.MaxStamina = maxStamina;
+					else if (csvData.TryGetValue("MaxStamina", out maxStaminaVals) && maxStaminaVals.Length > 0)
+						if (int.TryParse(maxStaminaVals[0], out maxStamina)) charaData.MaxStamina = maxStamina;
 
-					if (csvData.TryGetValue("チップ", out var initChipsStr) || csvData.TryGetValue("InitChips", out initChipsStr))
-						if (int.TryParse(initChipsStr, out var initChips)) charaData.InitChips = initChips;
+					// 資金
+					if (csvData.TryGetValue("資金", out var initMoneyVals) && initMoneyVals.Length > 0)
+						if (int.TryParse(initMoneyVals[0], out initMoney)) charaData.InitMoney = initMoney;
+					else if (csvData.TryGetValue("InitMoney", out initMoneyVals) && initMoneyVals.Length > 0)
+						if (int.TryParse(initMoneyVals[0], out initMoney)) charaData.InitMoney = initMoney;
 
-					if (csvData.TryGetValue("突進", out var pushPowerStr) || csvData.TryGetValue("PushPower", out pushPowerStr))
-						if (int.TryParse(pushPowerStr, out var pushPower)) charaData.PushPower = pushPower;
+					// チップ
+					if (csvData.TryGetValue("チップ", out var initChipsVals) && initChipsVals.Length > 0)
+						if (int.TryParse(initChipsVals[0], out initChips)) charaData.InitChips = initChips;
+					else if (csvData.TryGetValue("InitChips", out initChipsVals) && initChipsVals.Length > 0)
+						if (int.TryParse(initChipsVals[0], out initChips)) charaData.InitChips = initChips;
 
-					//if (csvData.TryGetValue("移動速度", out var moveSpeedStr) || csvData.TryGetValue("MoveSpeed", out moveSpeedStr))
-					//	if (int.TryParse(moveSpeedStr, out var moveSpeed)) charaData.MoveSpeed = moveSpeed;
+					// 突進 (power, chip)
+					if (csvData.TryGetValue("突進", out var pushVals))
+					{
+						if (pushVals.Length > 0 && int.TryParse(pushVals[0], out pushPower))
+							charaData.PushPower = pushPower;
+						if (pushVals.Length > 1)
+							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost);
+					}
 
-					if (csvData.TryGetValue("移動コスト", out var moveCostStr) || csvData.TryGetValue("MoveCost", out moveCostStr))
-						charaData.MoveCost = ParseIntArray(moveCostStr, charaData.MoveCost);
+					// 防御 (power, chip)
+					if (csvData.TryGetValue("防御", out var defenseVals))
+					{
+						if (defenseVals.Length > 0 && int.TryParse(defenseVals[0], out defPower))
+							charaData.DefensePower = defPower;
+						if (defenseVals.Length > 1)
+							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost);
+					}
 
-					if (csvData.TryGetValue("突進コスト", out var pushCostStr) || csvData.TryGetValue("PushCost", out pushCostStr))
-						charaData.PushCost = ParseIntArray(pushCostStr, charaData.PushCost);
+					// スキル (power(不要), chip)
+					if (csvData.TryGetValue("スキル", out var skillVals))
+					{
+						if (skillVals.Length > 1)
+						{
+							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost);
+							charaData.Skills.ChipCost = charaData.SkillCost[0];
+						}
+					}
 
-					if (csvData.TryGetValue("攻撃コスト", out var attackCostStr) || csvData.TryGetValue("AttackCost", out attackCostStr))
-						charaData.AttackCost = ParseIntArray(attackCostStr, charaData.AttackCost);
-
-					if (csvData.TryGetValue("防御コスト", out var defenseCostStr) || csvData.TryGetValue("DefenseCost", out defenseCostStr))
-						charaData.DefenseCost = ParseIntArray(defenseCostStr, charaData.DefenseCost);
-
-					if (csvData.TryGetValue("スキルコスト", out var skillCostStr) || csvData.TryGetValue("SkillCost", out skillCostStr))
-						charaData.SkillCost = ParseIntArray(skillCostStr, charaData.SkillCost);
-
-					if (csvData.TryGetValue("スキル", out var skillId) || csvData.TryGetValue("SkillId", out skillId))
-						charaData.Skills.Id = skillId;
-
-					//if (csvData.TryGetValue("スキルスタミナ回復", out var staminaRecStr) || csvData.TryGetValue("SkillStaminaRec", out staminaRecStr))
-					//	if (int.TryParse(staminaRecStr, out var staminaRec)) charaData.Skills.StaminaRec = staminaRec;
-
-					//if (csvData.TryGetValue("スキルチップコスト", out var chipCostStr) || csvData.TryGetValue("SkillChipCost", out chipCostStr))
-					//	if (int.TryParse(chipCostStr, out var chipCost)) charaData.Skills.ChipCost = chipCost;
+					// スキルIDの個別指定がもしCSV側にあれば読み込む (A列: SkillId など)
+					if (csvData.TryGetValue("SkillId", out var skillIdVals) && skillIdVals.Length > 0)
+						charaData.Skills.Id = skillIdVals[0];
 				}
 			}
 
@@ -212,7 +278,7 @@ namespace GamblingAction.Domain
 			});
 		}
 
-		private async Task<Dictionary<string, string>> LoadCSVFromUrlAsync(string url)
+		private async Task<Dictionary<string, string[]>> LoadCSVFromUrlAsync(string url)
 		{
 			if (string.IsNullOrEmpty(url) || url.Contains("YOUR_SPREADSHEET_ID"))
 			{
@@ -234,16 +300,28 @@ namespace GamblingAction.Domain
 					return null;
 				}
 
-				var dict = new Dictionary<string, string>();
+				var dict = new Dictionary<string, string[]>();
 				var lines = req.downloadHandler.text.Split('\n');
 				foreach (var line in lines)
 				{
 					var cols = line.Split(',');
-					if (cols.Length < 2) continue;
+					if (cols.Length < 1) continue;
 
 					string key = cols[0].Trim();
-					string val = cols[1].Trim();
-					dict[key] = val;
+					if (string.IsNullOrEmpty(key)) continue;
+
+					var vals = new List<string>();
+					for (int i = 1; i < cols.Length; i++)
+					{
+						string cVal = cols[i].Trim();
+						if (cVal.StartsWith("\"") && cVal.EndsWith("\""))
+						{
+							cVal = cVal.Substring(1, cVal.Length - 2).Trim();
+						}
+						if (string.IsNullOrEmpty(cVal)) continue; // カンマの連続による空要素を除外
+						vals.Add(cVal);
+					}
+					dict[key] = vals.ToArray();
 				}
 
 				return dict;
@@ -268,6 +346,14 @@ namespace GamblingAction.Domain
 					result.Add(parsed);
 				}
 			}
+
+			// 1つしか数値がない場合、2、3段階目はそれぞれ2倍、3倍にする
+			if (result.Count == 1)
+			{
+				int baseVal = result[0];
+				return new[] { baseVal, baseVal * 2, baseVal * 3 };
+			}
+
 			return result.Count > 0 ? result.ToArray() : defaultValue;
 		}
 
@@ -377,6 +463,10 @@ namespace GamblingAction.Domain
 			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
 			m_Net.On<FinalRaiseCanceledMessage>(ServerEvents.FinalRaiseCanceled, HandleFinalRaiseCanceled);
 			m_Net.On(ServerEvents.FinalRaiseStarted, HandleFinalRaiseStarted);
+
+			// イカサマスキル発動中、相手のintentが更新された際の通知（イカサマのソケットにのみ送信される）。
+			m_Net.On<OpponentIntentRevealedMessage>(ServerEvents.OpponentIntentRevealed,
+				msg => OnOpponentIntentRevealed?.Invoke(msg));
 		}
 
 		private void HandleInit(InitMessage msg)
@@ -550,6 +640,7 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.FinalRaisePending);
 			m_Net.Off(ServerEvents.FinalRaiseCanceled);
 			m_Net.Off(ServerEvents.FinalRaiseStarted);
+			m_Net.Off(ServerEvents.OpponentIntentRevealed);
 		}
 	}
 

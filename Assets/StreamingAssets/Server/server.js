@@ -70,6 +70,9 @@ function resetPlayerPos(id) {
     p.stamina = maxStamina + bonus;
     p.falling = false; p.intent = null; p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
+    // 債務者の次回突進強化はラウンド間で持ち越さない
+    p.nextPushBonus = 0;
+    // scammerActive はゲーム内で持続するためここではリセットしない
 }
 
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
@@ -118,8 +121,8 @@ function autoExchangeTimedOut() {
     for (let id in players) {
         const p = players[id];
         if (p.exchanged || p.isAI) continue;
-        const amount = Math.floor(p.money / 3 / 100);
-        const cost = amount * 100;
+        const amount = Math.floor(p.money / 3);
+        const cost = amount;
         p.money -= cost; p.chips += amount; p.exchanged = true;
         changed = true;
     }
@@ -130,7 +133,7 @@ function autoExchangeTimedOut() {
 function handleAIExchange(id) {
     const p = players[id];
     let ratio = 0.5 + (Math.random() * 0.1 - 0.05);
-    const amount = Math.floor((p.money * ratio) / 100);
+    const amount = Math.floor(p.money * ratio);
     setTimeout(() => {
         // AI も精算は後でまとめて行うため、選択内容だけ記録する。
         p.pendingExchange = amount;
@@ -490,6 +493,7 @@ io.on('connection', (socket) => {
         initChips: Config.INITIAL_CHIPS,
         basePushPower: 0,
         baseMoveSpeed: 0,
+        baseDefensePower: 0,
         chipCosts: JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER)),
         skillData: null,
         modifiers: {
@@ -498,7 +502,11 @@ io.on('connection', (socket) => {
             moveSpeedBonus: 0,
             chipCostMultiplier: 1.0,
             defenseReductionBonus: 0.0
-        }
+        },
+        // イカサマのスキル発動フラグ（trueの間、相手のintentをSocket個別に送信する）
+        scammerActive: false,
+        // 債務者の次回突進強化（onResolveでセットされ、push実行時にengine.jsが読んでリセットする）
+        nextPushBonus: 0
     };
 
     console.log(`[Server] Player joined: ${socket.id} as ${role}`);
@@ -523,7 +531,7 @@ io.on('connection', (socket) => {
 
                 // 初期資金・初期チップ・プッシュ力・移動速度のバリデーションとクランプ
                 const moneyLimit = 20000;
-                const chipsLimit = 15;
+                const chipsLimit = 1000;
                 p.initMoney = Math.min(moneyLimit, Math.max(100, parseInt(chara.initMoney) || Config.INITIAL_MONEY));
                 p.initChips = Math.min(chipsLimit, Math.max(0, parseInt(chara.initChips) || Config.INITIAL_CHIPS));
 
@@ -531,6 +539,7 @@ io.on('connection', (socket) => {
                 const speedLimit = 3;
                 p.basePushPower = Math.min(pushLimit, Math.max(-2, parseInt(chara.pushPower) || 0));
                 p.baseMoveSpeed = Math.min(speedLimit, Math.max(-2, parseInt(chara.moveSpeed) || 0));
+                p.baseDefensePower = Math.min(pushLimit, Math.max(-2, parseInt(chara.defensePower) || 0));
 
                 // 各アクションごとのチップ消費コストテーブルのクランプ
                 const costLimit = (Config.LIMITS && Config.LIMITS.SKILL_CHIP_COST_LIMIT) || 15;
@@ -629,7 +638,7 @@ io.on('connection', (socket) => {
         const p = players[socket.id];
         if (p && !gameActive && !p.isAI) {
             const amount = parseInt(data.amount) || 0;
-            const cost = amount * 100;
+            const cost = amount;
             // この時点では所持金・チップを動かさず、選択内容だけ記録する。
             // 実際の精算は両替・カード選択が全員終わってからまとめて行う。
             if (p.money >= cost) {
@@ -670,7 +679,20 @@ io.on('connection', (socket) => {
 
     socket.on('set_intent', (data) => {
         const p = players[socket.id];
-        if (gameActive && currentBeat < 4 && p && !p.isAI) p.intent = { type: data.type || 'move', dir: data.dir, power: data.power || 1 };
+        if (gameActive && currentBeat < 4 && p && !p.isAI) {
+            p.intent = { type: data.type || 'move', dir: data.dir, power: data.power || 1 };
+
+            // イカサマ（scammer_skill）が有効な対戦相手がいれば、このプレイヤーの intent を
+            // その対戦相手の Socket にのみ個別送信する（全体 broadcast は行わない）。
+            for (const otherId in players) {
+                if (otherId !== socket.id && players[otherId].scammerActive) {
+                    const scammerSocket = io.sockets.sockets.get(otherId);
+                    if (scammerSocket) {
+                        scammerSocket.emit('opponent_intent_revealed', { intent: p.intent });
+                    }
+                }
+            }
+        }
     });
 
     // 敗者がファイナルレイズを発起するか決定する。accept=true で勝者の応答待ちへ。
@@ -859,7 +881,7 @@ function settleAllChoices() {
         // チップ変換時のスキル効果フック
         const finalAmount = Skills.onExchange(p, amount);
         if (amount > 0) {
-            p.money -= amount * 100;
+            p.money -= amount;
             p.chips += finalAmount;
         }
         const buffCost = p.selectedBuff === 'high_risk' ? 15 : (p.selectedBuff === 'low_risk' ? 5 : 0);
@@ -1083,6 +1105,10 @@ function resetMatchState(isMatchStart = false) {
             defenseReductionBonus: 0.0
         };
 
+        // キャラクター固有の一時フラグ初期化
+        p.scammerActive = false;
+        p.nextPushBonus = 0;
+
         resetPlayerPos(id);
     }
 }
@@ -1109,22 +1135,22 @@ function generateMissions(selectedBuff) {
         switch (type) {
             case 0: // Move
                 targetCount = 5 + Math.floor(Math.random() * 6); // 5-10 cells
-                baseChipsReward = targetCount * 2; // チップ報酬
+                baseChipsReward = targetCount * 2 * 10; // チップ報酬 (インフレ対応で10倍)
                 description = `フィールドを ${targetCount} マス移動しよう`;
                 break;
             case 1: // Push
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 pushes
-                baseChipsReward = targetCount * 5;
+                baseChipsReward = targetCount * 5 * 10;
                 description = `相手を計 ${targetCount} 回プッシュしよう`;
                 break;
             case 2: // Defense
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 defenses
-                baseChipsReward = targetCount * 4;
+                baseChipsReward = targetCount * 4 * 10;
                 description = `防御を計 ${targetCount} 回使用しよう`;
                 break;
             case 4: // GainChip
                 targetCount = 2 + Math.floor(Math.random() * 4); // 2-5 chips
-                baseChipsReward = Math.floor(targetCount * 3);
+                baseChipsReward = Math.floor(targetCount * 3) * 10;
                 description = `チップを計 ${targetCount} 回獲得しよう`;
                 break;
         }

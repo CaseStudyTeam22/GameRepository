@@ -53,7 +53,8 @@ const Engine = {
             if (intent.type === 'push') {
                 const basePush = p.basePushPower || 0;
                 const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-                const finalPushDist = Math.max(1, power + basePush + pushBonus);
+                const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
+                const finalPushDist = Math.max(1, power + basePush + pushBonus + nextBonus);
                 if (intent.dir === 'up') p.targetY -= finalPushDist;
                 else if (intent.dir === 'down') p.targetY += finalPushDist;
                 else if (intent.dir === 'left') p.targetX -= finalPushDist;
@@ -111,7 +112,8 @@ const Engine = {
             const power = Math.max(1, Math.min(3, intent.power || 1));
             const basePush = p.basePushPower || 0;
             const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-            return power + basePush + pushBonus;
+            const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
+            return power + basePush + pushBonus + nextBonus;
         };
 
         if (isTargetConflict) {
@@ -224,7 +226,9 @@ const Engine = {
                 events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p.id, dir: intent.dir, power: intent.power, x: p.prevX, y: p.prevY });
                 const basePush = p.basePushPower || 0;
                 const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-                let finalDist = power + basePush + pushBonus;
+                const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
+                let finalDist = power + basePush + pushBonus + nextBonus;
+                if (nextBonus > 0) p.nextPushBonus = 0; // 使用後リセット
                 // 高风险攻击方：power=3 时推距 +1
                 if (p.selectedBuff === 'high_risk' && power === 3) finalDist += 1;
                 const tIntent = intents[target.id] || { type: 'none' };
@@ -233,6 +237,8 @@ const Engine = {
                     finalDist = Math.max(0, finalDist - tPower);
                 }
                 if (tIntent.type === 'defense') finalDist = 0;
+                // ガーディアン: スキル中はノックバック無効
+                if (isGuardianBlocking(target, intents)) finalDist = 0;
                 // 高风险被击方：30% 概率推距 +1
                 if (finalDist > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) finalDist += 1;
 
@@ -250,14 +256,19 @@ const Engine = {
                 if (p.selectedBuff === 'high_risk' && power === 3) dmg += 1;
                 const tIntent = intents[target.id] || { type: 'none' };
                 if (tIntent.type === 'defense') {
+                    const defPower = target.baseDefensePower || 0;
                     const defBonus = (target.modifiers && target.modifiers.defenseReductionBonus) || 0;
-                    const reduction = Math.min(1.0, Config.EFFECTS.defense.reduction + defBonus);
+                    const reduction = Math.min(1.0, Config.EFFECTS.defense.reduction + defBonus + defPower * 0.02);
                     dmg = Math.floor(dmg * (1 - reduction));
                 }
+                // ガーディアン: スキル中はダメージ無効
+                if (isGuardianBlocking(target, intents)) dmg = 0;
                 // 高风险被击方：30% 概率伤害 +1
                 if (dmg > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) dmg += 1;
-                target.stamina = Math.max(0, target.stamina - dmg);
-                events.push({ type: 'hit', targetId: target.id, damage: dmg });
+                if (dmg > 0) {
+                    target.stamina = Math.max(0, target.stamina - dmg);
+                    events.push({ type: 'hit', targetId: target.id, damage: dmg });
+                }
             }
 
             if (intent.type === 'defense') {
@@ -326,6 +337,19 @@ function generateExplosionItems(items, midX, midY) {
         ty = Math.max(0, Math.min(Config.GRID_SIZE - 1, ty));
         items.push({ id: Date.now() + Math.random(), type: Math.random() > 0.3 ? 'chips' : 'money', x: tx, y: ty });
     }
+}
+
+/**
+ * ガーディアン（guardian_skill）の無敵防御状態かどうかを判定するヘルパー関数。
+ * スキル発動中のガーディアンは push によるノックバックと attack によるダメージを無効化する。
+ * @param {Object} player 判定対象のプレイヤー
+ * @param {Object} intents 全プレイヤーのintentマップ
+ * @returns {boolean}
+ */
+function isGuardianBlocking(player, intents) {
+    if (!player || !intents) return false;
+    const intent = intents[player.id] || {};
+    return intent.type === 'skill' && player.skillData?.id === 'guardian_skill';
 }
 
 module.exports = Engine;

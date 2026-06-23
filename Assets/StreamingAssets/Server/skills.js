@@ -29,7 +29,7 @@ const Skills = {
         const skillId = player.skillData?.id;
         const charaIndex = player.charaIndex;
 
-        // 成金（charaIndex === 2）は、スキル発動時は本来のpushの行動の2倍のチップを消費
+        // 成金（charaIndex === 2 / nouveau_skill）は、スキル発動時は本来のpushの行動の2倍のチップを消費
         const isNarikin = skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche';
         if (isNarikin) {
             if (intent.type === 'skill') {
@@ -37,6 +37,17 @@ const Skills = {
                 const power = Math.max(1, Math.min(3, intent.power || 1));
                 const pushCost = Config.CHIP_COST_BY_POWER['push'][power - 1] || 3;
                 return pushCost * 2;
+            }
+        }
+
+        // 債務者（charaIndex === 6 / debtor_skill）: チップが閾値を超えている場合はスキル発動不可
+        const isDebtor = skillId === 'debtor_skill' || charaIndex === 6 || player.charaName === 'Debtor';
+        if (isDebtor && intent.type === 'skill') {
+            const Config = require('./config');
+            const threshold = Config.DEBTOR_CHIP_THRESHOLD !== undefined ? Config.DEBTOR_CHIP_THRESHOLD : 10;
+            if (player.chips > threshold) {
+                // コストを現在チップ+999にすることで「チップ不足」扱いにし発動を防ぐ
+                return player.chips + 999;
             }
         }
 
@@ -56,6 +67,7 @@ const Skills = {
      * @param {Object} intent アクション意図 (type, dir, power)
      * @param {Array} events 描画演出用のイベントリスト (追加用)
      * @param {Object} config config.js の参照
+     * @param {Array} items フィールド上のアイテムリスト (参照渡し)
      */
     onResolve: (player, opponent, intent, events, config, items) => {
         if (intent.type !== 'skill') return;
@@ -105,6 +117,11 @@ const Skills = {
                 // 相手の防御による軽減
                 if (tIntent.type === 'defense') {
                     finalDist = Math.max(0, finalDist - 2);
+                }
+
+                // ガーディアン: スキル中はノックバック無効
+                if (tIntent.type === 'skill' && opponent.skillData?.id === 'guardian_skill') {
+                    finalDist = 0;
                 }
 
                 // 高リスク被撃：30% 確率でpush_powerを+1
@@ -166,10 +183,61 @@ const Skills = {
                     finalDmg = Math.floor(dmg * (1 - config.EFFECTS.defense.reduction));
                 }
 
-                opponent.stamina = Math.max(0, opponent.stamina - finalDmg);
-                events.push({ type: 'hit', targetId: opponent.id, damage: finalDmg });
-                events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "FIGHTER STRIKE!" });
+                // ガーディアン: スキル中はダメージ無効
+                if (oppIntent.type === 'skill' && opponent.skillData?.id === 'guardian_skill') {
+                    finalDmg = 0;
+                }
+
+                if (finalDmg > 0) {
+                    opponent.stamina = Math.max(0, opponent.stamina - finalDmg);
+                    events.push({ type: 'hit', targetId: opponent.id, damage: finalDmg });
+                    events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "FIGHTER STRIKE!" });
+                }
             }
+        }
+        else if (skillId === 'guardian_skill' || charaIndex === 4 || player.charaName === 'Guardian') {
+            // ガーディアン: スキル中に被弾してもスタミナが減らず吹き飛ばされない（無敵防御）
+            // 実際の無敵化はengine.jsの push/attack 処理内で isGuardianBlocking() によって行われる。
+            // ここでは演出イベントのみ追加する。
+            events.push({ type: 'vfx', vfxType: 'defense_vfx', targetId: player.id, x: player.prevX, y: player.prevY });
+            events.push({ type: 'vfx', vfxType: 'bump', targetId: player.id, text: 'GUARD!' });
+        }
+        else if (skillId === 'scammer_skill' || charaIndex === 5 || player.charaName === 'Scammer') {
+            // イカサマ: scammerActive フラグを立てる。
+            // server.js の set_intent ハンドラがこのフラグを見て、相手の intent を当該 Socket にのみ Emit する。
+            if (!player.scammerActive) {
+                player.scammerActive = true;
+                events.push({ type: 'vfx', vfxType: 'bump', targetId: player.id, text: 'READING...' });
+            }
+            events.push({ type: 'vfx', vfxType: 'rest_vfx', targetId: player.id });
+        }
+        else if (skillId === 'debtor_skill' || charaIndex === 6 || player.charaName === 'Debtor') {
+            // 債務者: フィールド上の全アイテムを回収 + 次の突進を強化する
+            // ※ チップ条件（chips <= DEBTOR_CHIP_THRESHOLD）は onCalculateCost で担保済み
+            let chipsGained = 0;
+            let moneyGained = 0;
+
+            if (items) {
+                const chipValue = config.CHIP_ITEM_VALUE || 5;
+                const moneyValue = config.MONEY_ITEM_VALUE || 500;
+                for (let i = items.length - 1; i >= 0; i--) {
+                    if (items[i].type === 'chips') {
+                        chipsGained += chipValue;
+                    } else {
+                        moneyGained += moneyValue;
+                    }
+                    items.splice(i, 1);
+                }
+            }
+
+            player.chips += chipsGained;
+            player.money += moneyGained;
+            // 次に使用する突進を +2 強化する（一時的フラグ）
+            player.nextPushBonus = 2;
+
+            events.push({ type: 'vfx', vfxType: 'rest_vfx', targetId: player.id });
+            const gainText = chipsGained > 0 ? `COLLECT! +${chipsGained}chips` : 'COLLECT!';
+            events.push({ type: 'vfx', vfxType: 'bump', targetId: player.id, text: gainText });
         }
         else {
             // デフォルトスキル（スプシから送られてきたスキル情報に基づく汎用処理、または何もしない）

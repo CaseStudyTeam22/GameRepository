@@ -17,6 +17,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("initChips")] public int InitChips;
 		[JsonProperty("pushPower")] public int PushPower;
 		[JsonProperty("moveSpeed")] public int MoveSpeed;
+		[JsonProperty("defensePower")] public int DefensePower;
 
 		[JsonProperty("moveCost")] public int[] MoveCost;
 		[JsonProperty("pushCost")] public int[] PushCost;

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace GamblingAction.Core.Dto
@@ -65,6 +65,12 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("reason")] public string Reason;
 	}
 
+	// イカサマスキル発動中、相手が intent を送信した際にイカサマのみに届く通知。
+	public class OpponentIntentRevealedMessage
+	{
+		[JsonProperty("intent")] public IntentDto Intent;
+	}
+
 	public static class ServerEvents
 	{
 		public const string Init                 = "init";
@@ -96,5 +102,7 @@ namespace GamblingAction.Core.Dto
 		public const string FinalRaiseCanceled   = "final_raise_canceled";
 		// 勝者が受諾し、ファイナルレイズ本番ラウンドへ入る通知。
 		public const string FinalRaiseStarted    = "final_raise_started";
+		// イカサマスキル発動中、相手のintentが更新された際にイカサマプレイヤーのみに送信される通知。
+		public const string OpponentIntentRevealed = "opponent_intent_revealed";
 	}
 }

@@ -235,7 +235,7 @@ namespace GamblingAction.UI
 				m_ExchangeSlider.onValueChanged.AddListener(v =>
 				{
 					if (m_ExchangeAmountText != null)
-						m_ExchangeAmountText.text = $"{(int)v} chips (¥{(int)v * 100})";
+						m_ExchangeAmountText.text = $"{(int)v} chips (¥{(int)v})";
 				});
 
 			if (m_ExchangeConfirmButton != null)
@@ -671,12 +671,12 @@ namespace GamblingAction.UI
 		{
 			if (m_ExchangeSlider == null) return;
 			var me = m_State.Me;
-			int max = me != null ? Mathf.Min(100, me.Money / 100) : 0;
+			int max = me != null ? Mathf.Min(20000, me.Money) : 0;
 			m_ExchangeSlider.minValue = 0;
 			m_ExchangeSlider.maxValue = max;
 			if (m_ExchangeSlider.value > max) m_ExchangeSlider.value = max;
 			if (m_ExchangeAmountText != null)
-				m_ExchangeAmountText.text = $"{(int)m_ExchangeSlider.value} chips (¥{(int)m_ExchangeSlider.value * 100})";
+				m_ExchangeAmountText.text = $"{(int)m_ExchangeSlider.value} chips (¥{(int)m_ExchangeSlider.value})";
 		}
 
 		private static void SetActive(GameObject go, bool active)

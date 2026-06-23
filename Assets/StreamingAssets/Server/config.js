@@ -33,7 +33,7 @@ module.exports = {
         'push':    { staminaDmg: 0 },
         'attack':  { staminaDmg: 1 }, // 小注削 1，大招削 3（× power）
         'defense': { reduction: 0.8 },
-        'idle':    { staminaRec: 0, chipsRec: 3 },
+        'idle':    { staminaRec: 0, chipsRec: 30 },
         'skill':   { staminaDmg: 0 }, // ここがキャラによって可変するため、要調整
         'rest':    { staminaRec: 1 }
     },
@@ -58,7 +58,7 @@ module.exports = {
     LIMITS: {
         MAX_STAMINA_LIMIT: 8,
         SKILL_STAMINA_REC_LIMIT: 3,
-        SKILL_CHIP_COST_LIMIT: 15
+        SKILL_CHIP_COST_LIMIT: 1000
     },
 
     INITIAL_MONEY: 10000,
@@ -68,8 +68,13 @@ module.exports = {
 
     ITEM_SPAWN_INTERVAL: 2,
     MAX_ITEMS_ON_FIELD: 10,
-    CHIP_ITEM_VALUE: 5,
+    CHIP_ITEM_VALUE: 50,
     MONEY_ITEM_VALUE: 500,
+
+    // 債務者（debtor_skill）スキルの発動可能チップ上限。
+    // チップがこの値を超えている場合はスキルを発動できない。
+    // チップのインフレ調整時はこの値も合わせて見直すこと。
+    DEBTOR_CHIP_THRESHOLD: 100,
 
     // ファイナルレイズの提案・応答それぞれの制限時間（ミリ秒）。
     // 無応答はキャンセル扱いで通常の game_over へ進む。
