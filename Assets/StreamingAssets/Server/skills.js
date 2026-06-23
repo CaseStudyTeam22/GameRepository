@@ -10,11 +10,6 @@ const Skills = {
      * @returns {number} 補正後の両替チップ数
      */
     onExchange: (player, pendingExchange) => {
-        const skillId = player.skillData?.id;
-        // 格闘家（charaIndex === 3 / fighter_skill）は両替効率が1.2倍になる (パッシブ効果)
-        if (skillId === 'fighter_skill' || player.charaName === 'Fighter' || player.charaIndex === 3) {
-            return Math.floor(pendingExchange * 1.2);
-        }
         return pendingExchange;
     },
 
