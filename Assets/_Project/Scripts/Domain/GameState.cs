@@ -24,8 +24,9 @@ namespace GamblingAction.Domain
 		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
+        public bool SuddenDeathAlreadyStarted { get; private set; }
 
-		public PlayerDto Me =>
+        public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
 
 		public PlayerDto Opponent =>
@@ -54,7 +55,8 @@ namespace GamblingAction.Domain
 
         public GameState(INetClient net)
 		{
-			m_Net = net;
+            Debug.Log("[GameState] Created instance: " + this.GetHashCode());
+            m_Net = net;
 			Subscribe();
 		}
 
@@ -376,6 +378,7 @@ namespace GamblingAction.Domain
 		}
         public void RaiseSuddenDeathStarted()
         {
+            SuddenDeathAlreadyStarted = true;
             OnSuddenDeathStarted?.Invoke();
         }
 

@@ -18,8 +18,9 @@ namespace GamblingAction.Domain
 		// ファイナルレイズ本番ラウンド進行中なら true。
 		// このラウンドの勝者がそのまま全勝（game_over）になる。
 		bool IsFinalDuel { get; }
+		bool SuddenDeathAlreadyStarted { get; }
 
-		PlayerDto Me { get; }
+        PlayerDto Me { get; }
 		PlayerDto Opponent { get; }
 
 		void SubmitIntent(string type, string dir, int power);

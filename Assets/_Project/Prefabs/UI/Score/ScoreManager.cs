@@ -29,6 +29,9 @@ namespace GamblingAction.UI
 
         private void Start()
         {
+            Debug.Log("[ScoreManager] Start called. m_State=" + m_State);
+            Debug.Log("[ScoreManager] Using GameState instance: " + m_State.GetHashCode());
+
             m_State = GameStateLocator.Current;
             if (m_State == null)
             {
@@ -39,8 +42,13 @@ namespace GamblingAction.UI
             m_State.OnStateInitialized += RefreshScores;
             m_State.OnPlayersChanged += RefreshScores;
 
-            // ★ サドンデスイベント購読
+            
             m_State.OnSuddenDeathStarted += OnSuddenDeathStarted;
+
+            if (m_State.SuddenDeathAlreadyStarted)
+            {
+                OnSuddenDeathStarted();
+            }
 
             RefreshScores();
         }
