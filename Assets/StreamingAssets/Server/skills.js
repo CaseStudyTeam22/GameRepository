@@ -137,7 +137,7 @@ const Skills = {
 
             // 消費したチップのばらまき処理 (items に追加)
             if (items) {
-                const chipValue = config.CHIP_ITEM_VALUE || 5;
+                const chipValue = config.CHIP_ITEM_VALUE || 50;
                 const numItems = Math.max(1, Math.round(consumedChips / chipValue));
 
                 for (let i = 0; i < numItems; i++) {
@@ -213,7 +213,7 @@ const Skills = {
             let moneyGained = 0;
 
             if (items) {
-                const chipValue = config.CHIP_ITEM_VALUE || 5;
+                const chipValue = config.CHIP_ITEM_VALUE || 50;
                 const moneyValue = config.MONEY_ITEM_VALUE || 500;
                 for (let i = items.length - 1; i >= 0; i--) {
                     if (items[i].type === 'chips') {

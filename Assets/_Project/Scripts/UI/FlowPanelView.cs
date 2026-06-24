@@ -234,14 +234,15 @@ namespace GamblingAction.UI
 			if (m_ExchangeSlider != null)
 				m_ExchangeSlider.onValueChanged.AddListener(v =>
 				{
+					int amount = GetExchangeAmount(v);
 					if (m_ExchangeAmountText != null)
-						m_ExchangeAmountText.text = $"{(int)v} chips (¥{(int)v})";
+						m_ExchangeAmountText.text = $"{amount} chips (¥{amount})";
 				});
 
 			if (m_ExchangeConfirmButton != null)
 				m_ExchangeConfirmButton.onClick.AddListener(() =>
 				{
-					int amount = m_ExchangeSlider != null ? (int)m_ExchangeSlider.value : 0;
+					int amount = m_ExchangeSlider != null ? GetExchangeAmount(m_ExchangeSlider.value) : 0;
 					m_PendingExchange = amount;
 					m_State.SubmitExchange(amount);
 					m_ExchangeConfirmButton.interactable = false;
@@ -676,16 +677,39 @@ namespace GamblingAction.UI
 			m_RoundText.text = $"Round {shown}/{m_TotalRounds}";
 		}
 
+		private int GetExchangeAmount(float sliderValue)
+		{
+			var me = m_State.Me;
+			if (me == null) return 0;
+			int max = Mathf.Min(20000, me.Money);
+			if (max <= 0) return 0;
+
+			int maxSteps = Mathf.CeilToInt((float)max / 200f);
+			int step = Mathf.RoundToInt(sliderValue);
+
+			if (step >= maxSteps)
+			{
+				return max; // 最右端は所持金全て（オールイン）
+			}
+			return step * 200;
+		}
+
 		private void UpdateExchangeRange()
 		{
 			if (m_ExchangeSlider == null) return;
 			var me = m_State.Me;
 			int max = me != null ? Mathf.Min(20000, me.Money) : 0;
+			int maxSteps = Mathf.CeilToInt((float)max / 200f);
+
 			m_ExchangeSlider.minValue = 0;
-			m_ExchangeSlider.maxValue = max;
-			if (m_ExchangeSlider.value > max) m_ExchangeSlider.value = max;
+			m_ExchangeSlider.maxValue = maxSteps;
+			m_ExchangeSlider.wholeNumbers = true; // 整数値にスナップさせる
+
+			if (m_ExchangeSlider.value > maxSteps) m_ExchangeSlider.value = maxSteps;
+
+			int currentAmount = GetExchangeAmount(m_ExchangeSlider.value);
 			if (m_ExchangeAmountText != null)
-				m_ExchangeAmountText.text = $"{(int)m_ExchangeSlider.value} chips (¥{(int)m_ExchangeSlider.value})";
+				m_ExchangeAmountText.text = $"{currentAmount} chips (¥{currentAmount})";
 		}
 
 		private static void SetActive(GameObject go, bool active)
