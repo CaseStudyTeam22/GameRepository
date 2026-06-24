@@ -280,7 +280,9 @@ namespace GamblingAction.UI
 
 		private void HandlePhase(EGamePhase phase)
 		{
-			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
+			var me = m_State.Me;
+			bool showExchange = (phase == EGamePhase.Exchange) && (me == null || !me.Exchanged);
+			SetActive(m_ExchangePanel,  showExchange);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver);
 
 			// ミッションHUDを表示するフェーズの制御（Countdown / Battle 中）
@@ -368,6 +370,13 @@ namespace GamblingAction.UI
 			UpdateMissionUI();
 			UpdateBuffPanelUI();
 			UpdateMissionSelectionUI();
+
+			// チップ交換フェーズ中、すでに両替済みの場合は両替パネルを非表示にする
+			if (m_State.Phase == EGamePhase.Exchange)
+			{
+				bool showExchange = me == null || !me.Exchanged;
+				SetActive(m_ExchangePanel, showExchange);
+			}
 		}
 
 		private void UpdateMissionUI()

@@ -216,6 +216,9 @@ function prepareExchangePhase() {
     // 制限時間：超過したら未交換のプレイヤーを自動でチップ交換する。
     if (exchangeTimer) clearTimeout(exchangeTimer);
     exchangeTimer = setTimeout(autoExchangeTimedOut, PREPARE_PHASE_MS);
+
+    // 両者成金など、この時点で全員の両替が確定している場合は即座に移行フェーズをトリガーする
+    checkAllExchanged();
 }
 
 // チップ交換の制限時間超過。未交換のプレイヤーは所持金の 1/3 をチップに替える。
