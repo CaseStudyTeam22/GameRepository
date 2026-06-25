@@ -430,6 +430,7 @@ MonoBehaviour:
   m_MissingPlayerText: '-'
   m_LeftPosition: {x: -600, y: -100}
   m_RightPosition: {x: 850, y: -100}
+  suddenDeathUIPrefab: {fileID: 2628402194884014216, guid: 36dfffe21daab304cbf8c0fb0fcf614d, type: 3}
 --- !u!1 &8081991451530938699
 GameObject:
   m_ObjectHideFlags: 0

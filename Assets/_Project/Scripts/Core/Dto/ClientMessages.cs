@@ -46,8 +46,16 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("accept")] public bool Accept;
 	}
 
+	// 接続直後に送る、端末ごとに一意なトークン。再接続時も同じ値を送る。
+	// サーバはこのトークンで「同じ人の再接続」を判定し、元の席を復元する。
+	public class IdentifyMessage
+	{
+		[JsonProperty("token")] public string Token;
+	}
+
 	public static class ClientEvents
 	{
+		public const string Identify       = "identify";
 		public const string PlayerReady    = "player_ready";
 		public const string PlayerUnready  = "player_unready";
 		public const string EnterLobby     = "enter_lobby";

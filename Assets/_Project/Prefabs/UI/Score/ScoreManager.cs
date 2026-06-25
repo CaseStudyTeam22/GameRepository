@@ -5,100 +5,139 @@ using UnityEngine.Serialization;
 
 namespace GamblingAction.UI
 {
-	public class ScoreManager : MonoBehaviour
-	{
-		[Header("Score Texts")]
-		[FormerlySerializedAs("p1ScoreText")]
-		[SerializeField, Tooltip("P1 のスコアを表示する TextMeshPro テキスト")]
-		private TMP_Text m_P1ScoreText;
+    public class ScoreManager : MonoBehaviour
+    {
+        [Header("Score Texts")]
+        [SerializeField] private TMP_Text m_P1ScoreText;
+        [SerializeField] private TMP_Text m_P2ScoreText;
 
-		[FormerlySerializedAs("p2ScoreText")]
-		[SerializeField, Tooltip("P2 のスコアを表示する TextMeshPro テキスト")]
-		private TMP_Text m_P2ScoreText;
+        [Header("Player Roles")]
+        [SerializeField] private string m_P1Role = "P1";
+        [SerializeField] private string m_P2Role = "P2";
 
-		[Header("Player Roles")]
-		[SerializeField, Tooltip("P1 を判定する role 名")]
-		private string m_P1Role = "P1";
+        [SerializeField] private string m_MissingPlayerText = "-";
 
-		[SerializeField, Tooltip("P2 を判定する role 名")]
-		private string m_P2Role = "P2";
+        [Header("Score Positions")]
+        [SerializeField] private Vector2 m_LeftPosition;
+        [SerializeField] private Vector2 m_RightPosition;
 
-		[SerializeField, Tooltip("対象プレイヤーが見つからない場合に表示する文字列")]
-		private string m_MissingPlayerText = "-";
-
-        [SerializeField] 
-		private Vector2 m_LeftPosition;
-        
-		[SerializeField] 
-		private Vector2 m_RightPosition;
+        [Header("Sudden Death UI Prefab")]
+        [SerializeField] private GameObject suddenDeathUIPrefab;   // ★ 追加
 
         private IGameState m_State;
+        private bool m_SuddenDeathTriggered = false;
 
-		private void Start()
-		{
-			m_State = GameStateLocator.Current;
-			if (m_State == null)
-			{
-				Debug.LogError("[ScoreManager] GameStateLocator.Current is null");
-				return;
-			}
+        private void Start()
+        {
+            Debug.Log("[ScoreManager] Start called. m_State=" + m_State);
+            Debug.Log("[ScoreManager] Using GameState instance: " + m_State.GetHashCode());
 
-			m_State.OnStateInitialized += RefreshScores;
-			m_State.OnPlayersChanged += RefreshScores;
+            m_State = GameStateLocator.Current;
+            if (m_State == null)
+            {
+                Debug.LogError("[ScoreManager] GameStateLocator.Current is null");
+                return;
+            }
 
-			RefreshScores();
-		}
+            m_State.OnStateInitialized += RefreshScores;
+            m_State.OnPlayersChanged += RefreshScores;
 
-		private void OnDestroy()
-		{
-			if (m_State == null) return;
+            
+            m_State.OnSuddenDeathStarted += OnSuddenDeathStarted;
 
-			m_State.OnStateInitialized -= RefreshScores;
-			m_State.OnPlayersChanged -= RefreshScores;
-		}
+            if (m_State.SuddenDeathAlreadyStarted)
+            {
+                OnSuddenDeathStarted();
+            }
 
-		private void RefreshScores()
-		{
-			SetScoreText(m_P1ScoreText, TryGetScore(m_P1Role));
-			SetScoreText(m_P2ScoreText, TryGetScore(m_P2Role));
+            RefreshScores();
+        }
 
-			UpdatePosition();
-		}
+        private void OnDestroy()
+        {
+            if (m_State == null) return;
 
-		private int? TryGetScore(string role)
-		{
-			if (m_State == null || m_State.Players == null) return null;
+            m_State.OnStateInitialized -= RefreshScores;
+            m_State.OnPlayersChanged -= RefreshScores;
+            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted; // ★ 追加
+        }
 
-			foreach (var player in m_State.Players.Values)
-			{
-				if (player == null) continue;
-				if (player.Role != role) continue;
+        private void RefreshScores()
+        {
+            SetScoreText(m_P1ScoreText, TryGetScore(m_P1Role));
+            SetScoreText(m_P2ScoreText, TryGetScore(m_P2Role));
 
-				return player.Score;
-			}
+            UpdatePosition();
+            CheckSuddenDeath();
+        }
 
-			return null;
-		}
+        private void CheckSuddenDeath()
+        {
+            if (m_SuddenDeathTriggered)
+                return;
 
-		private void SetScoreText(TMP_Text text, int? score)
-		{
-			if (text == null) return;
-			text.text = score.HasValue ? score.Value.ToString() : m_MissingPlayerText;
-		}
+            var p1 = TryGetScore(m_P1Role);
+            var p2 = TryGetScore(m_P2Role);
 
-		// スコア表示の位置を、現在のプレイヤーIDに応じて更新する
-		private void UpdatePosition()
-		{
-			if (m_State?.Me == null)
-				return;
+            if (p1 == 2 && p2 == 2)
+            {
+                m_SuddenDeathTriggered = true;
 
-			var p1Rect = m_P1ScoreText != null
-				? m_P1ScoreText.GetComponent<RectTransform>()
-				: null;
+                Debug.Log("[ScoreManager] Sudden Death Triggered!");
 
-			var p2Rect = m_P2ScoreText != null
-				? m_P2ScoreText.GetComponent<RectTransform>()
-				: null;
+                m_State?.NotifySuddenDeathRequested();
+            }
+        }
+
+        private void OnSuddenDeathStarted()
+        {
+            Debug.Log("[ScoreManager] Sudden Death UI Triggered");
+
+            if (suddenDeathUIPrefab == null)
+            {
+                Debug.LogError("[ScoreManager] suddenDeathUIPrefab が設定されていません");
+                return;
+            }
+
+            // ★ Canvas の下に生成
+            var canvas = FindObjectOfType<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogError("[ScoreManager] Canvas が見つかりません");
+                return;
+            }
+
+            Instantiate(suddenDeathUIPrefab, canvas.transform);
+        }
+
+        private int? TryGetScore(string role)
+        {
+            if (m_State == null || m_State.Players == null) return null;
+
+            foreach (var player in m_State.Players.Values)
+            {
+                if (player == null) continue;
+                if (player.Role != role) continue;
+
+                return player.Score;
+            }
+
+            return null;
+        }
+
+        private void SetScoreText(TMP_Text text, int? score)
+        {
+            if (text == null) return;
+            text.text = score.HasValue ? score.Value.ToString() : m_MissingPlayerText;
+        }
+
+        private void UpdatePosition()
+        {
+            if (m_State?.Me == null)
+                return;
+
+            var p1Rect = m_P1ScoreText?.GetComponent<RectTransform>();
+            var p2Rect = m_P2ScoreText?.GetComponent<RectTransform>();
 
             if (m_State.Me.Role == m_P1Role)
             {
@@ -111,5 +150,5 @@ namespace GamblingAction.UI
                 p2Rect.anchoredPosition = m_LeftPosition;
             }
         }
-	}
+    }
 }
