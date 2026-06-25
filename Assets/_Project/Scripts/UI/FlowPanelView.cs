@@ -188,6 +188,10 @@ namespace GamblingAction.UI
 			m_State.OnPlayersChanged += UpdateExchangeRange;
 			m_State.OnBeatChanged    += HandleBeatChanged;
 
+			// 起動時のシーン保存状態に依存せず、フェーズ判定の前に全フローパネルを一旦隠す。
+			// （シーンで誤ってアクティブ保存されていても、起動直後に重複表示されないようにする保険）
+			HideAllFlowPanels();
+
 			HandlePhase(m_State.Phase);
 			HandlePlayersChanged();
 			UpdateExchangeRange();
@@ -709,6 +713,16 @@ namespace GamblingAction.UI
 			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver && m_IsStarted);
 
+			// BuffSelection 以外のフェーズ（Exchange に戻った場合を含む）では
+			// バフパネル／ミッション選択パネルを明示的に隠す。
+			// これを入れないと Exchange ⇄ BuffSelection を往復したときに
+			// BuffPanel が ON のまま残り、ExchangePanel と重なって表示される。
+			if (phase != EGamePhase.BuffSelection)
+			{
+				SetActive(m_BuffPanel, false);
+				SetActive(m_MissionSelectionPanel, false);
+			}
+
 			// ミッションHUDを表示するフェーズの制御（Countdown / Battle 中）
 			bool showMissionHUD = (phase == EGamePhase.Countdown || phase == EGamePhase.Battle) && m_State.Me?.Mission != null;
 			SetActive(m_MissionPanel, showMissionHUD);
@@ -1132,6 +1146,23 @@ namespace GamblingAction.UI
 			if (m_ExchangeSlider.value > max) m_ExchangeSlider.value = max;
 			if (m_ExchangeAmountText != null)
 				m_ExchangeAmountText.text = $"{(int)m_ExchangeSlider.value} chips (¥{(int)m_ExchangeSlider.value * 100})";
+		}
+
+		/// <summary>
+		/// フェーズで出し分ける全フローパネルを一旦すべて隠す。
+		/// 起動時の初期化で、シーンの保存状態（アクティブのまま保存）に関わらず
+		/// クリーンな状態から HandlePhase に表示を委ねるために使う。
+		/// </summary>
+		private void HideAllFlowPanels()
+		{
+			SetActive(m_ExchangePanel, false);
+			SetActive(m_BuffPanel, false);
+			SetActive(m_RoundOverPanel, false);
+			SetActive(m_GameOverPanel, false);
+			SetActive(m_MainGameStage, false);
+			SetActive(m_PreparingCountdownPanel, false);
+			SetActive(m_MissionPanel, false);
+			SetActive(m_MissionSelectionPanel, false);
 		}
 
 		private static void SetActive(GameObject go, bool active)

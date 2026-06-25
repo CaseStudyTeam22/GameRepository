@@ -26,6 +26,17 @@ namespace GamblingAction.Gameplay
 
 		public SkillDefinition SkillSet => m_SkillSet;
 
+		[Header("Dust (movement effect)")]
+		[SerializeField, Tooltip("移動時に出す土煙の ParticleSystem prefab。null なら土煙は出ない")]
+		private ParticleSystem m_DustPrefab;
+
+		[SerializeField, Tooltip("一度に放出する土煙パーティクルの数")]
+		private int m_DustEmitCount = 12;
+		[SerializeField, Tooltip("移動中、1フレームあたりに放出する土煙の数（軌跡の濃さ）")]
+		private int m_DustTrailPerFrame = 2;
+		[SerializeField, Range(0f, 1f), Tooltip("移動のこの進行度までで土煙を止める。0.6 なら移動の60%地点までしか出さない（到着マス被り防止）")]
+		private float m_DustEmitUntil = 0.6f;
+
 		[Header("Movement")]
 		[FormerlySerializedAs("moveDuration")]
 		[SerializeField] private float m_MoveDuration = 0.22f;
@@ -47,6 +58,8 @@ namespace GamblingAction.Gameplay
 		private Material m_BaseMaterial;
 		private float m_BaseY;
 		private Tween m_MoveTween;
+		// 土煙はマス移動のたびに生成せず、1個を使い回す（メモリ効率のため）
+		private ParticleSystem m_DustInstance;
 
 		private bool m_IsFalling;
 		private float m_FallVelocity;
@@ -98,6 +111,9 @@ namespace GamblingAction.Gameplay
 				m_State.OnPhaseChanged   -= HandlePhaseChanged;
 				m_State.OnGameEvents     -= HandleGameEvents;
 			}
+			// 使い回していた土煙インスタンスを破棄する
+			if (m_DustInstance != null) Destroy(m_DustInstance.gameObject);
+
 			if (PopupDirector.Instance != null && !string.IsNullOrEmpty(m_PlayerId))
 				PopupDirector.Instance.UnregisterPlayer(m_PlayerId);
 		}
@@ -131,12 +147,20 @@ namespace GamblingAction.Gameplay
 				m_FallVelocity = 0f;
 				m_KickoffDone = false;
 			}
-			else if (!m_IsFalling && (dto.X != m_LastX || dto.Y != m_LastY))
+			/*else if (!m_IsFalling && (dto.X != m_LastX || dto.Y != m_LastY))
 			{
 				var target = m_Board.GridToWorld(dto.X, dto.Y);
 				target.y = m_BaseY;
 				m_MoveTween?.Kill();
 				m_MoveTween = transform.DOMove(target, m_MoveDuration).SetEase(m_MoveEase);
+			}*/
+			else if (!m_IsFalling && (dto.X != m_LastX || dto.Y != m_LastY))
+			{
+				var target = m_Board.GridToWorld(dto.X, dto.Y);
+				target.y = m_BaseY;
+				m_MoveTween?.Kill();
+				m_MoveTween = transform.DOMove(target, m_MoveDuration).SetEase(m_MoveEase)
+					.OnUpdate(EmitDustTrail);   // 移動中ずっと足元で土煙を出す
 			}
 
 			m_PrevFalling = dto.Falling;
@@ -191,6 +215,47 @@ namespace GamblingAction.Gameplay
 			transform.position = pos;
 			m_LastX = dto.X;
 			m_LastY = dto.Y;
+		}
+
+	
+		/// 足元に土煙を1回放出する。
+		/// インスタンスは初回のみ生成し、以降は使い回す。
+		private void EmitDust()
+		{
+			if (m_DustPrefab == null) return;
+
+			// 初回だけ生成する（毎回 Instantiate しないことでメモリ効率を確保）
+			if (m_DustInstance == null)
+			{
+				m_DustInstance = Instantiate(m_DustPrefab, null);
+			}
+
+			// 足元の位置に移動させてから放出する
+			var footPos = transform.position;
+			footPos.y = m_BaseY;
+			m_DustInstance.transform.position = footPos;
+			m_DustInstance.Emit(m_DustEmitCount);
+		}
+
+	
+		/// 移動中、現在の足元位置で土煙を少量ずつ放出する（軌跡用）。
+		private void EmitDustTrail()
+		{
+			if (m_DustPrefab == null) return;
+
+			// 移動の終盤（しきい値以降）は放出を止める。到着マスで被らせないため
+			if (m_MoveTween != null && m_MoveTween.ElapsedPercentage() > m_DustEmitUntil) return;
+
+			if (m_DustInstance == null)
+			{
+				m_DustInstance = Instantiate(m_DustPrefab, null);
+			}
+
+			// 現在の足元位置に追従させて少量放出する
+			var footPos = transform.position;
+			footPos.y = m_BaseY;
+			m_DustInstance.transform.position = footPos;
+			m_DustInstance.Emit(m_DustTrailPerFrame);
 		}
 
 		private void ApplyColor(PlayerDto dto)
