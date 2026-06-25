@@ -35,6 +35,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
 		// 上記の合体値用フィールド
 		[JsonProperty("modifiers")]   public PlayerModifiersDto Modifiers;
+		[JsonProperty("scammerActive")] public bool ScammerActive;
 		[JsonProperty("stamina")]     public int Stamina;
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 	}
