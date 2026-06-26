@@ -104,5 +104,8 @@ namespace GamblingAction.Core.Dto
 		public const string FinalRaiseStarted    = "final_raise_started";
 		// イカサマスキル発動中、相手のintentが更新された際にイカサマプレイヤーのみに送信される通知。
 		public const string OpponentIntentRevealed = "opponent_intent_revealed";
+
+		// 既に 2 人ぶんの席が埋まっているため入室を断られた通知。直後にサーバから切断される。
+		public const string RoomFull             = "room_full";
 	}
 }

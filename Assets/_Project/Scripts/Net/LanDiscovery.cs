@@ -24,7 +24,10 @@ namespace GamblingAction.Net
 		{
 			public readonly string HostIp;
 			public readonly int Port;
-			public Result(string ip, int port) { HostIp = ip; Port = port; }
+			// 通知を送ったサーバプロセスの PID。ホスト同士が衝突したとき、
+			// どちらがホストを続けるかを PID で決めるために使う。
+			public readonly int Pid;
+			public Result(string ip, int port, int pid) { HostIp = ip; Port = port; Pid = pid; }
 			public bool IsValid => !string.IsNullOrEmpty(HostIp);
 		}
 
@@ -76,7 +79,7 @@ namespace GamblingAction.Net
 					if (excludeOwnPid != 0 && pid == excludeOwnPid) continue;
 					// 念のため：パケットに書かれた IP が空なら受信元 IP を使う。
 					if (string.IsNullOrEmpty(ip)) ip = r.RemoteEndPoint.Address.ToString();
-					return new Result(ip, port);
+					return new Result(ip, port, pid);
 				}
 			}
 			finally

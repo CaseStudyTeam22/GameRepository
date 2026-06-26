@@ -28,6 +28,10 @@ namespace GamblingAction.Domain
 		private List<ItemDto> m_Items = new();
 		private int m_SelectedCharaIndex = 0;
 
+		// この端末を一意に識別するトークン。アプリ起動中は変わらない。
+		// 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
+		private readonly string m_Token = System.Guid.NewGuid().ToString("N");
+
 		public string MyId { get; private set; }
 		public int GridSize { get; private set; } = GamblingAction.Core.GameConfig.GridSize;
 		public IReadOnlyDictionary<string, PlayerDto> Players => m_Players;
@@ -38,8 +42,9 @@ namespace GamblingAction.Domain
 		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
+        public bool SuddenDeathAlreadyStarted { get; private set; }
 
-		public PlayerDto Me =>
+        public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
 
 		public PlayerDto Opponent =>
@@ -68,9 +73,12 @@ namespace GamblingAction.Domain
 		/// UI表示は未実装（骨格のみ）。
 		public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
 
-		public GameState(INetClient net)
+        public event Action OnSuddenDeathStarted;
+
+        public GameState(INetClient net)
 		{
-			m_Net = net;
+            Debug.Log("[GameState] Created instance: " + this.GetHashCode());
+            m_Net = net;
 			Subscribe();
 		}
 
@@ -424,12 +432,20 @@ namespace GamblingAction.Domain
 
 			return Mathf.RoundToInt(finalPower);
 		}
+        public void NotifySuddenDeathRequested()
+        {
+            // サーバーへリクエスト送信
+            m_Net.Emit("request_sudden_death",null);
+        }
 
-		private void Subscribe()
+        private void Subscribe()
 		{
 			m_Net.OnConnected += () =>
 			{
 				IsConnected = true;
+				// 接続が確立するたびに端末トークンを送る。
+				// サーバはこれを見て新規入室か再接続かを判定する。
+				m_Net.Emit(ClientEvents.Identify, new IdentifyMessage { Token = m_Token });
 				OnConnectionChanged?.Invoke(true);
 			};
 			m_Net.OnDisconnected += () =>
@@ -458,18 +474,21 @@ namespace GamblingAction.Domain
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
 			m_Net.On(ServerEvents.RoundStart,          () => SetPhase(EGamePhase.Battle));
 			m_Net.On(ServerEvents.CloseAll,            HandleCloseAll);
+			m_Net.On(ServerEvents.RoomFull,           HandleRoomFull);
 
 			m_Net.On<FinalRaiseOfferMessage>(ServerEvents.FinalRaiseOffer, HandleFinalRaiseOffer);
 			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
 			m_Net.On<FinalRaiseCanceledMessage>(ServerEvents.FinalRaiseCanceled, HandleFinalRaiseCanceled);
 			m_Net.On(ServerEvents.FinalRaiseStarted, HandleFinalRaiseStarted);
-
 			// イカサマスキル発動中、相手のintentが更新された際の通知（イカサマのソケットにのみ送信される）。
 			m_Net.On<OpponentIntentRevealedMessage>(ServerEvents.OpponentIntentRevealed,
 				msg => OnOpponentIntentRevealed?.Invoke(msg));
-		}
 
-		private void HandleInit(InitMessage msg)
+            m_Net.On("sudden_death_started", () =>{Debug.Log("[GameState] sudden_death_started received");RaiseSuddenDeathStarted();});
+
+        }
+
+        private void HandleInit(InitMessage msg)
 		{
 			MyId = msg.Id;
 			GridSize = msg.GridSize;
@@ -570,6 +589,12 @@ namespace GamblingAction.Domain
 			m_Net.Disconnect();
 		}
 
+		// 既に 2 人で埋まっているため入室を断られた。正常な 2 人対戦では起きない。
+		private void HandleRoomFull()
+		{
+			Debug.LogWarning("[GameState] 入室を断られました（既に 2 人で対戦中）");
+		}
+
 		private void ReplacePlayers(Dictionary<string, PlayerDto> incoming)
 		{
 			m_Players.Clear();
@@ -642,10 +667,16 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.FinalRaiseStarted);
 			m_Net.Off(ServerEvents.OpponentIntentRevealed);
 		}
-	}
+        public void RaiseSuddenDeathStarted()
+        {
+            SuddenDeathAlreadyStarted = true;
+            OnSuddenDeathStarted?.Invoke();
+        }
 
-	// Modifierの拡張メソッド定義
-	public static class ModifierDomainExtensions
+    }
+
+    // Modifierの拡張メソッド定義
+    public static class ModifierDomainExtensions
 	{
 		public static float GetModifiedValue(this ModifierContainer container, float baseValue)
 		{
@@ -670,5 +701,8 @@ namespace GamblingAction.Domain
 		{
 			container.Modifiers?.Remove(tag);
 		}
+
 	}
+
+
 }

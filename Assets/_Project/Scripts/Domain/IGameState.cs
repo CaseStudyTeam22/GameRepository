@@ -18,8 +18,9 @@ namespace GamblingAction.Domain
 		// ファイナルレイズ本番ラウンド進行中なら true。
 		// このラウンドの勝者がそのまま全勝（game_over）になる。
 		bool IsFinalDuel { get; }
+		bool SuddenDeathAlreadyStarted { get; }
 
-		PlayerDto Me { get; }
+        PlayerDto Me { get; }
 		PlayerDto Opponent { get; }
 
 		void SubmitIntent(string type, string dir, int power);
@@ -36,7 +37,9 @@ namespace GamblingAction.Domain
 		// 勝者がファイナルレイズを受諾するか（accept=true）拒否するかを送信。
 		void SubmitFinalRaiseRespond(bool accept);
 
-		event Action OnStateInitialized;
+        void NotifySuddenDeathRequested();
+
+        event Action OnStateInitialized;
 		event Action OnPlayersChanged;
 		event Action OnItemsChanged;
 		event Action OnBeatChanged;
@@ -63,5 +66,7 @@ namespace GamblingAction.Domain
 		event Action OnFinalRaiseStarted;
 		// 相手の意図（イカサマなどのスキルで公開されたインテント）が明かされたときの通知。
 		event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
+        // サドンデス開始通知。ファイナルレイズとは別のフェーズ。
+        event Action OnSuddenDeathStarted;
 	}
 }

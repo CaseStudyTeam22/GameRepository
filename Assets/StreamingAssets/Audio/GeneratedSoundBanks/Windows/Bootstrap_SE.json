@@ -1,0 +1,49 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Windows",
+  "BasePlatform": "Windows",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "1975480976",
+    "Type": "User",
+    "GUID": "{60A31E10-5905-4CE2-A205-B395B76523C5}",
+    "Color": "19",
+    "Language": "SFX",
+    "Hash": "{841431B0-570A-D48B-D627-F7B7A9F32DAF}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Bootstrap_SE",
+    "ShortName": "Bootstrap_SE",
+    "Path": "Bootstrap_SE.bnk",
+    "Media": [
+     {
+      "Id": "378225411",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "start_SE.wav",
+      "CachePath": "47/{47D8EA95-80A4-6018-B5EC-06F27226212B}.wem"
+     }
+    ],
+    "Events": [
+     {
+      "Id": "2230670290",
+      "Name": "Play_start",
+      "ObjectPath": "\\Events\\Default Work Unit\\SE\\Bootstrap\\Play_start",
+      "GUID": "{C2663EBE-5A32-4BCF-9CE6-C5B696F00A38}",
+      "Color": "19",
+      "DurationType": "OneShot",
+      "DurationMin": "0.8157823",
+      "DurationMax": "0.8157823",
+      "MediaRefs": [
+       {
+        "Id": "378225411"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "FileHash": "{30BAA034-F43D-522C-E517-925BD5B8EFC1}"
+ }
+}

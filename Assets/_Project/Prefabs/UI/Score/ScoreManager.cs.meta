@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e434f4a52dd48d846bd84c30c846a03e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - m_P1ScoreText: {instanceID: 0}
+  - m_P2ScoreText: {instanceID: 0}
+  - suddenDeathUIPrefab: {fileID: 2628402194884014216, guid: 36dfffe21daab304cbf8c0fb0fcf614d, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

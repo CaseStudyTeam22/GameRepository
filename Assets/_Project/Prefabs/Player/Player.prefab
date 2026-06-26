@@ -338,6 +338,8 @@ MonoBehaviour:
   m_Fx: {fileID: 4676508576606827506}
   m_SkillSet: {fileID: 11400000, guid: 800a9a5e033eda043ad6b8f5b091cace, type: 2}
   m_IntentBubble: {fileID: 2470626556009896975}
+  m_DustPrefab: {fileID: 644303079887784423, guid: cf4ced7980ad56446b65be875878de24, type: 3}
+  m_DustEmitCount: 12
   m_MoveDuration: 0.22
   m_MoveEase: 6
   m_Gravity: 18
