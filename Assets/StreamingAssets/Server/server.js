@@ -150,7 +150,7 @@ function checkNouveauRicheAutoExchange() {
                     p1.exchanged = false;
                     console.log(`[Server] NouveauRiche ${p1.role} cannot afford ${A_opp}. Unlocking manual exchange.`);
                     io.emit('sync_state', { players });
-                    
+
                     if (p1.isAI) {
                         setTimeout(() => {
                             if (!players[p1.id] || players[p1.id].exchanged) return;
@@ -179,7 +179,7 @@ function checkNouveauRicheAutoExchange() {
                     p2.exchanged = false;
                     console.log(`[Server] NouveauRiche ${p2.role} cannot afford ${A_opp}. Unlocking manual exchange.`);
                     io.emit('sync_state', { players });
-                    
+
                     if (p2.isAI) {
                         setTimeout(() => {
                             if (!players[p2.id] || players[p2.id].exchanged) return;
@@ -1220,6 +1220,13 @@ function handleRoundConcluded(winnerId, loserId) {
     }
 
     const playerList = Object.values(players);
+
+    // ラウンド終了時、チップを持ち金に戻す
+    for (let id in players) {
+        const p = players[id];
+        p.money += p.chips;  // チップをお金にキャッシュバック
+        p.chips = 0;
+    }
 
     // 通常戦の途中で 2-1 または 1-2 になったら、ファイナルレイズの提案フェーズへ
     if (playerList.length === 2) {
