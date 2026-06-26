@@ -64,8 +64,9 @@ namespace GamblingAction.Domain
 		event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		// 勝者が受諾し、ファイナルレイズ本番ラウンドへ入る通知。
 		event Action OnFinalRaiseStarted;
+		// 相手の意図（イカサマなどのスキルで公開されたインテント）が明かされたときの通知。
+		event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
         // サドンデス開始通知。ファイナルレイズとは別のフェーズ。
         event Action OnSuddenDeathStarted;
-
-    }
+	}
 }

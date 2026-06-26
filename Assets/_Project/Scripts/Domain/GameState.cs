@@ -1,18 +1,32 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using GamblingAction.Net;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GamblingAction.Domain
 {
 	public class GameState : IGameState, IDisposable
 	{
+		private static readonly string[] CharacterSheetUrls = new string[]
+		{
+			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=0",         // Normal
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=573545404", // Doctor
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=484412955", // NouveauRiche
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=369696735", // Fighter
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=34508704", // Guardian
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=2137123423", // Scammer
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=795014052"  // Debtor
+		};
+
 		private readonly INetClient m_Net;
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
+		private int m_SelectedCharaIndex = 0;
 
 		// この端末を一意に識別するトークン。アプリ起動中は変わらない。
 		// 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
@@ -55,6 +69,10 @@ namespace GamblingAction.Domain
 		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
 		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		public event Action OnFinalRaiseStarted;
+		/// イカサマスキル発動中に相手の intent が更新された際、イカサマプレイヤーのみに通知されるイベント。
+		/// UI表示は未実装（骨格のみ）。
+		public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
+
         public event Action OnSuddenDeathStarted;
 
         public GameState(INetClient net)
@@ -71,11 +89,11 @@ namespace GamblingAction.Domain
 			if (me == null || me.IsAI) return;
 
 			// テストで4拍ごとに押し出し力+1
-			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
-			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
+			//m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
+			//Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
 
 			// スタミナ上限を追加
-			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
+			//m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
 
 			// ステータスを更新
 			RefreshPlayerStats(m_Players[MyId]);
@@ -88,9 +106,263 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
 		}
 
-		public void SubmitReady(bool isAI)
+		public async void SubmitReady(bool isAI)
 		{
-			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
+			var charaData = new CharaDataMessage
+			{
+				Name = "Normal",
+				MaxStamina = 5,
+				InitMoney = 10000,
+				InitChips = 0,
+				PushPower = 0,
+				MoveSpeed = 0,
+				MoveCost = new[] { 1, 3, 5 },
+				PushCost = new[] { 3, 5, 9 },
+				AttackCost = new[] { 3, 5, 9 },
+				DefenseCost = new[] { 2, 2, 2 },
+				SkillCost = new[] { 3, 5, 9 },
+				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
+			};
+
+			// デフォルト値の設定
+			if (m_SelectedCharaIndex == 1)
+			{
+				charaData.Name = "Doctor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				// キャラ別に発動コストを変更したい場合はこれをいじってね
+				// クライアント側の挙動はちゃんと確認できたけど、サーバー側でちゃんと動いてるかはわからんね。多分大丈夫だけど。
+				//charaData.MoveCost = new[] { 3, 6, 9 }; // 全キャラ共通にするため無効化
+				//charaData.PushCost = new[] { 3, 5, 9 },
+				//charaData.AttackCost = new[] { 3, 5, 9 },
+				//charaData.DefenseCost = new[] { 2, 2, 2 },
+				charaData.SkillCost = new[] { 3, 3, 3 }; // スキルコスト3固定
+				charaData.Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 3 };
+			}
+			else if (m_SelectedCharaIndex == 2)
+			{
+				charaData.Name = "NouveauRiche";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 8000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 0, 0, 0 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
+			}
+			else if (m_SelectedCharaIndex == 3)
+			{
+				charaData.Name = "Fighter";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 3, 3, 3 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
+			}
+			else if (m_SelectedCharaIndex == 4)
+			{
+				// ガーディアン: スキル発動中はノックバックとダメージを完全無効化する無敵防御キャラ。
+				// 最大定力が高いが定力回復手段がないため、防御タイミングが鍵になる。
+				charaData.Name = "Guardian";
+				charaData.MaxStamina = 7;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 3;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 4, 4, 4 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "guardian_skill", StaminaRec = 0, ChipCost = 4 };
+			}
+			else if (m_SelectedCharaIndex == 5)
+			{
+				// イカサマ: 初回スキル発動のコストが高いが、以降相手のインテントをリアルタイムで碟き見ることができる。
+				// 初期資金少し多め。
+				charaData.Name = "Scammer";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 12000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 15, 15, 15 }; // 初回発動コストが重い
+				charaData.Skills = new CharaSkillDataMessage { Id = "scammer_skill", StaminaRec = 0, ChipCost = 15 };
+			}
+			else if (m_SelectedCharaIndex == 6)
+			{
+				// 債務者: チップが少ないときのみスキル発動可能。
+				// フィールド上のアイテムを一括回収し、次の突進を強化する。
+				// 初期資金が少ないので経済管理が重要になる。
+				charaData.Name = "Debtor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 6000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 1; // 突進力が少し高め
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 2, 2, 2 }; // スキルコストは低い
+				charaData.Skills = new CharaSkillDataMessage { Id = "debtor_skill", StaminaRec = 0, ChipCost = 2 };
+			}
+
+			// CSV読み込みによる上書き
+			// コストのスケーリングはとりあえず読み取ったものから1x,2x,3xする
+			// 足りない項目はたす
+			// 英字はなにかと、読み取る順番はcsvのカンマ区切りでないとだめかどうか？
+			if (m_SelectedCharaIndex >= 0 && m_SelectedCharaIndex < CharacterSheetUrls.Length)
+			{
+				string url = CharacterSheetUrls[m_SelectedCharaIndex];
+				var csvData = await LoadCSVFromUrlAsync(url);
+				if (csvData != null)
+				{
+					int maxStamina;
+					int initMoney;
+					int initChips;
+					int pushPower;
+					int defPower;
+
+					// キャラクター名
+					if (csvData.TryGetValue("キャラクター名", out var nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+					else if (csvData.TryGetValue("Name", out nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+
+					// スタミナ（体幹）
+					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaVals) && maxStaminaVals.Length > 0)
+						if (int.TryParse(maxStaminaVals[0], out maxStamina)) charaData.MaxStamina = maxStamina;
+					else if (csvData.TryGetValue("MaxStamina", out maxStaminaVals) && maxStaminaVals.Length > 0)
+						if (int.TryParse(maxStaminaVals[0], out maxStamina)) charaData.MaxStamina = maxStamina;
+
+					// 資金
+					if (csvData.TryGetValue("資金", out var initMoneyVals) && initMoneyVals.Length > 0)
+						if (int.TryParse(initMoneyVals[0], out initMoney)) charaData.InitMoney = initMoney;
+					else if (csvData.TryGetValue("InitMoney", out initMoneyVals) && initMoneyVals.Length > 0)
+						if (int.TryParse(initMoneyVals[0], out initMoney)) charaData.InitMoney = initMoney;
+
+					// チップ
+					if (csvData.TryGetValue("チップ", out var initChipsVals) && initChipsVals.Length > 0)
+						if (int.TryParse(initChipsVals[0], out initChips)) charaData.InitChips = initChips;
+					else if (csvData.TryGetValue("InitChips", out initChipsVals) && initChipsVals.Length > 0)
+						if (int.TryParse(initChipsVals[0], out initChips)) charaData.InitChips = initChips;
+
+					// 突進 (power, chip)
+					if (csvData.TryGetValue("突進", out var pushVals))
+					{
+						if (pushVals.Length > 0 && int.TryParse(pushVals[0], out pushPower))
+							charaData.PushPower = pushPower;
+						if (pushVals.Length > 1)
+							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost);
+					}
+
+					// 防御 (power, chip)
+					if (csvData.TryGetValue("防御", out var defenseVals))
+					{
+						if (defenseVals.Length > 0 && int.TryParse(defenseVals[0], out defPower))
+							charaData.DefensePower = defPower;
+						if (defenseVals.Length > 1)
+							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost);
+					}
+
+					// スキル (power(不要), chip)
+					if (csvData.TryGetValue("スキル", out var skillVals))
+					{
+						if (skillVals.Length > 1)
+						{
+							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost);
+							charaData.Skills.ChipCost = charaData.SkillCost[0];
+						}
+					}
+
+					// スキルIDの個別指定がもしCSV側にあれば読み込む (A列: SkillId など)
+					if (csvData.TryGetValue("SkillId", out var skillIdVals) && skillIdVals.Length > 0)
+						charaData.Skills.Id = skillIdVals[0];
+				}
+			}
+
+			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage 
+			{ 
+				IsAI = isAI,
+				CharaData = charaData
+			});
+		}
+
+		private async Task<Dictionary<string, string[]>> LoadCSVFromUrlAsync(string url)
+		{
+			if (string.IsNullOrEmpty(url) || url.Contains("YOUR_SPREADSHEET_ID"))
+			{
+				return null;
+			}
+
+			try
+			{
+				using var req = UnityWebRequest.Get(url);
+				var operation = req.SendWebRequest();
+				while (!operation.isDone)
+				{
+					await Task.Yield();
+				}
+
+				if (req.result != UnityWebRequest.Result.Success)
+				{
+					Debug.LogError($"CSV読み込み失敗: {req.error} (URL: {url})");
+					return null;
+				}
+
+				var dict = new Dictionary<string, string[]>();
+				var lines = req.downloadHandler.text.Split('\n');
+				foreach (var line in lines)
+				{
+					var cols = line.Split(',');
+					if (cols.Length < 1) continue;
+
+					string key = cols[0].Trim();
+					if (string.IsNullOrEmpty(key)) continue;
+
+					var vals = new List<string>();
+					for (int i = 1; i < cols.Length; i++)
+					{
+						string cVal = cols[i].Trim();
+						if (cVal.StartsWith("\"") && cVal.EndsWith("\""))
+						{
+							cVal = cVal.Substring(1, cVal.Length - 2).Trim();
+						}
+						if (string.IsNullOrEmpty(cVal)) continue; // カンマの連続による空要素を除外
+						vals.Add(cVal);
+					}
+					dict[key] = vals.ToArray();
+				}
+
+				return dict;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"CSV読み込み中に例外が発生しました: {ex.Message} (URL: {url})");
+				return null;
+			}
+		}
+
+		private int[] ParseIntArray(string val, int[] defaultValue)
+		{
+			if (string.IsNullOrEmpty(val)) return defaultValue;
+			var parts = val.Split(new[] { '/', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length == 0) return defaultValue;
+			var result = new List<int>();
+			foreach (var part in parts)
+			{
+				if (int.TryParse(part.Trim(), out var parsed))
+				{
+					result.Add(parsed);
+				}
+			}
+
+			// 1つしか数値がない場合、2、3段階目はそれぞれ2倍、3倍にする
+			if (result.Count == 1)
+			{
+				int baseVal = result[0];
+				return new[] { baseVal, baseVal * 2, baseVal * 3 };
+			}
+
+			return result.Count > 0 ? result.ToArray() : defaultValue;
 		}
 
 		public void SubmitUnready()
@@ -125,6 +397,7 @@ namespace GamblingAction.Domain
 
 		public void SubmitSelectChara(int index)
 		{
+			m_SelectedCharaIndex = index;
 			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
 		}
 
@@ -207,6 +480,10 @@ namespace GamblingAction.Domain
 			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
 			m_Net.On<FinalRaiseCanceledMessage>(ServerEvents.FinalRaiseCanceled, HandleFinalRaiseCanceled);
 			m_Net.On(ServerEvents.FinalRaiseStarted, HandleFinalRaiseStarted);
+			// イカサマスキル発動中、相手のintentが更新された際の通知（イカサマのソケットにのみ送信される）。
+			m_Net.On<OpponentIntentRevealedMessage>(ServerEvents.OpponentIntentRevealed,
+				msg => OnOpponentIntentRevealed?.Invoke(msg));
+
             m_Net.On("sudden_death_started", () =>{Debug.Log("[GameState] sudden_death_started received");RaiseSuddenDeathStarted();});
 
         }
@@ -342,19 +619,18 @@ namespace GamblingAction.Domain
 		{
 			if (player == null) return;
 
-			// スタミナの補正計算
-			int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
-
-			// 現在との差分を計算
-			int diff = modifiedStamina - player.Stamina;
-			player.MaxStamina += diff; // 最大値更新
-			
-			if (diff < 0 && player.Stamina > player.MaxStamina)
+			if (player.Modifiers != null)
 			{
-				player.Stamina = player.MaxStamina;
+				Debug.Log($"[GameState] PlayerStats Refreshed via Server Modifiers: {player.Id}, " +
+				          $"MaxStamina={player.MaxStamina}, " +
+				          $"MaxStaminaBonus={player.Modifiers.MaxStaminaBonus}, " +
+				          $"MoveSpeedBonus={player.Modifiers.MoveSpeedBonus}, " +
+				          $"PushPowerBonus={player.Modifiers.PushPowerBonus}");
 			}
-			
-			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
+			else
+			{
+				Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
+			}
 		}
 
 		private void SetPhase(EGamePhase phase)
@@ -389,6 +665,7 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.FinalRaisePending);
 			m_Net.Off(ServerEvents.FinalRaiseCanceled);
 			m_Net.Off(ServerEvents.FinalRaiseStarted);
+			m_Net.Off(ServerEvents.OpponentIntentRevealed);
 		}
         public void RaiseSuddenDeathStarted()
         {

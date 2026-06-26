@@ -1,14 +1,14 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Networking;
 using System.Collections;
 using System.Collections.Generic;
 
 public class FighterCSVImporter : MonoBehaviour
 {
-    [Header("Ši“¬‰ÆƒV[ƒg‚ÌCSV URL")]
+    [Header("æ ¼é—˜å®¶ã‚·ãƒ¼ãƒˆã®CSV URL")]
     [SerializeField] private string csvUrl;
 
-    [Header("Ši“¬‰Æ‚ÌStatsData")]
+    [Header("æ ¼é—˜å®¶ã®StatsData")]
     [SerializeField] private FighterStatsData fighterStatsData;
 
     [ContextMenu("Import Fighter CSV")]
@@ -24,7 +24,7 @@ public class FighterCSVImporter : MonoBehaviour
 
         if (req.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogError("Ši“¬‰ÆCSV“Ç‚İ‚İ¸”s: " + req.error);
+            Debug.LogError("æ ¼é—˜å®¶CSVèª­ã¿è¾¼ã¿å¤±æ•—: " + req.error);
             yield break;
         }
 
@@ -47,20 +47,20 @@ public class FighterCSVImporter : MonoBehaviour
         }
 
         fighterStatsData.SetData(keys, values);
-        Debug.Log("Ši“¬‰ÆƒXƒe[ƒ^ƒXCSV“Ç‚İ‚İŠ®—¹");
+        Debug.Log("æ ¼é—˜å®¶ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹CSVèª­ã¿è¾¼ã¿å®Œäº†");
     }
     [ContextMenu("Debug Fighter Stats")]
     public void DebugStats()
     {
         Debug.Log("=== Fighter Stats Debug ===");
 
-        Debug.Log("‘‹à: " + fighterStatsData.GetInt("‘‹à"));
-        Debug.Log("ƒ`ƒbƒv: " + fighterStatsData.GetInt("ƒ`ƒbƒv"));
-        Debug.Log("ƒXƒ^ƒ~ƒii‘ÌŠ²j: " + fighterStatsData.GetInt("ƒXƒ^ƒ~ƒii‘ÌŠ²j"));
-        Debug.Log("“Ëi: " + fighterStatsData.GetInt("“Ëi"));
-        Debug.Log("–hŒä: " + fighterStatsData.GetInt("–hŒä"));
-        Debug.Log("ƒXƒLƒ‹: " + fighterStatsData.GetString("ƒXƒLƒ‹"));
-        Debug.Log("ƒXƒLƒ‹“à—e: " + fighterStatsData.GetString("ƒXƒLƒ‹“à—e"));
+        Debug.Log("è³‡é‡‘: " + fighterStatsData.GetInt("è³‡é‡‘"));
+        Debug.Log("ãƒãƒƒãƒ—: " + fighterStatsData.GetInt("ãƒãƒƒãƒ—"));
+        Debug.Log("ã‚¹ã‚¿ãƒŸãƒŠï¼ˆä½“å¹¹ï¼‰: " + fighterStatsData.GetInt("ã‚¹ã‚¿ãƒŸãƒŠï¼ˆä½“å¹¹ï¼‰"));
+        Debug.Log("çªé€²: " + fighterStatsData.GetInt("çªé€²"));
+        Debug.Log("é˜²å¾¡: " + fighterStatsData.GetInt("é˜²å¾¡"));
+        Debug.Log("ã‚¹ã‚­ãƒ«: " + fighterStatsData.GetString("ã‚¹ã‚­ãƒ«"));
+        Debug.Log("ã‚¹ã‚­ãƒ«å†…å®¹: " + fighterStatsData.GetString("ã‚¹ã‚­ãƒ«å†…å®¹"));
 
         Debug.Log("=== End ===");
     }

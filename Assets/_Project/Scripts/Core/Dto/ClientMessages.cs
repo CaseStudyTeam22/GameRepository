@@ -1,10 +1,38 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace GamblingAction.Core.Dto
 {
+	public class CharaSkillDataMessage
+	{
+		[JsonProperty("id")] public string Id;
+		[JsonProperty("staminaRec")] public int StaminaRec;
+		[JsonProperty("chipCost")] public int ChipCost;
+	}
+
+	public class CharaDataMessage
+	{
+		[JsonProperty("name")] public string Name;
+		[JsonProperty("maxStamina")] public int MaxStamina;
+		[JsonProperty("initMoney")] public int InitMoney;
+		[JsonProperty("initChips")] public int InitChips;
+		[JsonProperty("pushPower")] public int PushPower;
+		[JsonProperty("moveSpeed")] public int MoveSpeed;
+		[JsonProperty("defensePower")] public int DefensePower;
+
+		[JsonProperty("moveCost")] public int[] MoveCost;
+		[JsonProperty("pushCost")] public int[] PushCost;
+		[JsonProperty("attackCost")] public int[] AttackCost;
+		[JsonProperty("defenseCost")] public int[] DefenseCost;
+		[JsonProperty("skillCost")] public int[] SkillCost;
+		[JsonProperty("restCost")] public int[] RestCost;
+
+		[JsonProperty("skills")] public CharaSkillDataMessage Skills;
+	}
+
 	public class PlayerReadyMessage
 	{
 		[JsonProperty("isAI")] public bool IsAI;
+		[JsonProperty("charaData")] public CharaDataMessage CharaData;
 	}
 
 	public class ExchangeChipsMessage

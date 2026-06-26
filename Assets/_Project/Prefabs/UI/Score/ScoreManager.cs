@@ -22,17 +22,20 @@ namespace GamblingAction.UI
         [SerializeField] private Vector2 m_RightPosition;
 
         [Header("Sudden Death UI Prefab")]
-        [SerializeField] private GameObject suddenDeathUIPrefab;   // š ’Ç‰Á
+        [SerializeField] private GameObject suddenDeathUIPrefab;   // è¿½åŠ 
 
         private IGameState m_State;
         private bool m_SuddenDeathTriggered = false;
 
         private void Start()
         {
-            Debug.Log("[ScoreManager] Start called. m_State=" + m_State);
-            Debug.Log("[ScoreManager] Using GameState instance: " + m_State.GetHashCode());
-
             m_State = GameStateLocator.Current;
+            Debug.Log("[ScoreManager] Start called. m_State=" + m_State);
+            if (m_State != null)
+            {
+                Debug.Log("[ScoreManager] Using GameState instance: " + m_State.GetHashCode());
+            }
+
             if (m_State == null)
             {
                 Debug.LogError("[ScoreManager] GameStateLocator.Current is null");
@@ -59,7 +62,7 @@ namespace GamblingAction.UI
 
             m_State.OnStateInitialized -= RefreshScores;
             m_State.OnPlayersChanged -= RefreshScores;
-            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted; // š ’Ç‰Á
+            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted; // â˜… è¿½åŠ 
         }
 
         private void RefreshScores()
@@ -95,15 +98,15 @@ namespace GamblingAction.UI
 
             if (suddenDeathUIPrefab == null)
             {
-                Debug.LogError("[ScoreManager] suddenDeathUIPrefab ‚ªİ’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ");
+                Debug.LogError("[ScoreManager] suddenDeathUIPrefab ãŒè¨­å®šã•ã‚Œã¦ã„ã¾ã›ã‚“");
                 return;
             }
 
-            // š Canvas ‚Ì‰º‚É¶¬
+            // â˜… Canvas ã®ä¸‹ã«ç”Ÿæˆ
             var canvas = FindObjectOfType<Canvas>();
             if (canvas == null)
             {
-                Debug.LogError("[ScoreManager] Canvas ‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ");
+                Debug.LogError("[ScoreManager] Canvas ãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“");
                 return;
             }
 

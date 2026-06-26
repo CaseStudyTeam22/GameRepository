@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace GamblingAction.Core.Dto
@@ -34,8 +34,19 @@ namespace GamblingAction.Core.Dto
 		// 上記の合体値用フィールド
 		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
 		// 上記の合体値用フィールド
+		[JsonProperty("modifiers")]   public PlayerModifiersDto Modifiers;
+		[JsonProperty("scammerActive")] public bool ScammerActive;
 		[JsonProperty("stamina")]     public int Stamina;
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
+	}
+
+	public class PlayerModifiersDto
+	{
+		[JsonProperty("maxStaminaBonus")]       public int MaxStaminaBonus;
+		[JsonProperty("pushPowerBonus")]        public int PushPowerBonus;
+		[JsonProperty("moveSpeedBonus")]        public int MoveSpeedBonus;
+		[JsonProperty("chipCostMultiplier")]    public float ChipCostMultiplier;
+		[JsonProperty("defenseReductionBonus")] public float DefenseReductionBonus;
 	}
 
 	// キャラクターの初期データの定義
