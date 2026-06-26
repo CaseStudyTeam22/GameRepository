@@ -123,16 +123,17 @@ function checkNouveauRicheAutoExchange() {
 
     if (isN1 && isN2) {
         // 両者が成金の場合は現在所持金額の50%をそれぞれがかけてチップとする
-        if (!p1.exchanged) {
+        if (p1.pendingExchange === 0) {
             p1.pendingExchange = Math.floor(p1.money * 0.5);
             p1.exchanged = true;
             console.log(`[Server] NouveauRiche vs NouveauRiche: ${p1.role} auto-exchanged ${p1.pendingExchange}`);
         }
-        if (!p2.exchanged) {
+        if (p2.pendingExchange === 0) {
             p2.pendingExchange = Math.floor(p2.money * 0.5);
             p2.exchanged = true;
             console.log(`[Server] NouveauRiche vs NouveauRiche: ${p2.role} auto-exchanged ${p2.pendingExchange}`);
         }
+
     } else if (isN1 && !isN2) {
         // P1が成金、P2が通常キャラ
         if (p2.exchanged) {

@@ -813,7 +813,7 @@ namespace GamblingAction.UI
 
 			if (phase == EGamePhase.BuffSelection)
 			{
-				int chips = (m_State.Me?.Chips ?? 0) + m_PendingExchange;
+				int chips = (m_State.Me?.Chips ?? 0) + (m_State.Me?.PendingExchange ?? 0);
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
 				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;

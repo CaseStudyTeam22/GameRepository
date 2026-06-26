@@ -13,6 +13,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("ready")]       public bool Ready;
 		[JsonProperty("inLobby")]     public bool InLobby;
 		[JsonProperty("exchanged")]   public bool Exchanged;
+		[JsonProperty("pendingExchange")] public int PendingExchange;
 		[JsonProperty("score")]       public int Score;
 		[JsonProperty("money")]       public int Money;
 		[JsonProperty("chips")]       public int Chips;
