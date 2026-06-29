@@ -3,22 +3,27 @@ using GamblingAction.Domain;
 
 namespace GamblingAction.Audio
 {
-    // 
-    // フェーズ変化に応じてBGMの再生・停止を管理する
+    // フェーズ変化に応じて BGM の再生・停止を管理する
     public class BGMPlayer : MonoBehaviour
     {
-        [Header("Wwise")]
+        [Tooltip("BGM->Boot")]
         [SerializeField] private AK.Wwise.Event m_BGMEvent;
+        [SerializeField] private AK.Wwise.Event m_SeekEvent;
 
-        // Wwise State の定数
         private const string k_StateGroup = "Gameplay_State";
-        private const string k_StateBattle = "Battle";
         private const string k_StateSilence = "Silence";
+
+        private const uint k_MusicSyncCallbackFlags =
+            (uint)AkCallbackType.AK_MusicSyncUserCue |
+            (uint)AkCallbackType.AK_MusicSyncBar |
+            (uint)AkCallbackType.AK_EnableGetMusicPlayPosition |
+            (uint)AkCallbackType.AK_MusicPlayStarted;
 
         private IGameState m_State;
         private IBeatClock m_BeatClock;
+        private BGMSyncController m_BgmSyncController;
 
-        // 再生中のPlayingID。0u = 未再生
+        // 再生中の PlayingID。0u = 未再生
         private uint m_PlayingID = 0u;
 
         // Battle フェーズ移行後、CurrentBeat == 1 を待つフラグ
@@ -38,11 +43,25 @@ namespace GamblingAction.Audio
 
             if (beatClock == null)
             {
-                Debug.LogError("[BGMPlayer] BeatClockが見つかりません。シーンにBeatManagerが存在するか確認してください。");
+                Debug.LogError("[BGMPlayer] BeatClockが見つかりません。シーンにBeatClockが存在するか確認してください。");
                 return;
             }
 
             m_BeatClock = beatClock;
+
+            if (m_SeekEvent == null)
+            {
+                m_SeekEvent = m_BGMEvent;
+                Debug.LogWarning("[BGMPlayer] m_SeekEvent が未設定のため m_BGMEvent を使用します。");
+            }
+
+            m_BgmSyncController = GetComponent<BGMSyncController>();
+            if (m_BgmSyncController == null)
+            {
+                m_BgmSyncController = gameObject.AddComponent<BGMSyncController>();
+            }
+
+            m_BgmSyncController.Initialize(m_BeatClock, m_State, gameObject, m_SeekEvent);
 
             m_State.OnPhaseChanged += HandlePhaseChanged;
             m_BeatClock.OnBeat += HandleBeat;
@@ -59,43 +78,107 @@ namespace GamblingAction.Audio
             {
                 m_BeatClock.OnBeat -= HandleBeat;
             }
+
+            if (m_BgmSyncController != null)
+            {
+                m_BgmSyncController.StopSync();
+            }
         }
 
-        // IGameState.OnPhaseChangedから呼ばれる
+        // IGameState.OnPhaseChanged から呼ばれる
         private void HandlePhaseChanged(EGamePhase phase)
         {
-            // State の切り替えは Post 時に Wwise Event 内で行われる
             if (phase == EGamePhase.Battle)
             {
+                if (m_PlayingID != 0u)
+                {
+                    return;
+                }
+
                 m_IsWaitingForBeat1 = true;
                 Debug.Log("[BGMPlayer] Battle開始。CurrentBeat == 1 を待機中");
+                return;
             }
-            else if (phase == EGamePhase.RoundOver || phase == EGamePhase.GameOver)
+
+            if (WwiseSoundAPI.Instance != null && m_PlayingID != 0u)
             {
-                WwiseGameSyncAPI.SetState(k_StateGroup, k_StateSilence);
-                m_IsWaitingForBeat1 = false;
-                m_PlayingID = 0u;
+                WwiseSoundAPI.Instance.Stop(m_PlayingID, gameObject, 0);
+            }
+
+            if (m_BgmSyncController != null)
+            {
+                m_BgmSyncController.StopSync();
+            }
+
+            m_IsWaitingForBeat1 = false;
+            m_PlayingID = 0u;
+            WwiseGameSyncAPI.SetState(k_StateGroup, k_StateSilence);
+
+            if (phase == EGamePhase.RoundOver || phase == EGamePhase.GameOver)
+            {
                 Debug.Log("[BGMPlayer] BGM停止");
-            }
-            else
-            {
-                WwiseGameSyncAPI.SetState(k_StateGroup, k_StateSilence);
-                m_IsWaitingForBeat1 = false;
-                m_PlayingID = 0u;
             }
         }
 
-        // IBeatClock.OnBeatから呼ばれる
+        // IBeatClock.OnBeat から呼ばれる
         private void HandleBeat(int beat)
         {
+            if (m_BgmSyncController != null)
+            {
+                m_BgmSyncController.HandleBeat(beat);
+            }
+
             if (!m_IsWaitingForBeat1 || beat != 1)
             {
                 return;
             }
 
-            m_PlayingID = WwiseSoundAPI.Instance.PlayTracked(m_BGMEvent, gameObject);
+            if (WwiseSoundAPI.Instance == null)
+            {
+                Debug.LogWarning("[BGMPlayer] WwiseSoundAPI.Instance が null です。");
+                return;
+            }
+
+            if (m_BGMEvent == null)
+            {
+                Debug.LogWarning("[BGMPlayer] m_BGMEvent が未設定です。");
+                return;
+            }
+
+            uint playingId = WwiseSoundAPI.Instance.PlayTracked(
+                m_BGMEvent,
+                gameObject,
+                k_MusicSyncCallbackFlags,
+                HandleMusicSyncCallback);
+
+            if (playingId == 0u)
+            {
+                Debug.LogWarning("[BGMPlayer] BGM再生に失敗しました。");
+                return;
+            }
+
+            m_PlayingID = playingId;
             m_IsWaitingForBeat1 = false;
+
+            if (m_BgmSyncController != null)
+            {
+                m_BgmSyncController.StartSync(m_PlayingID);
+            }
+
             Debug.Log("[BGMPlayer] BGM再生命令を発行");
+        }
+
+        private void HandleMusicSyncCallback(object cookie, AkCallbackType type, AkCallbackInfo info)
+        {
+            if (m_BgmSyncController == null)
+            {
+                return;
+            }
+
+            if (info is AkMusicSyncCallbackInfo musicSyncInfo)
+            {
+                m_BgmSyncController.HandleMusicSyncCallback(type, musicSyncInfo);
+            }
         }
     }
 }

@@ -2,11 +2,10 @@ using System;
 
 namespace GamblingAction.Audio
 {
-    // 拍情報の提供窓口
-    // 別担当者はこのインターフェースのみを通じて拍情報にアクセスする
+    // サーバー定義の拍情報を外部へ公開する窓口
     public interface IBeatClock
     {
-        // BeatDurationとBeatsPerBarが確定しているか
+        // 拍情報を利用可能か
         bool IsReady { get; }
 
         // 現在何拍目か (1始まり)
@@ -26,8 +25,5 @@ namespace GamblingAction.Audio
 
         // 小節頭発火
         event Action OnBar;
-
-        // 再生終了発火
-        //event Action OnEnd;
     }
 }
