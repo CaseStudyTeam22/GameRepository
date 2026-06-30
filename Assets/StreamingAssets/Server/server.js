@@ -640,7 +640,16 @@ io.on('connection', (socket) => {
         if (accept) startFinalDuel();
         else cancelFinalRaise('declined');
     });
+    socket.on('request_sudden_death', () => {
+        console.log("[Server] Sudden Death Requested");
 
+        // サドンデス開始フラグ
+        isFinalDuel = true;
+        finalRaiseTurnCount = 0;
+
+        // クライアントへ通知
+        io.emit('sudden_death_started');
+    });
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
     socket.on('disconnect', () => {
         console.log(`[Server] Player left: ${socket.id}`);

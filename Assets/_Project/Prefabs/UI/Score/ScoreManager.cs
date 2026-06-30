@@ -22,16 +22,13 @@ namespace GamblingAction.UI
         [SerializeField] private Vector2 m_RightPosition;
 
         [Header("Sudden Death UI Prefab")]
-        [SerializeField] private GameObject suddenDeathUIPrefab;   // Åö í«â¡
+        [SerializeField] private GameObject suddenDeathUIPrefab;   
 
         private IGameState m_State;
         private bool m_SuddenDeathTriggered = false;
 
         private void Start()
         {
-            Debug.Log("[ScoreManager] Start called. m_State=" + m_State);
-            Debug.Log("[ScoreManager] Using GameState instance: " + m_State.GetHashCode());
-
             m_State = GameStateLocator.Current;
             if (m_State == null)
             {
@@ -99,7 +96,7 @@ namespace GamblingAction.UI
                 return;
             }
 
-            // Åö Canvas ÇÃâ∫Ç…ê∂ê¨
+           
             var canvas = FindObjectOfType<Canvas>();
             if (canvas == null)
             {
