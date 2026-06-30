@@ -21,14 +21,32 @@ namespace GamblingAction.UI
         [SerializeField] private Vector2 m_LeftPosition;
         [SerializeField] private Vector2 m_RightPosition;
 
-        [Header("Sudden Death UI Prefab")]
-        [SerializeField] private GameObject suddenDeathUIPrefab;   
+        [SerializeField] private TMP_Text m_DeathText;
+        [SerializeField] private TMP_Text m_SuddenDeathTextTop;
+        [SerializeField] private TMP_Text m_SuddenDeathTextBottom;
+        [SerializeField] private GameObject m_SuddenDeathPanelTop;
+        [SerializeField] private GameObject m_SuddenDeathPanelBottom;
+
+
+
+        [SerializeField] private float m_ScrollSpeed = 100f;
+
+        private bool m_IsSuddenDeathScrolling = false;
+        private RectTransform m_TopRect;
+        private RectTransform m_BottomRect;
+        private float m_ScreenWidth;
+
 
         private IGameState m_State;
         private bool m_SuddenDeathTriggered = false;
 
         private void Start()
         {
+            m_TopRect = m_SuddenDeathTextTop.GetComponent<RectTransform>();
+            m_BottomRect = m_SuddenDeathTextBottom.GetComponent<RectTransform>();
+
+            m_ScreenWidth = Screen.width;
+
             m_State = GameStateLocator.Current;
             if (m_State == null)
             {
@@ -82,29 +100,25 @@ namespace GamblingAction.UI
 
                 Debug.Log("[ScoreManager] Sudden Death Triggered!");
 
-                m_State?.NotifySuddenDeathRequested();
+                m_State.NotifySuddenDeathStarted();
             }
         }
 
+   
         private void OnSuddenDeathStarted()
         {
-            Debug.Log("[ScoreManager] Sudden Death UI Triggered");
+            // 表示（Alpha解除）
+            SetAlpha(m_SuddenDeathTextTop, 1f);
+            SetAlpha(m_SuddenDeathTextBottom, 1f);
+            SetAlpha(m_SuddenDeathPanelTop, 1f);
+            SetAlpha(m_SuddenDeathPanelBottom, 1f);
 
-            if (suddenDeathUIPrefab == null)
-            {
-                Debug.LogError("[ScoreManager] suddenDeathUIPrefab が設定されていません");
-                return;
-            }
+            // スクロール開始
+            m_IsSuddenDeathScrolling = true;
 
-           
-            var canvas = FindObjectOfType<Canvas>();
-            if (canvas == null)
-            {
-                Debug.LogError("[ScoreManager] Canvas が見つかりません");
-                return;
-            }
-
-            Instantiate(suddenDeathUIPrefab, canvas.transform);
+            // 初期位置（右端からスタート）
+            m_TopRect.anchoredPosition = new Vector2(m_ScreenWidth, m_TopRect.anchoredPosition.y);
+            m_BottomRect.anchoredPosition = new Vector2(-m_ScreenWidth, m_BottomRect.anchoredPosition.y);
         }
 
         private int? TryGetScore(string role)
@@ -147,5 +161,43 @@ namespace GamblingAction.UI
                 p2Rect.anchoredPosition = m_LeftPosition;
             }
         }
+        private void Update()
+        {
+            if (!m_IsSuddenDeathScrolling) return;
+
+            // 上のテキスト：右 → 左
+            m_TopRect.anchoredPosition += Vector2.left * m_ScrollSpeed * Time.deltaTime;
+
+            if (m_TopRect.anchoredPosition.x < -m_ScreenWidth)
+            {
+                m_TopRect.anchoredPosition = new Vector2(m_ScreenWidth, m_TopRect.anchoredPosition.y);
+            }
+
+            // 下のテキスト：左 → 右
+            m_BottomRect.anchoredPosition += Vector2.right * m_ScrollSpeed * Time.deltaTime;
+
+            if (m_BottomRect.anchoredPosition.x > m_ScreenWidth)
+            {
+                m_BottomRect.anchoredPosition = new Vector2(-m_ScreenWidth, m_BottomRect.anchoredPosition.y);
+            }
+        }
+        private void SetAlpha(TMP_Text text, float alpha)
+        {
+            var c = text.color;
+            c.a = alpha;
+            text.color = c;
+        }
+        private void SetAlpha(GameObject obj, float alpha)
+        {
+            var img = obj.GetComponent<UnityEngine.UI.Image>();
+            if (img != null)
+            {
+                var c = img.color;
+                c.a = alpha;
+                img.color = c;
+            }
+        }
+
+
     }
 }
