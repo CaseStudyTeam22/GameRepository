@@ -100,7 +100,6 @@ namespace GamblingAction.UI
 
                 Debug.Log("[ScoreManager] Sudden Death Triggered!");
 
-                m_State.NotifySuddenDeathStarted();
             }
         }
 
