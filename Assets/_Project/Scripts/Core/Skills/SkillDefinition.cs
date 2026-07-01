@@ -34,7 +34,7 @@ namespace GamblingAction.Core.Skills
 	public class SkillEntry
 	{
 		[FormerlySerializedAs("skillType")]
-		[Tooltip("プロトコル上の type（move/push/attack/defense/rest）")]
+		[Tooltip("プロトコル上の type（move/push/attack/defense/skill）")]
 		[SerializeField] private string m_SkillType;
 
 		[FormerlySerializedAs("patternType")]
