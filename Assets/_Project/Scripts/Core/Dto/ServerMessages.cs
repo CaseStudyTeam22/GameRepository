@@ -20,6 +20,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("beat")]       public int Beat;
 		[JsonProperty("timeLeft")]   public int TimeLeft;
 		[JsonProperty("gameActive")] public bool GameActive;
+		[JsonProperty("cycleCount")] public int CycleCount;
 	}
 
 	public class RoundOverMessage

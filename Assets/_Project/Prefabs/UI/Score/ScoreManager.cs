@@ -1,22 +1,25 @@
 using GamblingAction.Domain;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 namespace GamblingAction.UI
 {
 	public class ScoreManager : MonoBehaviour
-	{
-		[Header("Score Texts")]
-		[FormerlySerializedAs("p1ScoreText")]
-		[SerializeField, Tooltip("P1 のスコアを表示する TextMeshPro テキスト")]
-		private TMP_Text m_P1ScoreText;
+	{		
+		[Header("P1ScoreImages")]
+        [FormerlySerializedAs("p1ScoreImages")]
+        [SerializeField, Tooltip("P1 のスコアを表示する 画像")]
+        private List<Image> m_P1ScoreImages;
 
-		[FormerlySerializedAs("p2ScoreText")]
-		[SerializeField, Tooltip("P2 のスコアを表示する TextMeshPro テキスト")]
-		private TMP_Text m_P2ScoreText;
+        [Header("P2ScoreImages")]
+        [FormerlySerializedAs("p2ScoreImages")]
+        [SerializeField, Tooltip("P2 のスコアを表示する 画像")]
+        private List<Image> m_P2ScoreImages;
 
-		[Header("Player Roles")]
+        [Header("Player Roles")]
 		[SerializeField, Tooltip("P1 を判定する role 名")]
 		private string m_P1Role = "P1";
 
@@ -59,10 +62,10 @@ namespace GamblingAction.UI
 
 		private void RefreshScores()
 		{
-			SetScoreText(m_P1ScoreText, TryGetScore(m_P1Role));
-			SetScoreText(m_P2ScoreText, TryGetScore(m_P2Role));
+            SetScoreImage(m_P1ScoreImages, TryGetScore(m_P1Role));
+            SetScoreImage(m_P2ScoreImages, TryGetScore(m_P2Role));
 
-			UpdatePosition();
+            UpdatePosition();
 		}
 
 		private int? TryGetScore(string role)
@@ -80,11 +83,22 @@ namespace GamblingAction.UI
 			return null;
 		}
 
-		private void SetScoreText(TMP_Text text, int? score)
+		private void SetScoreImage(List<Image> images, int? score)
 		{
-			if (text == null) return;
-			text.text = score.HasValue ? score.Value.ToString() : m_MissingPlayerText;
-		}
+			if (images == null) return;
+
+			for (int i = 0; i < images.Count; ++i)
+			{
+				if (i + 1 <= score.Value)
+				{
+                    images[i].color = score.HasValue ? Color.yellow : Color.gray;
+                }
+				else
+				{
+                    images[i].color = Color.gray;
+                }
+            }
+        }
 
 		// スコア表示の位置を、現在のプレイヤーIDに応じて更新する
 		private void UpdatePosition()
@@ -92,18 +106,18 @@ namespace GamblingAction.UI
 			if (m_State?.Me == null)
 				return;
 
-			var p1Rect = m_P1ScoreText != null
-				? m_P1ScoreText.GetComponent<RectTransform>()
-				: null;
+            var p1Rect = m_P1ScoreImages[0] != null
+                ? m_P1ScoreImages[0].transform.parent.GetComponent<RectTransform>()
+                : null;
 
-			var p2Rect = m_P2ScoreText != null
-				? m_P2ScoreText.GetComponent<RectTransform>()
-				: null;
+            var p2Rect = m_P2ScoreImages[0] != null
+                ? m_P2ScoreImages[0].transform.parent.GetComponent<RectTransform>()
+                : null;
 
             if (m_State.Me.Role == m_P1Role)
             {
                 p1Rect.anchoredPosition = m_LeftPosition;
-                p2Rect.anchoredPosition = m_RightPosition;
+				p2Rect.anchoredPosition = m_RightPosition;
             }
             else
             {

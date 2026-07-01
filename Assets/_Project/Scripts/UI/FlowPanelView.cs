@@ -48,7 +48,8 @@ namespace GamblingAction.UI
 		[FormerlySerializedAs("beatOffColor")]
 		[SerializeField] private Color m_BeatOffColor = new Color(0.17f, 0.17f, 0.16f, 1f);
 
-		[Header("Player slot colors")]
+
+        [Header("Player slot colors")]
 		[SerializeField, Tooltip("P1 の文字色（role 固定。ワールドの P1 と同じ色）")]
 		// GameConfig.P1Color（#00f2fe）に合わせる
 		private Color m_P1SlotColor = new Color(0f, 242f / 255f, 254f / 255f, 1f);
@@ -56,7 +57,8 @@ namespace GamblingAction.UI
 		// GameConfig.P2Color（#ff4444）に合わせる
 		private Color m_P2SlotColor = new Color(1f, 68f / 255f, 68f / 255f, 1f);
 
-		private IGameState m_State;
+
+        private IGameState m_State;
 
 		// この回で両替申請したチップ数。精算は両替・カード選択が終わってからまとめて行うため、
 		// カード選択ボタンの可否判定は「現チップ + この値」で行う。
@@ -85,6 +87,7 @@ namespace GamblingAction.UI
 		private TMP_Text m_ReadyText, m_CountdownText;
 		private RectTransform m_TimeBarFill;
 		private TMP_Text m_RoundText;
+		private TMP_Text m_TurnText;
 
 		private Image m_PrepareTimebar;
 		private TMP_Text m_PrepareTimeText;
@@ -122,7 +125,7 @@ namespace GamblingAction.UI
 			UpdateExchangeRange();
 			UpdateBeatVisual();
 			m_IsStarted = true;
-		}
+        }
 
 		private void OnDestroy()
 		{
@@ -194,7 +197,7 @@ namespace GamblingAction.UI
 			m_FinalBeat   = FindByPath<Image>(m_MainGameStage, "Metronome/Layout/FinalBeat");
 			m_ExecuteText = FindByPath<TMP_Text>(m_MainGameStage, "Metronome/ExecuteText");
 
-			m_ReadyText     = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Ready");
+			m_ReadyText = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Ready");
 			m_CountdownText = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Countdown");
 
 			var fill = FindByPath<RectTransform>(m_MainGameStage, "TimeBar/Fill");
@@ -206,7 +209,10 @@ namespace GamblingAction.UI
 
 			m_RoundText = FindByPath<TMP_Text>(m_MainGameStage, "Round/RoundText");
 
-			if (m_ExecuteText != null) m_ExecuteText.gameObject.SetActive(false);
+			m_TurnText = FindByPath<TMP_Text>(m_MainGameStage, "Turn/TurnText");
+
+
+            if (m_ExecuteText != null) m_ExecuteText.gameObject.SetActive(false);
 		}
 
 		private static T FindIn<T>(GameObject root, string name) where T : Component
@@ -486,12 +492,22 @@ namespace GamblingAction.UI
 			// 色は role 固定（ワールドのプレイヤー色と一致させる）。スロット位置は self/opponent。
 			Color slotColor = dto.Role == "P2" ? m_P2SlotColor : m_P1SlotColor;
 
-			if (nameText != null)
-			{
-				nameText.text = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
-				nameText.color = slotColor;
-			}
-			if (moneyText != null)
+            if (nameText != null)
+            {
+                string displayName = dto.Role;
+
+                if (displayName == "P1")
+                    displayName = "1P";
+                else if (displayName == "P2")
+                    displayName = "2P";
+
+                if (dto.IsAI)
+                    displayName += " (AI)";
+
+                nameText.text = displayName;
+                nameText.color = slotColor;
+            }
+            if (moneyText != null)
 			{
 				moneyText.text = $"¥{dto.Money:N0}";
 				moneyText.color = slotColor;
@@ -507,8 +523,10 @@ namespace GamblingAction.UI
 		{
 			UpdateBeatVisual();
 			UpdateTimeBar();
+			UpdateTurn();
 
-			if (m_State.CurrentBeat == 4)
+
+            if (m_State.CurrentBeat == 4)
 				FlashExecuteText();
 		}
 
@@ -523,12 +541,15 @@ namespace GamblingAction.UI
 				{
 					if (m_NormalBeats[i] == null) continue;
 					bool on = battle && beat == i + 1;
-					m_NormalBeats[i].color = on ? m_BeatOnColor : m_BeatOffColor;
-				}
+                    m_NormalBeats[i].color = on ? m_BeatOnColor : m_BeatOffColor;
+                }
 			}
 			if (m_FinalBeat != null)
-				m_FinalBeat.color = (battle && beat == 4) ? m_FinalBeatOnColor : m_BeatOffColor;
-		}
+			{
+                bool finalOn = battle && beat == 4;
+                m_FinalBeat.color = finalOn ? m_FinalBeatOnColor : m_BeatOffColor;
+            }
+        }
 
 		private void UpdateTimeBar()
 		{
@@ -689,7 +710,12 @@ namespace GamblingAction.UI
 			m_RoundText.text = $"Round {m_RoundCount}";
 		}
 
-		private void UpdateExchangeRange()
+        private void UpdateTurn()
+        {
+			m_TurnText.text = $"ターン{m_State.CycleCount}/20";
+        }
+
+        private void UpdateExchangeRange()
 		{
 			if (m_ExchangeSlider == null) return;
 			var me = m_State.Me;
