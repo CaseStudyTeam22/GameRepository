@@ -1000,6 +1000,7 @@ MonoBehaviour:
   m_MissingPlayerText: '-'
   m_LeftPosition: {x: -600, y: -100}
   m_RightPosition: {x: 850, y: -100}
+  m_DeathText: {fileID: 7504630462166836492}
   m_SuddenDeathTextTop: {fileID: 8461604775931501100}
   m_SuddenDeathTextBottom: {fileID: 3464184387096920274}
   m_SuddenDeathPanelTop: {fileID: 942595952198830545}

@@ -27,8 +27,6 @@ namespace GamblingAction.UI
         [SerializeField] private GameObject m_SuddenDeathPanelTop;
         [SerializeField] private GameObject m_SuddenDeathPanelBottom;
 
-
-
         [SerializeField] private float m_ScrollSpeed = 100f;
 
         private bool m_IsSuddenDeathScrolling = false;
@@ -36,18 +34,24 @@ namespace GamblingAction.UI
         private RectTransform m_BottomRect;
         private float m_ScreenWidth;
 
-
         private IGameState m_State;
         private bool m_SuddenDeathTriggered = false;
 
         private void Start()
         {
-            m_TopRect = m_SuddenDeathTextTop.GetComponent<RectTransform>();
-            m_BottomRect = m_SuddenDeathTextBottom.GetComponent<RectTransform>();
+            if (m_SuddenDeathTextTop != null)
+                m_TopRect = m_SuddenDeathTextTop.GetComponent<RectTransform>();
+            if (m_SuddenDeathTextBottom != null)
+                m_BottomRect = m_SuddenDeathTextBottom.GetComponent<RectTransform>();
 
             m_ScreenWidth = Screen.width;
 
             m_State = GameStateLocator.Current;
+            Debug.Log("[ScoreManager] Start called. m_State=" + m_State);
+            if (m_State != null)
+            {
+                Debug.Log("[ScoreManager] Using GameState instance: " + m_State.GetHashCode());
+            }
             if (m_State == null)
             {
                 Debug.LogError("[ScoreManager] GameStateLocator.Current is null");
@@ -57,7 +61,6 @@ namespace GamblingAction.UI
             m_State.OnStateInitialized += RefreshScores;
             m_State.OnPlayersChanged += RefreshScores;
 
-            
             m_State.OnSuddenDeathStarted += OnSuddenDeathStarted;
 
             if (m_State.SuddenDeathAlreadyStarted)
@@ -74,7 +77,7 @@ namespace GamblingAction.UI
 
             m_State.OnStateInitialized -= RefreshScores;
             m_State.OnPlayersChanged -= RefreshScores;
-            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted; // Åö í«â¡
+            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted; // ‚òÖ ËøΩÂä†
         }
 
         private void RefreshScores()
@@ -97,26 +100,23 @@ namespace GamblingAction.UI
             if (p1 == 2 && p2 == 2)
             {
                 m_SuddenDeathTriggered = true;
-
                 Debug.Log("[ScoreManager] Sudden Death Triggered!");
-
-                m_State.NotifySuddenDeathStarted();
+                m_State.NotifySuddenDeathRequested();
             }
         }
 
-   
         private void OnSuddenDeathStarted()
         {
-            // ï\é¶ÅiAlphaâèúÅj
+            // Ë°®Á§∫ÔºàAlphaËß£Èô§Ôºâ
             SetAlpha(m_SuddenDeathTextTop, 1f);
             SetAlpha(m_SuddenDeathTextBottom, 1f);
             SetAlpha(m_SuddenDeathPanelTop, 1f);
             SetAlpha(m_SuddenDeathPanelBottom, 1f);
 
-            // ÉXÉNÉçÅ[ÉãäJén
+            // „Çπ„ÇØ„É≠„Éº„É´ÈñãÂßã
             m_IsSuddenDeathScrolling = true;
 
-            // èâä˙à íuÅiâEí[Ç©ÇÁÉXÉ^Å[ÉgÅj
+            // ÂàùÊúü‰ΩçÁΩÆÔºàÂè≥Á´Ø„Åã„Çâ„Çπ„Çø„Éº„ÉàÔºâ
             m_TopRect.anchoredPosition = new Vector2(m_ScreenWidth, m_TopRect.anchoredPosition.y);
             m_BottomRect.anchoredPosition = new Vector2(-m_ScreenWidth, m_BottomRect.anchoredPosition.y);
         }
@@ -128,11 +128,11 @@ namespace GamblingAction.UI
             foreach (var player in m_State.Players.Values)
             {
                 if (player == null) continue;
-                if (player.Role != role) continue;
-
-                return player.Score;
+                if (player.Role == role)
+                {
+                    return player.Score;
+                }
             }
-
             return null;
         }
 
@@ -161,11 +161,12 @@ namespace GamblingAction.UI
                 p2Rect.anchoredPosition = m_LeftPosition;
             }
         }
+
         private void Update()
         {
             if (!m_IsSuddenDeathScrolling) return;
 
-            // è„ÇÃÉeÉLÉXÉgÅFâE Å® ç∂
+            // ‰∏ä„ÅÆ„ÉÜ„Ç≠„Çπ„ÉàÔºöÂè≥ ‚Üí Â∑¶
             m_TopRect.anchoredPosition += Vector2.left * m_ScrollSpeed * Time.deltaTime;
 
             if (m_TopRect.anchoredPosition.x < -m_ScreenWidth)
@@ -173,7 +174,7 @@ namespace GamblingAction.UI
                 m_TopRect.anchoredPosition = new Vector2(m_ScreenWidth, m_TopRect.anchoredPosition.y);
             }
 
-            // â∫ÇÃÉeÉLÉXÉgÅFç∂ Å® âE
+            // ‰∏ã„ÅÆ„ÉÜ„Ç≠„Çπ„ÉàÔºöÂ∑¶ ‚Üí Âè≥
             m_BottomRect.anchoredPosition += Vector2.right * m_ScrollSpeed * Time.deltaTime;
 
             if (m_BottomRect.anchoredPosition.x > m_ScreenWidth)
@@ -181,14 +182,18 @@ namespace GamblingAction.UI
                 m_BottomRect.anchoredPosition = new Vector2(-m_ScreenWidth, m_BottomRect.anchoredPosition.y);
             }
         }
+
         private void SetAlpha(TMP_Text text, float alpha)
         {
+            if (text == null) return;
             var c = text.color;
             c.a = alpha;
             text.color = c;
         }
+
         private void SetAlpha(GameObject obj, float alpha)
         {
+            if (obj == null) return;
             var img = obj.GetComponent<UnityEngine.UI.Image>();
             if (img != null)
             {
@@ -197,7 +202,5 @@ namespace GamblingAction.UI
                 img.color = c;
             }
         }
-
-
     }
 }
