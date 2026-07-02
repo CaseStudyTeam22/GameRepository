@@ -92,7 +92,8 @@ namespace GamblingAction.Input
 		private void HandleSkillKeys()
 		{
 			TrySetSkillMode(KeyCode.Q, IntentTypes.Push);
-			TrySetSkillMode(KeyCode.W, IntentTypes.Attack);
+			// attack廃止につきコメントアウト
+			// TrySetSkillMode(KeyCode.W, IntentTypes.Attack);
 			TrySetSkillMode(KeyCode.E, IntentTypes.Defense);
 			TrySetSkillMode(KeyCode.R, IntentTypes.Skill);
 		}

@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using System.Collections;
@@ -54,8 +54,8 @@ namespace GamblingAction.UI
 		[Header("Command Buttons & Animation Settings")]
 		[SerializeField, Tooltip("押し出しコマンド選択ボタン")]
 		private Button m_PushButton;
-		[SerializeField, Tooltip("攻撃コマンド選択ボタン")]
-		private Button m_AttackButton;
+		//[SerializeField, Tooltip("攻撃コマンド選択ボタン")]
+		//private Button m_AttackButton;
 		[SerializeField, Tooltip("防御コマンド選択ボタン")]
 		private Button m_DefenseButton;
 		[SerializeField, Tooltip("スキルコマンド選択ボタン")]
@@ -662,7 +662,7 @@ namespace GamblingAction.UI
 
 			// バトル用の各コマンド選択ボタン（Push, Attack, Defense, Skill）を再帰検索して取得
 			m_PushButton    = FindChild<Button>(m_MainGameStage.transform, "Push");
-			m_AttackButton  = FindChild<Button>(m_MainGameStage.transform, "Attack");
+			//m_AttackButton  = FindChild<Button>(m_MainGameStage.transform, "Attack");
 			m_DefenseButton = FindChild<Button>(m_MainGameStage.transform, "Defense");
 			m_SkillButton   = FindChild<Button>(m_MainGameStage.transform, "Skill");
 
@@ -1292,10 +1292,10 @@ namespace GamblingAction.UI
 				{
 					isSelected = true;
 				}
-				else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
-				{
-					isSelected = true;
-				}
+				// else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
+				// {
+				// 	isSelected = true;
+				// }
 				else if (btn == m_DefenseButton && activeIntentType == IntentTypes.Defense)
 				{
 					isSelected = true;
@@ -1394,7 +1394,7 @@ namespace GamblingAction.UI
 			m_CommandButtons = new Button[]
 			{
 				m_PushButton,
-				m_AttackButton,
+				//m_AttackButton,
 				m_DefenseButton,
 				m_SkillButton
 			};
@@ -1471,10 +1471,10 @@ namespace GamblingAction.UI
 				{
 					isSelected = true;
 				}
-				else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
-				{
-					isSelected = true;
-				}
+				// else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
+				// {
+				// 	isSelected = true;
+				// }
 				else if (btn == m_DefenseButton && activeIntentType == IntentTypes.Defense)
 				{
 					isSelected = true;
