@@ -29,6 +29,10 @@ let cycleCount = 0;
 let timeLeft = Config.GAME_DURATION;
 let gameActive = false;
 
+let beatSequence = 0;
+let roundId = 0;
+let beatStartServerMs = 0;
+
 // 双方準備完了後のカウントダウン中の setTimeout 句柄。取り消し時に clear する。
 let lobbyCountdownTimer = null;
 // チップ交換 / カード選択の制限時間タイマー句柄。全員完了時 / フェーズ離脱時に clear する。
@@ -78,6 +82,10 @@ function resetPlayerPos(id) {
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
 // resetMatch / round_over の直後にここを通し、双方の round_ready を待つ。
 function beginRound() {
+    roundId++;
+    beatSequence = 0;
+    beatStartServerMs = 0;
+
     for (let id in players) players[id].roundReady = false;
     if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
     // 位置を先に初期化して配る。クライアントは再生成時に新しい位置のキャラを出せる。
@@ -99,7 +107,7 @@ function checkAllRoundReady() {
 }
 
 function prepareExchangePhase() {
-    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION;
+    items = []; currentBeat = 0; beatSequence = 0; beatStartServerMs = 0; timeLeft = Config.GAME_DURATION;
     for (let id in players) {
         resetPlayerPos(id);
         players[id].exchanged = false;
@@ -145,6 +153,8 @@ function handleAIExchange(id) {
 setInterval(() => {
     if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
+    beatSequence++;
+    beatStartServerMs = getCurrentServerTimeMs();
 
     // 时间到，判定平局或结束
     if (timeLeft <= 0) {
@@ -280,7 +290,11 @@ setInterval(() => {
 
         io.emit('sync_items', items);
     }
-    io.emit('beat', { beat: currentBeat, timeLeft, gameActive });
+
+    const beatsPerBar = 4;
+    const barIndex = getBarIndexFromSequence(beatSequence - 1, beatsPerBar);
+    const nextBoundaryServerMs = beatStartServerMs + Config.BEAT_INTERVAL;
+    io.emit('beat', { beat: currentBeat, timeLeft, gameActive, barIndex, beatSequence, roundId, beatStartServerMs, nextBoundaryServerMs, beatIntervalMs: Config.BEAT_INTERVAL, beatsPerBar });
 }, Config.BEAT_INTERVAL);
 
 // --- AI Brain: 普通难度，目标是推对手下平台 ---
@@ -1034,7 +1048,7 @@ function startFinalDuel() {
 // Lobby 関連フラグ（ready / inLobby / isAI / roundReady / buffReady）もここで初期化する。
 // 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
 function resetMatchState() {
-    gameActive = false; items = []; currentBeat = 0;
+    gameActive = false; items = []; currentBeat = 0; beatSequence = 0; beatStartServerMs = 0;
 
     // 全ての進行管理タイマーをリセット
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
@@ -1122,6 +1136,15 @@ function generateMissions() {
     }
     return missions;
 }
+
+function getCurrentServerTimeMs() {
+    return Date.now();
+}
+
+function getBarIndexFromSequence(sequence, beatsPerBar) {
+    return Math.floor(sequence / beatsPerBar) + 1;
+}
+
 
 // --- グローバル・エラーハンドラ ---
 // 予期せぬクラッシュを防ぎ、エラー内容をコンソールに出力してサーバーを延命させる

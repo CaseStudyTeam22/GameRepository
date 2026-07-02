@@ -17,10 +17,17 @@ namespace GamblingAction.Core.Dto
 
 	public class BeatMessage
 	{
-		[JsonProperty("beat")]       public int Beat;
-		[JsonProperty("timeLeft")]   public int TimeLeft;
-		[JsonProperty("gameActive")] public bool GameActive;
-	}
+		[JsonProperty("beat")]					public int Beat;
+		[JsonProperty("timeLeft")]				public int TimeLeft;
+		[JsonProperty("gameActive")]			public bool GameActive;
+        [JsonProperty("barIndex")]				public int BarIndex;
+        [JsonProperty("beatSequence")]			public long BeatSequence;
+        [JsonProperty("roundId")]				public long RoundId;
+        [JsonProperty("beatStartServerMs")]		public long BeatStartServerMs;
+        [JsonProperty("nextBoundaryServerMs")]	public long NextBoundaryServerMs;
+        [JsonProperty("beatIntervalMs")]		public int BeatIntervalMs;
+        [JsonProperty("beatsPerBar")]			public int BeatsPerBar;
+    }
 
 	public class RoundOverMessage
 	{

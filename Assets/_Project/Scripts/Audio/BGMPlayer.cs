@@ -100,16 +100,6 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            if (WwiseSoundAPI.Instance != null && m_PlayingID != 0u)
-            {
-                WwiseSoundAPI.Instance.Stop(m_PlayingID, gameObject, 0);
-            }
-
-            if (m_BgmSyncController != null)
-            {
-                m_BgmSyncController.StopSync();
-            }
-
             m_IsWaitingForBeat1 = false;
             m_PlayingID = 0u;
             WwiseGameSyncAPI.SetState(k_StateGroup, k_StateSilence);

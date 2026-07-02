@@ -13,7 +13,18 @@ namespace GamblingAction.Domain
 		int CurrentBeat { get; }
 		int TimeLeft { get; }
 		bool GameActive { get; }
-		EGamePhase Phase { get; }
+        int CurrentBarIndex { get; }
+        int CurrentAbsoluteBeat { get; }
+        int NextBeat { get; }
+        int NextBarIndex { get; }
+        int NextAbsoluteBeat { get; }
+        long BeatSequence { get; }
+        long RoundId { get; }
+        long BeatStartServerMs { get; }
+        long NextBoundaryServerMs { get; }
+        int BeatIntervalMs { get; }
+        int BeatsPerBar { get; }
+        EGamePhase Phase { get; }
 		bool IsConnected { get; }
 		// ファイナルレイズ本番ラウンド進行中なら true。
 		// このラウンドの勝者がそのまま全勝（game_over）になる。
