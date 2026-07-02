@@ -11,6 +11,15 @@ namespace GamblingAction.Input
 		[FormerlySerializedAs("worldCamera")]
 		[SerializeField] private Camera m_WorldCamera;
 
+#if UNITY_EDITOR
+		// デバッグ時のみデフォルト値はtrueとして、コードやエディタから設定可能にする
+		[Header("【debug】長押ししなくてもコマンドを受け付けるか")]
+		[SerializeField] private bool m_KeepActionOnRelease = true;
+#else
+		// ビルド後は強制的にfalse（長押し必須）
+		private const bool m_KeepActionOnRelease = false;
+#endif
+
 		private IGameState m_State;
 		private IBoardCoords m_Board;
 		private Plane m_GroundPlane = new Plane(Vector3.up, Vector3.zero);
@@ -129,6 +138,8 @@ namespace GamblingAction.Input
 			if (!m_ActiveSkillKey.HasValue) return;
 			if (UnityInput.GetKeyUp(m_ActiveSkillKey.Value))
 			{
+				if (m_KeepActionOnRelease) return;
+
 				// コマンドをキャンセルする(押しっぱの状態でないと4拍目に受け付けない)
 				CancelAll();
 			}
