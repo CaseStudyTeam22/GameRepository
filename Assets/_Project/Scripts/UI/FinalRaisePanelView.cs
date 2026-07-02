@@ -3,6 +3,8 @@ using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace GamblingAction.UI
@@ -14,6 +16,13 @@ namespace GamblingAction.UI
 	// 提案フェーズ：敗者が「挑戦する / 降りる」を選ぶ。
 	// 応答フェーズ：勝者が「受ける / 拒否」を選ぶ。
 	// 拒否・タイムアウト・切断は全てサーバ側で game_over に流される。
+	//
+	// 【コントローラー対応（追加）】
+	//   自分が操作側（m_IsActive）のときだけ反応する。
+	//   左スティック左右 / 十字キー左右 … 2 ボタン間のカーソル移動
+	//   B ボタン（buttonEast）          … 決定
+	//   提案フェーズ：[ChallengeButton, FoldButton]
+	//   応答フェーズ：[AcceptButton, RefuseButton]
 	//
 	// 子オブジェクトの参照は名前ベースで自動取得する。Prefab で以下の構造を保つこと：
 	//   FinalRaisePanel (このスクリプト, 常駐 active)
@@ -29,6 +38,16 @@ namespace GamblingAction.UI
 	//       Status (TMP)             ← 任意
 	public class FinalRaisePanelView : MonoBehaviour
 	{
+		// ─────────────────────────────────────────────────────────────
+		// 定数（コントローラー UI 用）
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>スティック入力のデッドゾーン（これ未満は無入力と見なす）</summary>
+		private const float m_StickDeadZone = 0.3f;
+
+		/// <summary>選択移動のクールダウン（秒）。連続入力チカチカ防止用</summary>
+		private const float m_NavCooldown = 0.2f;
+
 		// 表示切替対象。Awake で "Root" 子を探し、無ければ自分自身。
 		private GameObject m_Root;
 		// 自分側 / 相手側のセット。Awake で名前検索して埋める。
@@ -44,6 +63,29 @@ namespace GamblingAction.UI
 
 		private bool m_IsActive;
 		private bool m_Submitted;
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 用フィールド（追加）
+		// ─────────────────────────────────────────────────────────────
+
+		/// <summary>左スティック + 十字キーを統合した Vector2 アクション</summary>
+		private InputAction m_NavigateAction;
+
+		/// <summary>B ボタン（buttonEast）による決定アクション</summary>
+		private InputAction m_ConfirmUiAction;
+
+		/// <summary>
+		/// 現在のステージで操作対象になる 2 ボタン。
+		/// 提案：[ChallengeButton, FoldButton] / 応答：[AcceptButton, RefuseButton]。
+		/// 非アクティブ時は null。
+		/// </summary>
+		private Button[] m_ActiveButtons;
+
+		/// <summary>現在フォーカスしているボタンのインデックス</summary>
+		private int m_SelectedIndex;
+
+		/// <summary>選択移動のクールダウン残り時間（秒）</summary>
+		private float m_NavCooldownRemaining;
 
 		private class SideRefs
 		{
@@ -72,6 +114,10 @@ namespace GamblingAction.UI
 			BindClick(m_You.FoldButton,      () => SubmitProposeIfAllowed(false));
 			BindClick(m_You.AcceptButton,    () => SubmitRespondIfAllowed(true));
 			BindClick(m_You.RefuseButton,    () => SubmitRespondIfAllowed(false));
+
+			// コントローラー入力を構築する
+			BuildUiActions();
+			RegisterUiCallbacks();
 		}
 
 		private SideRefs ResolveSide(string sideName)
@@ -114,17 +160,184 @@ namespace GamblingAction.UI
 			m_State.OnFinalRaiseCanceled  += HandleCanceled;
 			m_State.OnFinalRaiseStarted   += HandleStarted;
 			m_State.OnGameOver            += HandleGameOver;
+
+			EnableUiActions();
 		}
 
 		private void OnDestroy()
 		{
-			if (m_State == null) return;
-			m_State.OnFinalRaiseOffer     -= HandleOffer;
-			m_State.OnFinalRaisePending   -= HandlePending;
-			m_State.OnFinalRaiseCanceled  -= HandleCanceled;
-			m_State.OnFinalRaiseStarted   -= HandleStarted;
-			m_State.OnGameOver            -= HandleGameOver;
+			if (m_State != null)
+			{
+				m_State.OnFinalRaiseOffer     -= HandleOffer;
+				m_State.OnFinalRaisePending   -= HandlePending;
+				m_State.OnFinalRaiseCanceled  -= HandleCanceled;
+				m_State.OnFinalRaiseStarted   -= HandleStarted;
+				m_State.OnGameOver            -= HandleGameOver;
+			}
+
+			DisableUiActions();
+			DisposeUiActions();
 		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：InputAction 構築
+		// ─────────────────────────────────────────────────────────────
+
+		private void BuildUiActions()
+		{
+			// 左スティックと十字キーの両方を 1 つの Vector2 Action に統合する
+			m_NavigateAction = new InputAction("FRNavigate", InputActionType.Value, expectedControlType: "Vector2");
+			m_NavigateAction.AddBinding("<Gamepad>/leftStick");
+			m_NavigateAction.AddCompositeBinding("Dpad")
+				.With("Up",    "<Gamepad>/dpad/up")
+				.With("Down",  "<Gamepad>/dpad/down")
+				.With("Left",  "<Gamepad>/dpad/left")
+				.With("Right", "<Gamepad>/dpad/right");
+
+			// B ボタン（buttonEast）で決定する
+			// Xbox = B / Switch Pro = A（右側ボタン）
+			m_ConfirmUiAction = new InputAction("FRConfirm", InputActionType.Button);
+			m_ConfirmUiAction.AddBinding("<Gamepad>/buttonEast");
+		}
+
+		private void RegisterUiCallbacks()
+		{
+			m_ConfirmUiAction.performed += _ => OnConfirmUi();
+		}
+
+		private void EnableUiActions()
+		{
+			m_NavigateAction.Enable();
+			m_ConfirmUiAction.Enable();
+		}
+
+		private void DisableUiActions()
+		{
+			m_NavigateAction?.Disable();
+			m_ConfirmUiAction?.Disable();
+		}
+
+		private void DisposeUiActions()
+		{
+			m_NavigateAction?.Dispose();
+			m_ConfirmUiAction?.Dispose();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コントローラー UI 入力：毎フレーム処理
+		// ─────────────────────────────────────────────────────────────
+
+		private void Update()
+		{
+			// 自分が操作側でない、または送信済み・非表示なら入力を受け付けない
+			if (!m_IsActive || m_Submitted || m_Stage == EStage.Hidden) return;
+			if (m_ActiveButtons == null) return;
+
+			m_NavCooldownRemaining -= Time.deltaTime;
+
+			float axisX = m_NavigateAction.ReadValue<Vector2>().x;
+			HandleNavigation(axisX);
+		}
+
+		/// <summary>
+		/// 左スティック左右 / 十字キー左右で 2 ボタン間のカーソルを移動する。
+		/// interactable なボタンのみを対象とし、クールダウンでチカチカを防止する。
+		/// </summary>
+		private void HandleNavigation(float axisX)
+		{
+			if (m_NavCooldownRemaining > 0f) return;
+			if (Mathf.Abs(axisX) < m_StickDeadZone) return;
+
+			int direction = axisX > 0 ? 1 : -1;
+			int next = FindNextInteractable(m_ActiveButtons, m_SelectedIndex, direction);
+			if (next == m_SelectedIndex) return;
+
+			m_SelectedIndex        = next;
+			m_NavCooldownRemaining = m_NavCooldown;
+			FocusButton(m_ActiveButtons, m_SelectedIndex);
+		}
+
+		/// <summary>
+		/// B ボタン押下時に現在フォーカス中のボタンを押す。
+		/// 自分が操作側でない、または送信済みなら無視。
+		/// </summary>
+		private void OnConfirmUi()
+		{
+			if (!m_IsActive || m_Submitted || m_Stage == EStage.Hidden) return;
+			if (m_ActiveButtons == null) return;
+			if (m_SelectedIndex < 0 || m_SelectedIndex >= m_ActiveButtons.Length) return;
+
+			var button = m_ActiveButtons[m_SelectedIndex];
+			if (button == null || !button.interactable) return;
+			button.onClick.Invoke();
+		}
+
+		/// <summary>
+		/// 指定方向で次に interactable なボタンのインデックスを返す。
+		/// 端で見つからなければ現在のインデックスを返す（移動しない）。
+		/// </summary>
+		private static int FindNextInteractable(Button[] buttons, int current, int direction)
+		{
+			int i = current + direction;
+			while (i >= 0 && i < buttons.Length)
+			{
+				if (buttons[i] != null && buttons[i].interactable) return i;
+				i += direction;
+			}
+			return current;
+		}
+
+		/// <summary>
+		/// 配列の中で最初に interactable なインデックスを返す。見つからなければ 0。
+		/// </summary>
+		private static int FindFirstInteractable(Button[] buttons)
+		{
+			if (buttons == null) return 0;
+			for (int i = 0; i < buttons.Length; i++)
+				if (buttons[i] != null && buttons[i].interactable) return i;
+			return 0;
+		}
+
+		/// <summary>
+		/// 指定ボタンに EventSystem のフォーカスを移す。
+		/// Button の選択時ハイライト（や ButtonFocusHighlight）が自動で適用される。
+		/// </summary>
+		private static void FocusButton(Button[] buttons, int index)
+		{
+			if (buttons == null) return;
+			if (index < 0 || index >= buttons.Length) return;
+
+			var button = buttons[index];
+			if (button == null) return;
+
+			if (EventSystem.current != null)
+				EventSystem.current.SetSelectedGameObject(button.gameObject);
+		}
+
+		/// <summary>
+		/// 現在のステージに応じて操作対象ボタン配列を構築し、先頭にフォーカスを移す。
+		/// 自分が操作側でない場合は配列を null にして入力を無効化する。
+		/// </summary>
+		private void SetupControllerFocus()
+		{
+			if (!m_IsActive)
+			{
+				m_ActiveButtons = null;
+				return;
+			}
+
+			m_ActiveButtons = m_Stage == EStage.Offer
+				? new[] { m_You.ChallengeButton, m_You.FoldButton }   // 提案フェーズ
+				: new[] { m_You.AcceptButton,    m_You.RefuseButton }; // 応答フェーズ
+
+			m_NavCooldownRemaining = 0f;
+			m_SelectedIndex        = FindFirstInteractable(m_ActiveButtons);
+			FocusButton(m_ActiveButtons, m_SelectedIndex);
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 既存メソッド群（変更なし。コントローラーフォーカス設定のみ追記）
+		// ─────────────────────────────────────────────────────────────
 
 		private void HandleOffer(FinalRaiseOfferMessage msg)
 		{
@@ -187,6 +400,9 @@ namespace GamblingAction.UI
 			SetStatus("");
 			SetActiveSafe(m_Root, true);
 			RestartTimer(timeoutMs);
+
+			// コントローラー：操作対象ボタンを設定して先頭にフォーカスする
+			SetupControllerFocus();
 		}
 
 		private void Hide()
@@ -203,6 +419,9 @@ namespace GamblingAction.UI
 			SetActiveSafe(m_You.CountdownPanel, false);
 			SetActiveSafe(m_Opp.CountdownPanel, false);
 			SetActiveSafe(m_Root, false);
+
+			// コントローラー：操作対象をクリアして入力を無効化する
+			m_ActiveButtons = null;
 		}
 
 		private void SubmitProposeIfAllowed(bool accept)
@@ -231,6 +450,9 @@ namespace GamblingAction.UI
 			SetInteractable(m_You.AcceptButton,    false);
 			SetInteractable(m_You.RefuseButton,    false);
 			SetStatus(status);
+
+			// コントローラー：送信後は操作対象をクリアして再入力を防ぐ
+			m_ActiveButtons = null;
 		}
 
 		private void SetStatus(string text)

@@ -18,6 +18,10 @@ namespace GamblingAction.Net
 		private static readonly TimeSpan k_DiscoveryTimeout = TimeSpan.FromSeconds(3);
 		// ポート競合後の再探索の待ち時間。相手はもうポートを掴んでいるはずなので短くて良い。
 		private static readonly TimeSpan k_RetryDiscoveryTimeout = TimeSpan.FromSeconds(2);
+		// 自分がホストになった直後、もう一台も同時にホストになっていないか確認する待ち時間。
+		// 二人がほぼ同時に起動した場合だけ衝突するため、双方のサーバが立ち上がって
+		// 通知し合うのに十分な短い時間で足りる。
+		private static readonly TimeSpan k_HostConflictTimeout = TimeSpan.FromSeconds(3);
 
 		public string ResolvedUrl { get; private set; }
 		public bool IsHost { get; private set; }
@@ -46,6 +50,23 @@ namespace GamblingAction.Net
 
 			if (startResult == HostServerProcess.StartResult.Success)
 			{
+				// 起動した直後に、もう一台も同時にホストになっていないかを確認する。
+				// 探索は短い固定時間しか聞かないため、二人が時間差で起動すると
+				// 互いに相手を見つけられず「双方がホスト」になり、別々のサーバに
+				// 繋がって相手が見えなくなる。そこで起動後にもう一度聞き、別のホストが
+				// 居たら PID の小さい方をホストとして残し、大きい方はクライアントへ降格する。
+				var rival = await LanDiscovery.ListenAsync(k_HostConflictTimeout, excludeOwnPid: m_Host.Pid, ct);
+				if (rival.IsValid && m_Host.Pid > rival.Pid)
+				{
+					// 相手の方がホストを続ける。自分の node を止めてクライアントとして繋ぐ。
+					Debug.Log($"[NetworkBootstrap] ホスト衝突を検出（自PID={m_Host.Pid} > 相手PID={rival.Pid}）→ クライアントへ降格");
+					m_Host.Dispose();
+					m_Host = null;
+					ResolvedUrl = $"http://{rival.HostIp}:{rival.Port}";
+					IsHost = false;
+					return ResolvedUrl;
+				}
+
 				// Windows では "localhost" が ::1（IPv6）に解決されることがあり、
 				// 環境によっては socket.io 接続が成立せず無応答になる。明示的に IPv4 を指定する。
 				ResolvedUrl = $"http://127.0.0.1:{HostServerProcess.ServerPort}";
