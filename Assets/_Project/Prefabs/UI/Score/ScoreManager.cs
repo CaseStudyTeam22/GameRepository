@@ -1,21 +1,33 @@
-using GamblingAction.Domain;
+﻿using GamblingAction.Domain;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 namespace GamblingAction.UI
 {
     public class ScoreManager : MonoBehaviour
     {
-        [Header("Score Texts")]
-        [SerializeField] private TMP_Text m_P1ScoreText;
-        [SerializeField] private TMP_Text m_P2ScoreText;
+        [Header("P1ScoreImages")]
+        [FormerlySerializedAs("p1ScoreImages")]
+        [SerializeField, Tooltip("P1 のスコア表示画像")]
+        private List<Image> m_P1ScoreImages;
+
+        [Header("P2ScoreImages")]
+        [FormerlySerializedAs("p2ScoreImages")]
+        [SerializeField, Tooltip("P2 のスコア表示画像")]
+        private List<Image> m_P2ScoreImages;
 
         [Header("Player Roles")]
-        [SerializeField] private string m_P1Role = "P1";
-        [SerializeField] private string m_P2Role = "P2";
+        [SerializeField, Tooltip("P1 を判定する role 名")]
+        private string m_P1Role = "P1";
 
-        [SerializeField] private string m_MissingPlayerText = "-";
+        [SerializeField, Tooltip("P2 を判定する role 名")]
+        private string m_P2Role = "P2";
+
+        [SerializeField, Tooltip("対象プレイヤーがいない場合に表示する文字列")]
+        private string m_MissingPlayerText = "-";
 
         [Header("Score Positions")]
         [SerializeField] private Vector2 m_LeftPosition;
@@ -77,16 +89,33 @@ namespace GamblingAction.UI
 
             m_State.OnStateInitialized -= RefreshScores;
             m_State.OnPlayersChanged -= RefreshScores;
-            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted; // ★ 追加
+            m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted;
         }
 
         private void RefreshScores()
         {
-            SetScoreText(m_P1ScoreText, TryGetScore(m_P1Role));
-            SetScoreText(m_P2ScoreText, TryGetScore(m_P2Role));
+            SetScoreImage(m_P1ScoreImages, TryGetScore(m_P1Role));
+            SetScoreImage(m_P2ScoreImages, TryGetScore(m_P2Role));
 
             UpdatePosition();
             CheckSuddenDeath();
+        }
+
+        private void SetScoreImage(List<Image> images, int? score)
+        {
+            if (images == null) return;
+
+            for (int i = 0; i < images.Count; ++i)
+            {
+                if (score.HasValue && i + 1 <= score.Value)
+                {
+                    images[i].color = Color.yellow;
+                }
+                else
+                {
+                    images[i].color = Color.gray;
+                }
+            }
         }
 
         private void CheckSuddenDeath()
@@ -136,19 +165,21 @@ namespace GamblingAction.UI
             return null;
         }
 
-        private void SetScoreText(TMP_Text text, int? score)
-        {
-            if (text == null) return;
-            text.text = score.HasValue ? score.Value.ToString() : m_MissingPlayerText;
-        }
-
         private void UpdatePosition()
         {
             if (m_State?.Me == null)
                 return;
 
-            var p1Rect = m_P1ScoreText?.GetComponent<RectTransform>();
-            var p2Rect = m_P2ScoreText?.GetComponent<RectTransform>();
+            var p1Rect = m_P1ScoreImages != null && m_P1ScoreImages.Count > 0 && m_P1ScoreImages[0] != null
+                ? m_P1ScoreImages[0].transform.parent.GetComponent<RectTransform>()
+                : null;
+
+            var p2Rect = m_P2ScoreImages != null && m_P2ScoreImages.Count > 0 && m_P2ScoreImages[0] != null
+                ? m_P2ScoreImages[0].transform.parent.GetComponent<RectTransform>()
+                : null;
+
+            if (p1Rect == null || p2Rect == null)
+                return;
 
             if (m_State.Me.Role == m_P1Role)
             {

@@ -6,6 +6,9 @@ module.exports = {
     BEAT_INTERVAL: 375,
     GAME_DURATION: 150,
 
+    // ターン制限定数
+    TURN_MAX: 20,
+
     // 定力消耗：技能不消耗定力，定力只会因被攻击而减少
     COST: {
         'move':    0,

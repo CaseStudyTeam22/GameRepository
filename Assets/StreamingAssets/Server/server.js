@@ -198,7 +198,7 @@ function checkNouveauRicheAutoExchange() {
 }
 
 function prepareExchangePhase() {
-    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION;
+    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION; cycleCount = 0;
     for (let id in players) {
         resetPlayerPos(id);
         players[id].exchanged = false;
@@ -262,12 +262,17 @@ setInterval(() => {
     if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
 
-    // 时间到，判定平局或结束
-    if (timeLeft <= 0) {
+    // ターンの上限数に達したら、引き分け処理
+    if (cycleCount >= Config.TURN_MAX) {
         gameActive = false;
+
+        // カウントのリセット
+        cycleCount = 0;
+
         io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
         // 次ラウンドもゲートを通す：盤面・キャラ生成を待ってからチップ交換へ。
         setTimeout(beginRound, 3000);
+
         return;
     }
 
@@ -287,7 +292,7 @@ setInterval(() => {
             finalRaiseTurnCount++;
 
             // 20ターン経過しても決着がつかなかった場合、優勢側を勝者とする。
-            if (finalRaiseTurnCount >= 20) {
+            if (finalRaiseTurnCount >= Config.TURN_MAX) {
                 const winner =
                     Object.values(players)
                         .find(p => p.role === finalRaiseFavoredRole);
@@ -413,7 +418,7 @@ setInterval(() => {
 
         io.emit('sync_items', items);
     }
-    io.emit('beat', { beat: currentBeat, timeLeft, gameActive });
+    io.emit('beat', { beat: currentBeat, timeLeft, gameActive, cycleCount });
 }, Config.BEAT_INTERVAL);
 
 // --- AI Brain: 普通难度，目标是推对手下平台 ---

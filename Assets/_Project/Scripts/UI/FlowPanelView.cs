@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿﻿using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using System.Collections;
@@ -52,7 +52,7 @@ namespace GamblingAction.UI
 		[SerializeField] private Color m_BeatOffColor = new Color(0.17f, 0.17f, 0.16f, 1f);
 
 		[Header("Command Buttons & Animation Settings")]
-		[SerializeField, Tooltip("押し出しコマンド選択ボタン")]
+		[SerializeField, Tooltip("押し込みコマンド選択ボタン")]
 		private Button m_PushButton;
 		[SerializeField, Tooltip("攻撃コマンド選択ボタン")]
 		private Button m_AttackButton;
@@ -70,15 +70,15 @@ namespace GamblingAction.UI
 
 		// 各コマンドボタンのキャッシュ用配列
 		private Button[] m_CommandButtons;
-		// 各コマンドボタンの初期位置を保存する配列
+		// 各コマンドボタンの初期位置を保存する変数
 		private Vector2[] m_CommandButtonsDefaultPositions;
-		// 各コマンドボタンの初期背景色を保存する配列
+		// 各コマンドボタンの初期背景色を保存する変数
 		private Color[] m_CommandButtonsDefaultColors;
 		// 確定アニメーションが現在実行中かどうかを示すフラグ
 		private bool m_IsAnimatingCommandSelection;
 		// コマンドボタンの並びを制御するレイアウトグループ
 		private HorizontalLayoutGroup m_CommandLayoutGroup;
-		// コマンドボタンのフェードやスライドなど、実行中の DOTween アニメーションを追跡して確実に停止するためのリスト
+		// 各コマンドボタンのフェードやスライドなど、実行中の DOTween アニメーションを追跡して確実に停止するためのリスト
 		private readonly System.Collections.Generic.List<Tween> m_ActiveTweens = new System.Collections.Generic.List<Tween>();
 		// 前回のインテントタイプと強度（Power）を保存するキャッシュ変数（強度変更時の演出判定用）
 		private string m_PrevIntentType;
@@ -135,6 +135,7 @@ namespace GamblingAction.UI
 		private TMP_Text m_ReadyText, m_CountdownText;
 		private RectTransform m_TimeBarFill;
 		private TMP_Text m_RoundText;
+		private TMP_Text m_TurnText;
 
 		private Image m_PrepareTimebar;
 		private TMP_Text m_PrepareTimeText;
@@ -237,7 +238,6 @@ namespace GamblingAction.UI
 			UpdateExchangeRange();
 			UpdateBeatVisual();
 			m_IsStarted = true;
-
 			EnableUiActions();
 		}
 
@@ -648,7 +648,7 @@ namespace GamblingAction.UI
 			m_FinalBeat   = FindByPath<Image>(m_MainGameStage, "Metronome/Layout/FinalBeat");
 			m_ExecuteText = FindByPath<TMP_Text>(m_MainGameStage, "Metronome/ExecuteText");
 
-			m_ReadyText     = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Ready");
+			m_ReadyText = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Ready");
 			m_CountdownText = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Countdown");
 
 			var fill = FindByPath<RectTransform>(m_MainGameStage, "TimeBar/Fill");
@@ -659,6 +659,8 @@ namespace GamblingAction.UI
 			}
 
 			m_RoundText = FindByPath<TMP_Text>(m_MainGameStage, "Round/RoundText");
+
+			m_TurnText = FindByPath<TMP_Text>(m_MainGameStage, "Turn/TurnText");
 
 			// バトル用の各コマンド選択ボタン（Push, Attack, Defense, Skill）を再帰検索して取得
 			m_PushButton    = FindChild<Button>(m_MainGameStage.transform, "Push");
@@ -998,12 +1000,22 @@ namespace GamblingAction.UI
 			// 色は role 固定（ワールドのプレイヤー色と一致させる）。スロット位置は self/opponent。
 			Color slotColor = dto.Role == "P2" ? m_P2SlotColor : m_P1SlotColor;
 
-			if (nameText != null)
-			{
-				nameText.text = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
-				nameText.color = slotColor;
-			}
-			if (moneyText != null)
+            if (nameText != null)
+            {
+                string displayName = dto.Role;
+
+                if (displayName == "P1")
+                    displayName = "1P";
+                else if (displayName == "P2")
+                    displayName = "2P";
+
+                if (dto.IsAI)
+                    displayName += " (AI)";
+
+                nameText.text = displayName;
+                nameText.color = slotColor;
+            }
+            if (moneyText != null)
 			{
 				moneyText.text = $"¥{dto.Money:N0}";
 				moneyText.color = slotColor;
@@ -1019,13 +1031,14 @@ namespace GamblingAction.UI
 
 		private void HandleBeatChanged()
 		{
-			UpdateBeatVisual();
-			UpdateTimeBar();
-
 			if (m_State == null)
 			{
 				return;
 			}
+
+			UpdateBeatVisual();
+			UpdateTimeBar();
+			UpdateTurn();
 
 			// 4拍目（実行拍）での処理
 			if (m_State.CurrentBeat == 4)
@@ -1062,12 +1075,15 @@ namespace GamblingAction.UI
 				{
 					if (m_NormalBeats[i] == null) continue;
 					bool on = battle && beat == i + 1;
-					m_NormalBeats[i].color = on ? m_BeatOnColor : m_BeatOffColor;
-				}
+                    m_NormalBeats[i].color = on ? m_BeatOnColor : m_BeatOffColor;
+                }
 			}
 			if (m_FinalBeat != null)
-				m_FinalBeat.color = (battle && beat == 4) ? m_FinalBeatOnColor : m_BeatOffColor;
-		}
+			{
+                bool finalOn = battle && beat == 4;
+                m_FinalBeat.color = finalOn ? m_FinalBeatOnColor : m_BeatOffColor;
+            }
+        }
 
 		private void UpdateTimeBar()
 		{
@@ -1227,6 +1243,11 @@ namespace GamblingAction.UI
 			if (m_RoundText == null) return;
 			m_RoundText.text = $"Round {m_RoundCount}";
 		}
+
+        private void UpdateTurn()
+        {
+			m_TurnText.text = $"ターン{m_State.CycleCount}/20";
+        }
 
 		/// <summary>
 		/// ローカルプレイヤーのインテント変更イベントを受け取り、選択状態の背景色（倍率による3段階）およびボタンの位置を更新します。

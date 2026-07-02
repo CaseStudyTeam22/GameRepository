@@ -188,6 +188,7 @@ MonoBehaviour:
   m_ChipHeight: 0.06
   m_ChipRoot: {fileID: 2903651916057615063}
   m_DropHeight: 5
+  m_SpawnSpread: 0.3
   m_DropDuration: 0.35
   m_DropStagger: 0.08
   m_MaxStaggerTotal: 1.8
