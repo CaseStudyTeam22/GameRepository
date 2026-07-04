@@ -21,17 +21,17 @@ namespace GamblingAction.Domain
 		public int CurrentBeat { get; private set; }
 		public int TimeLeft { get; private set; }
 		public bool GameActive { get; private set; }
-        public int CurrentBarIndex { get; private set; }
-        public int CurrentAbsoluteBeat { get; private set; }
-        public int NextBeat { get; private set; }
-        public int NextBarIndex { get; private set; }
-        public int NextAbsoluteBeat { get; private set; }
-        public long BeatSequence { get; private set; }
-        public long RoundId { get; private set; }
-        public long BeatStartServerMs { get; private set; }
-        public long NextBoundaryServerMs { get; private set; }
-        public int BeatIntervalMs { get; private set; }
-        public int BeatsPerBar { get; private set; } = 4;
+		public int CurrentBarIndex { get; private set; }
+		public int CurrentAbsoluteBeat { get; private set; }
+		public int NextBeat { get; private set; }
+		public int NextBarIndex { get; private set; }
+		public int NextAbsoluteBeat { get; private set; }
+		public long BeatSequence { get; private set; }
+		public long RoundId { get; private set; }
+		public long BeatStartServerMs { get; private set; }
+		public long NextBoundaryServerMs { get; private set; }
+		public int BeatIntervalMs { get; private set; }
+		public int BeatsPerBar { get; private set; } = 4;
 		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
@@ -206,7 +206,19 @@ namespace GamblingAction.Domain
 
 		private void HandleInit(InitMessage msg)
 		{
-            CurrentBeat = 0; CurrentBarIndex = 0; CurrentAbsoluteBeat = 0; NextBeat = 0; NextBarIndex = 0; NextAbsoluteBeat = 0; BeatSequence = 0; RoundId = 0; BeatStartServerMs = 0; NextBoundaryServerMs = 0; BeatIntervalMs = 0; BeatsPerBar = 4;
+            CurrentBeat = 0;
+			CurrentBarIndex = 0;
+			CurrentAbsoluteBeat = 0;
+			NextBeat = 0;
+			NextBarIndex = 0;
+			NextAbsoluteBeat = 0;
+			BeatSequence = 0;
+			RoundId = 0;
+			BeatStartServerMs = 0;
+			NextBoundaryServerMs = 0;
+			BeatIntervalMs = 0;
+			BeatsPerBar = 4;
+
 			MyId = msg.Id;
 			GridSize = msg.GridSize;
 			ReplacePlayers(msg.Players);
@@ -233,31 +245,31 @@ namespace GamblingAction.Domain
 			TimeLeft = msg.TimeLeft;
 			GameActive = msg.GameActive;
 
-            CurrentBarIndex = msg.BarIndex;
-            BeatSequence = msg.BeatSequence;
-            RoundId = msg.RoundId;
-            BeatStartServerMs = msg.BeatStartServerMs;
-            NextBoundaryServerMs = msg.NextBoundaryServerMs;
-            BeatIntervalMs = msg.BeatIntervalMs;
-            BeatsPerBar = msg.BeatsPerBar > 0 ? msg.BeatsPerBar : 4;
+			CurrentBarIndex = msg.BarIndex;
+			BeatSequence = msg.BeatSequence;
+			RoundId = msg.RoundId;
+			BeatStartServerMs = msg.BeatStartServerMs;
+			NextBoundaryServerMs = msg.NextBoundaryServerMs;
+			BeatIntervalMs = msg.BeatIntervalMs;
+			BeatsPerBar = msg.BeatsPerBar > 0 ? msg.BeatsPerBar : 4;
 
-            CurrentAbsoluteBeat = ((CurrentBarIndex - 1) * BeatsPerBar) + CurrentBeat;
+			CurrentAbsoluteBeat = ((CurrentBarIndex - 1) * BeatsPerBar) + CurrentBeat;
 
-            if (CurrentBeat >= BeatsPerBar)
-            {
-                NextBeat = 1;
-                NextBarIndex = CurrentBarIndex + 1;
-            }
-            else
-            {
-                NextBeat = CurrentBeat + 1;
-                NextBarIndex = CurrentBarIndex;
-            }
+			if (CurrentBeat >= BeatsPerBar)
+			{
+				NextBeat = 1;
+				NextBarIndex = CurrentBarIndex + 1;
+			}
+			else
+			{
+				NextBeat = CurrentBeat + 1;
+				NextBarIndex = CurrentBarIndex;
+			}
 
-            NextAbsoluteBeat = ((NextBarIndex - 1) * BeatsPerBar) + NextBeat;
+			NextAbsoluteBeat = ((NextBarIndex - 1) * BeatsPerBar) + NextBeat;
 
-            OnBeatChanged?.Invoke();
-        }
+			 OnBeatChanged?.Invoke();
+		}
 
 		private void HandleGameEvents(EventDto[] events)
 		{
@@ -287,8 +299,8 @@ namespace GamblingAction.Domain
 		{
 			// 試合終了時はファイナルレイズ状態を必ずリセット（中断 / 完走どちらの経路でも）。
 			IsFinalDuel = false;
-            RoundId = 0;
-            SetPhase(EGamePhase.GameOver);
+			RoundId = 0;
+			SetPhase(EGamePhase.GameOver);
 			OnGameOver?.Invoke(msg.WinnerRole);
 		}
 

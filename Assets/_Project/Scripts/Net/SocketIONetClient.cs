@@ -67,7 +67,7 @@ namespace GamblingAction.Net
 					Debug.LogError($"[Net] Failed to parse '{eventName}': {ex.Message}\nPayload: {json}");
 					return;
 				}
-                handler(parsed);
+				handler(parsed);
 			};
 			m_Handlers[eventName] = raw;
 			m_Socket.On(eventName, raw);
