@@ -1396,13 +1396,6 @@
 								<Folder Name="Beat" ID="{81A86774-E010-4C4C-B9A2-A97A69E69282}" ShortID="892506091">
 									<ChildrenList>
 										<Sound Name="Beat_4" ID="{0D98371A-4812-47C3-A5E4-2AD750048801}" ShortID="130933829">
-											<PropertyList>
-												<Property Name="Volume" Type="Real64">
-													<ValueList>
-														<Value>-96</Value>
-													</ValueList>
-												</Property>
-											</PropertyList>
 											<ReferenceList>
 												<Reference Name="Conversion">
 													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>
@@ -1430,13 +1423,6 @@
 											</ActiveSourceList>
 										</Sound>
 										<Sound Name="Beat_1_to_3" ID="{AF7807DD-2BBF-477E-A1DA-541D0A3E28AB}" ShortID="126599168">
-											<PropertyList>
-												<Property Name="Volume" Type="Real64">
-													<ValueList>
-														<Value>-96</Value>
-													</ValueList>
-												</Property>
-											</PropertyList>
 											<ReferenceList>
 												<Reference Name="Conversion">
 													<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{7B8386A9-321A-443E-B61C-3CE9B0042DEC}"/>

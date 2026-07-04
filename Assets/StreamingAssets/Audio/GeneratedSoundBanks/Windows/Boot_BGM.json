@@ -11,7 +11,7 @@
     "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
     "Color": "1",
     "Language": "SFX",
-    "Hash": "{17EEAE24-FBF0-4517-A31C-B9A2F2D8FA84}",
+    "Hash": "{69ECE2A4-71F6-8D37-E253-F88F9893BDE9}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\Boot_BGM",
     "ShortName": "Boot_BGM",
     "Path": "Boot_BGM.bnk",
@@ -108,6 +108,6 @@
     ]
    }
   ],
-  "FileHash": "{AC316D5E-5490-6251-1804-EBF51BC85535}"
+  "FileHash": "{8AC98475-B87A-8638-0660-914B682CC5B4}"
  }
 }

@@ -11,7 +11,7 @@
     "GUID": "{80E7D19C-36CA-4B7F-AB32-510E99BC51BA}",
     "Color": "1",
     "Language": "SFX",
-    "Hash": "{F0DBA862-E888-5CFD-D3D7-721EF29585AA}",
+    "Hash": "{7EA19F2A-C86B-1061-3FBE-7AA39B1A3D74}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Boot_SE",
     "ShortName": "Boot_SE",
     "Path": "Boot_SE.bnk",
@@ -67,6 +67,6 @@
     ]
    }
   ],
-  "FileHash": "{E9409A66-5036-3119-AA32-8280A916A427}"
+  "FileHash": "{BA0E001D-D86E-6197-DA75-114552C325BE}"
  }
 }
