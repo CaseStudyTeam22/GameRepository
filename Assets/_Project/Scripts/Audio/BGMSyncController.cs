@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using GamblingAction.Domain;
 
@@ -11,7 +9,6 @@ namespace GamblingAction.Audio
     /// </summary>
     public class BGMSyncController : MonoBehaviour
     {
-
         [Header("Debug")]
         [SerializeField] private bool m_EnableDebugLog = true;
         [SerializeField] private float m_DebugLogIntervalSec = 0.25f;
@@ -28,7 +25,10 @@ namespace GamblingAction.Audio
         [SerializeField] private int m_MinRemainingMsToReserveSeek = 24;
         [SerializeField] private int m_MaxAudibleSeekJumpMs = 240;
         [SerializeField] private float m_ForceSeekDriftMs = 420f;
-        [SerializeField] private float m_FocusRecoverySuspendSec = 1.0f;
+        [SerializeField] private float m_FocusRecoveryLockThresholdMs = 200f;
+        [SerializeField] private float m_FocusRecoveryUnlockThresholdMs = 80f;
+        [SerializeField] private int m_FocusRecoveryUnlockStableFrames = 8;
+        [SerializeField] private float m_FocusRecoveryResumeDelaySec = 0.25f;
 
         [Header("RTPC Correction")]
         [SerializeField] private string m_PlaybackSpeedRtpcName = "playbackSpeed";
@@ -61,22 +61,23 @@ namespace GamblingAction.Audio
 
         private float m_SyncStartTimeSec = 0f;
         private float m_LastSeekTimeSec = -999f;
-        private float m_PreviousDriftMs = 0f;
+        private float m_LastSeekAppliedTimeSec = -999f;
         private int m_ObservationCount = 0;
         private int m_SeekCount = 0;
+        private int m_SeekCountInCurrentBarWindow = 0;
         private int m_LastKnownTimeLeft = -1;
 
         private bool m_HasPendingSeek = false;
         private int m_PendingSeekTargetMs = 0;
-        private int m_PendingBgmLoopTargetBeatInBar = 0;
-        private int m_PendingExecuteWindowLoopStartBeatInBar = 0;
-        private int m_PendingExecuteWindowLoopEndBeatInBar = 0;
-
         private int m_PendingServerTargetAbsoluteBeat = 0;
         private int m_PendingBgmTargetAbsoluteBeat = 0;
+        private int m_PendingBgmLoopTargetBeatInBar = 0;
         private int m_PendingRemainingMsToBoundary = 0;
+        private int m_PendingExecuteWindowLoopStartBeatInBar = 0;
+        private int m_PendingExecuteWindowLoopEndBeatInBar = 0;
+        private int m_PendingExecutePreBeatMeasure = 0;
+        private int m_PendingExecutePreBeatSlot = 0;
         private int m_PendingCreatedRoundId = 0;
-        private long m_PendingCreatedBeatSequence = 0;
         private bool m_PendingCreatedFromRtpcFailure = false;
 
         private bool m_HasLastBeatCue = false;
@@ -86,12 +87,10 @@ namespace GamblingAction.Audio
         private string m_LastPreBeatName = string.Empty;
         private int m_PreBeatCountSinceLastBeat = 0;
 
-        private int m_PendingExecutePreBeatMeasure = 0;
-        private int m_PendingExecutePreBeatSlot = 0;
-        private float m_SuspendCorrectionUntilSec = -1f;
-
-        private float m_LastSeekAppliedTimeSec = -999f;
-        private int m_SeekCountInCurrentBarWindow = 0;
+        private bool m_FocusRecoveryPending = false;
+        private bool m_FocusRecoveryLocked = false;
+        private int m_FocusRecoveryRecoverCount = 0;
+        private float m_FocusRecoveryResumeUntilSec = -1f;
 
         private bool m_RtpcActive = false;
         private int m_RtpcTargetAbsoluteBeat = 0;
@@ -157,10 +156,14 @@ namespace GamblingAction.Audio
             m_LastSeekTimeSec = -999f;
             m_SeekCount = 0;
             m_LastKnownTimeLeft = m_GameState.TimeLeft;
-            m_PreviousDriftMs = 0f;
 
             m_HasPendingSeek = false;
             m_PendingSeekTargetMs = 0;
+            
+            m_FocusRecoveryPending = false;
+            m_FocusRecoveryLocked = false;
+            m_FocusRecoveryRecoverCount = 0;
+            m_FocusRecoveryResumeUntilSec = -1f;
 
             m_HasLastBeatCue = false;
             m_LastBeatCueName = string.Empty;
@@ -195,13 +198,17 @@ namespace GamblingAction.Audio
             m_ObservationCount = 0;
             m_SeekCount = 0;
             m_LastKnownTimeLeft = -1;
-            m_PreviousDriftMs = -1;
 
             m_PendingExecutePreBeatMeasure = 0;
             m_PendingExecutePreBeatSlot = 0;
 
             m_HasPendingSeek = false;
             m_PendingSeekTargetMs = 0;
+
+            m_FocusRecoveryPending = false;
+            m_FocusRecoveryLocked = false;
+            m_FocusRecoveryRecoverCount = 0;
+            m_FocusRecoveryResumeUntilSec = -1f;
 
             m_HasLastBeatCue = false;
             m_LastBeatCueName = string.Empty;
@@ -418,17 +425,88 @@ namespace GamblingAction.Audio
             LastDriftMs = driftMs;
             m_ObservationCount++;
 
-            if (Time.unscaledTime < m_SuspendCorrectionUntilSec)
+            if (m_FocusRecoveryPending)
             {
-                if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
+                m_FocusRecoveryPending = false;
+
+                if (Mathf.Abs(driftMs) >= m_FocusRecoveryLockThresholdMs)
                 {
-                    Debug.Log(
-                        $"[BGMSyncController] ï‚ê≥í‚é~íÜ reason=focusRecovery expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms");
-                    m_LastSeekSkipLogTimeSec = Time.unscaledTime;
+                    m_FocusRecoveryLocked = true;
+                    m_FocusRecoveryRecoverCount = 0;
+
+                    if (m_RtpcActive)
+                    {
+                        ResetRtpc("focusRecoveryLock", false);
+                    }
+
+                    if (m_HasPendingSeek)
+                    {
+                        InvalidatePendingSeek("focusRecoveryLock");
+                    }
+
+                    if (m_EnableDebugLog)
+                    {
+                        Debug.Log(
+                            $"[BGMSyncController] focusïúãAîªíË lock drift={driftMs:F1}ms threshold={m_FocusRecoveryLockThresholdMs:F1}ms");
+                    }
+
+                    return;
                 }
 
-                m_PreviousDriftMs = driftMs;
-                return;
+                if (m_EnableDebugLog)
+                {
+                    Debug.Log(
+                        $"[BGMSyncController] focusïúãAîªíË unlock drift={driftMs:F1}ms threshold={m_FocusRecoveryLockThresholdMs:F1}ms");
+                }
+            }
+
+            if (m_FocusRecoveryLocked)
+            {
+                if (Mathf.Abs(driftMs) <= m_FocusRecoveryUnlockThresholdMs)
+                {
+                    m_FocusRecoveryRecoverCount++;
+
+                    if (m_FocusRecoveryRecoverCount >= m_FocusRecoveryUnlockStableFrames)
+                    {
+                        m_FocusRecoveryLocked = false;
+                        m_FocusRecoveryRecoverCount = 0;
+                        m_FocusRecoveryResumeUntilSec = Time.unscaledTime + m_FocusRecoveryResumeDelaySec;
+
+                        if (m_EnableDebugLog)
+                        {
+                            Debug.Log(
+                                $"[BGMSyncController] focusRecoveryâèú frame={Time.frameCount} now={Time.unscaledTime:F3} " +
+                                $"drift={driftMs:F1}ms unlockThreshold={m_FocusRecoveryUnlockThresholdMs:F1}ms " +
+                                $"stableFrames={m_FocusRecoveryUnlockStableFrames} resumeUntil={m_FocusRecoveryResumeUntilSec:F3}");
+                        }
+
+                        return;
+                    }
+                    else
+                    {
+                        if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
+                        {
+                            Debug.Log(
+                                $"[BGMSyncController] ï‚ê≥í‚é~íÜ reason=focusRecovery drift={driftMs:F1}ms recoverCount={m_FocusRecoveryRecoverCount}");
+                            m_LastSeekSkipLogTimeSec = Time.unscaledTime;
+                        }
+
+                        return;
+                    }
+                }
+                else
+                {
+                    m_FocusRecoveryRecoverCount = 0;
+
+                    if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
+                    {
+                        Debug.Log(
+                            $"[BGMSyncController] ï‚ê≥í‚é~íÜ reason=focusRecovery drift={driftMs:F1}ms recoverCount=0");
+                        m_LastSeekSkipLogTimeSec = Time.unscaledTime;
+                    }
+
+                    return;
+                }
             }
 
             if (m_EnableDebugLog && Time.unscaledTime - m_LastDebugLogTimeSec >= m_DebugLogIntervalSec)
@@ -438,6 +516,20 @@ namespace GamblingAction.Audio
                     $"expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms " +
                     $"targetAbs={targetAbsoluteBeat} remain={remainingMsToNextBoundary}ms rtpcActive={m_RtpcActive}");
                 m_LastDebugLogTimeSec = Time.unscaledTime;
+            }
+
+            if (Time.unscaledTime < m_FocusRecoveryResumeUntilSec)
+            {
+                if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
+                {
+                    Debug.Log(
+                        $"[BGMSyncController] ï‚ê≥çƒäJë“ã@íÜ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
+                        $"resumeUntil={m_FocusRecoveryResumeUntilSec:F3} remain={(m_FocusRecoveryResumeUntilSec - Time.unscaledTime):F3} " +
+                        $"drift={driftMs:F1}ms");
+                    m_LastSeekSkipLogTimeSec = Time.unscaledTime;
+                }
+
+                return;
             }
 
             EvaluateRtpcCorrection(expectedMs, actualMs, driftMs, remainingMsToNextBoundary, targetAbsoluteBeat);
@@ -668,7 +760,7 @@ namespace GamblingAction.Audio
             return true;
         }
 
-        private bool TryBuildSeekPlan(float driftMs, int remainingMsToNextBoundary, int serverTargetAbsoluteBeat, out int bgmTargetAbsoluteBeat, out int seekTargetMs, out int executeWindowStartBeatInBar, out int executeWindowEndBeatInBar)
+        private bool TryBuildSeekPlan(int remainingMsToNextBoundary, int serverTargetAbsoluteBeat, out int bgmTargetAbsoluteBeat, out int seekTargetMs, out int executeWindowStartBeatInBar, out int executeWindowEndBeatInBar)
         {
             bgmTargetAbsoluteBeat = 0;
             seekTargetMs = 0;
@@ -929,7 +1021,7 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            if (!TryBuildSeekPlan(driftMs, remainingMsToNextBoundary, serverTargetAbsoluteBeat, out int bgmTargetAbsoluteBeat, out int seekTargetMs, out int executeWindowStartBeatInBar, out int executeWindowEndBeatInBar))
+            if (!TryBuildSeekPlan(remainingMsToNextBoundary, serverTargetAbsoluteBeat, out int bgmTargetAbsoluteBeat, out int seekTargetMs, out int executeWindowStartBeatInBar, out int executeWindowEndBeatInBar))
             {
                 LogSeekSkip("seekPlanç\ízé∏îs", expectedMs, actualMs, driftMs);
                 return;
@@ -945,14 +1037,14 @@ namespace GamblingAction.Audio
             m_PendingExecuteWindowLoopStartBeatInBar = executeWindowStartBeatInBar;
             m_PendingExecuteWindowLoopEndBeatInBar = executeWindowEndBeatInBar;
             m_PendingCreatedRoundId = (int)m_GameState.RoundId;
-            m_PendingCreatedBeatSequence = m_GameState.BeatSequence;
             m_PendingCreatedFromRtpcFailure =
                 m_RtpcFailedForTarget && m_RtpcFailedTargetAbsoluteBeat == serverTargetAbsoluteBeat;
 
             Debug.Log(
-                $"[BGMSyncController] Seekó\ñÒ serverTargetAbs={m_PendingServerTargetAbsoluteBeat} " +
-                $"bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} " +
-                $"remain={m_PendingRemainingMsToBoundary}ms execLoopWindow={m_PendingExecuteWindowLoopStartBeatInBar}->{m_PendingExecuteWindowLoopEndBeatInBar} " +
+                $"[BGMSyncController] Seekó\ñÒ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
+                $"serverTargetAbs={m_PendingServerTargetAbsoluteBeat} bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} " +
+                $"loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} remain={m_PendingRemainingMsToBoundary}ms " +
+                $"execLoopWindow={m_PendingExecuteWindowLoopStartBeatInBar}->{m_PendingExecuteWindowLoopEndBeatInBar} " +
                 $"execPreBeat={m_PendingExecutePreBeatMeasure}:{m_PendingExecutePreBeatSlot} " +
                 $"expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms rtpcFailed={m_PendingCreatedFromRtpcFailure}");
         }
@@ -1214,25 +1306,20 @@ namespace GamblingAction.Audio
         {
             if (!hasFocus)
             {
+                m_FocusRecoveryPending = true;
+                m_FocusRecoveryRecoverCount = 0;
+
+                if (m_EnableDebugLog)
+                {
+                    Debug.Log("[BGMSyncController] focusëré∏ pending=true");
+                }
+
                 return;
-            }
-
-            m_SuspendCorrectionUntilSec = Time.unscaledTime + m_FocusRecoverySuspendSec;
-
-            if (m_RtpcActive)
-            {
-                ResetRtpc("focusRecovery", false);
-            }
-
-            if (m_HasPendingSeek)
-            {
-                InvalidatePendingSeek("focusRecovery");
             }
 
             if (m_EnableDebugLog)
             {
-                Debug.Log(
-                    $"[BGMSyncController] ï‚ê≥í‚é~äJén reason=focusRecovery until={m_SuspendCorrectionUntilSec:F3}");
+                Debug.Log("[BGMSyncController] focusïúãA");
             }
         }
 
@@ -1266,7 +1353,6 @@ namespace GamblingAction.Audio
             m_PendingBgmTargetAbsoluteBeat = 0;
             m_PendingRemainingMsToBoundary = 0;
             m_PendingCreatedRoundId = 0;
-            m_PendingCreatedBeatSequence = 0;
             m_PendingCreatedFromRtpcFailure = false;
 
         }
