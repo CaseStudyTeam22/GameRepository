@@ -39,6 +39,7 @@ namespace GamblingAction.Domain
 		public int CurrentBeat { get; private set; }
 		public int TimeLeft { get; private set; }
 		public bool GameActive { get; private set; }
+		public int CycleCount { get; private set; }
 		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
@@ -485,6 +486,8 @@ namespace GamblingAction.Domain
 			CurrentBeat = msg.Beat;
 			TimeLeft = msg.TimeLeft;
 			GameActive = msg.GameActive;
+			CycleCount = msg.CycleCount;
+
 			OnBeatChanged?.Invoke();
 		}
 

@@ -13,6 +13,7 @@ namespace GamblingAction.Domain
 		int CurrentBeat { get; }
 		int TimeLeft { get; }
 		bool GameActive { get; }
+		int CycleCount { get; }
 		EGamePhase Phase { get; }
 		bool IsConnected { get; }
 		// ファイナルレイズ本番ラウンド進行中なら true。
