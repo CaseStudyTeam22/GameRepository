@@ -24,10 +24,10 @@ const Engine = {
             // 筹码消耗：按 power 查表
             const costTable = (p.chipCosts && p.chipCosts[intent.type]) || Config.CHIP_COST_BY_POWER[intent.type];
             let chipCost = costTable ? costTable[power - 1] : 0;
-            
+
             // スキルによるコスト計算フックの適用
             chipCost = Skills.onCalculateCost(p, intent, chipCost);
-            
+
             if (p.chips < chipCost) intent.type = 'none';
             else p.chips -= chipCost;
 
@@ -36,7 +36,7 @@ const Engine = {
             // さらに将来的なステータス補正 maxStaminaBonus を適用
             const bonusStamina = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
             const maxStamina = (p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax) + bonusStamina;
-            
+
             const restRec = Config.EFFECTS.rest.staminaRec + (p.selectedBuff === 'low_risk' ? 1 : 0);
             if (intent.type === 'rest') p.stamina = Math.min(maxStamina, p.stamina + restRec);
             else if (intent.type === 'none') {
@@ -76,12 +76,25 @@ const Engine = {
 
         [p1, p2].forEach(p => {
             const intent = intents[p.id] || { type: 'none' };
-            if (intent.type !== 'move') return;
+            // push の場合は、開始時点で隣接していない（startDist > 1）時のみ衝突判定を行う
+            const isPushMove = (intent.type === 'push' && startDist > 1);
+            if (intent.type !== 'move' && !isPushMove) return;
+
             const other = p.id === p1Id ? p2 : p1;
             const power = Math.max(1, Math.min(3, intent.power || 1));
-            const baseSpeed = p.baseMoveSpeed || 0;
-            const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
-            const finalPower = Math.max(1, power + baseSpeed + speedBonus);
+
+            let maxDist = 1;
+            if (intent.type === 'move') {
+                const baseSpeed = p.baseMoveSpeed || 0;
+                const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
+                maxDist = Math.max(1, power + baseSpeed + speedBonus);
+            } else if (intent.type === 'push') {
+                const basePush = p.basePushPower || 0;
+                const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+                const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
+                maxDist = Math.max(1, power + basePush + pushBonus + nextBonus);
+            }
+
             // 从 prev 出发逐格推进，遇到对方（用其 prev 位置判定，避免交错冲突）或越界则停止
             let cx = p.prevX, cy = p.prevY;
             let dx = 0, dy = 0;
@@ -89,7 +102,7 @@ const Engine = {
             else if (intent.dir === 'down') dy = 1;
             else if (intent.dir === 'left') dx = -1;
             else if (intent.dir === 'right') dx = 1;
-            for (let step = 0; step < finalPower; step++) {
+            for (let step = 0; step < maxDist; step++) {
                 const nx = cx + dx, ny = cy + dy;
                 if (nx < 0 || nx >= Config.GRID_SIZE || ny < 0 || ny >= Config.GRID_SIZE) break;
                 if (nx === other.prevX && ny === other.prevY) break;
@@ -214,7 +227,16 @@ const Engine = {
             p2.x = p2.targetX; p2.y = p2.targetY;
         }
 
+        // 记录 Section 3 移动冲突解决后的位置 (用于后续物品路径拾取)
+        const p1Mid = { x: p1.x, y: p1.y };
+        const p2Mid = { x: p2.x, y: p2.y };
+
         // --- 4. 执行动作效果 ---
+        const movedSelf = {};
+        [p1, p2].forEach(p => {
+            movedSelf[p.id] = (p.x !== p.prevX || p.y !== p.prevY);
+        });
+
         [p1, p2].forEach(p => {
             const intent = intents[p.id];
             if (!intent) return;
@@ -236,16 +258,31 @@ const Engine = {
                     const tPower = getPF(target, tIntent);
                     finalDist = Math.max(0, finalDist - tPower);
                 }
+                // 防御の場合はkbしない
                 if (tIntent.type === 'defense') finalDist = 0;
-                // ガーディアン: スキル中はノックバック無効
-                if (isGuardianBlocking(target, intents)) finalDist = 0;
-                // 高风险被击方：30% 概率推距 +1
+                // ハイリスクを選んでいる場合30%で距離+1(この効果は処理順的に防御を貫通する)
                 if (finalDist > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) finalDist += 1;
+                // ガーディアン: スキル中はノックバック無効(high_riskの効果を受けない)
+                if (isGuardianBlocking(target, intents)) finalDist = 0;
 
                 if (intent.dir === 'up') target.y -= finalDist;
                 else if (intent.dir === 'down') target.y += finalDist;
                 else if (intent.dir === 'left') target.x -= finalDist;
                 else if (intent.dir === 'right') target.x += finalDist;
+
+                // 突進したプレイヤーの座標を、実際に相手を押し出した距離（finalDist）に合わせて制限する
+                if (movedSelf[p.id]) {
+                    const finalPushDist = Math.max(1, power + basePush + pushBonus + nextBonus);
+                    let dx = 0, dy = 0;
+                    if (intent.dir === 'up') dy = -1;
+                    else if (intent.dir === 'down') dy = 1;
+                    else if (intent.dir === 'left') dx = -1;
+                    else if (intent.dir === 'right') dx = 1;
+
+                    p.x -= dx * (finalPushDist - finalDist);
+                    p.y -= dy * (finalPushDist - finalDist);
+                }
+
                 if (finalDist > 0) events.push({ type: 'pushed', targetId: target.id, dir: intent.dir, dist: finalDist });
             }
 
@@ -276,7 +313,7 @@ const Engine = {
             }
 
             if (intent.type === 'rest') events.push({ type: 'vfx', vfxType: 'rest_vfx', targetId: p.id, x: p.x, y: p.y });
-            
+
             // スキル（固有アクション）の実行
             if (intent.type === 'skill') {
                 Skills.onResolve(p, target, intent, events, Config, items);
@@ -284,10 +321,48 @@ const Engine = {
         });
 
         // --- 5. 拾取物品 ---
+        const getLineCells = (x1, y1, x2, y2) => {
+            const cells = [];
+            if (x1 === x2) {
+                const minY = Math.min(y1, y2);
+                const maxY = Math.max(y1, y2);
+                for (let y = minY; y <= maxY; y++) {
+                    cells.push({ x: x1, y: y });
+                }
+            } else if (y1 === y2) {
+                const minX = Math.min(x1, x2);
+                const maxX = Math.max(x1, x2);
+                for (let x = minX; x <= maxX; x++) {
+                    cells.push({ x: x, y: y1 });
+                }
+            } else {
+                cells.push({ x: x1, y: y1 });
+                cells.push({ x: x2, y: y2 });
+            }
+            return cells;
+        };
+
         [p1, p2].forEach(p => {
+            const mid = p.id === p1Id ? p1Mid : p2Mid;
+            const path1 = getLineCells(p.prevX, p.prevY, mid.x, mid.y);
+            const path2 = getLineCells(mid.x, mid.y, p.x, p.y);
+
+            // 経路上の座標を統合して重複排除
+            const visited = [];
+            const seen = new Set();
+            [...path1, ...path2].forEach(cell => {
+                const key = `${cell.x},${cell.y}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    visited.push(cell);
+                }
+            });
+
             for (let i = items.length - 1; i >= 0; i--) {
-                if (p.x === items[i].x && p.y === items[i].y) {
-                    if (items[i].type === 'chips') {
+                const item = items[i];
+                const isOnPath = visited.some(cell => cell.x === item.x && cell.y === item.y);
+                if (isOnPath) {
+                    if (item.type === 'chips') {
                         p.chips += Config.CHIP_ITEM_VALUE;
                         events.push({ type: 'mission_progress', playerId: p.id, missionType: 'GainChip', amount: 1 });
                     }

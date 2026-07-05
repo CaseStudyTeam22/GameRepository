@@ -89,22 +89,12 @@ namespace GamblingAction.Domain
 			var me = Me;
 			if (me == null || me.IsAI) return;
 
-			// テストで4拍ごとに押し出し力+1
-			//m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
-			//Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
-
-			// スタミナ上限を追加
-			//m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
-
 			// ステータスを更新
 			RefreshPlayerStats(m_Players[MyId]);
 			// 自分の stats 変化を UI に反映する。
 			OnPlayersChanged?.Invoke();
 
-			// 補正等を考慮した力を持ってくる
-			int finalPower = GetCalculatedPower(MyId, type, power);
-
-			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
+			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
 		}
 
 		public async void SubmitReady(bool isAI)
@@ -412,27 +402,7 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.FinalRaiseRespond, new FinalRaiseRespondMessage { Accept = accept });
 		}
 
-		public int GetCalculatedPower(string playerId, string intentType, int basePower)
-		{
-			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
 
-			float finalPower = basePower;
-
-			// 行動タイプ別に応じてバフを適応
-			// stringで管理してる関係上switchｶﾅｰ
-			switch(intentType)
-			{
-				case IntentTypes.Push:
-					finalPower = player.PushModifier.GetModifiedValue(basePower);
-					break;
-				case IntentTypes.Move:
-					finalPower = player.MoveModifier.GetModifiedValue(basePower);
-					break;
-				// スタミナは一旦まち
-			}
-
-			return Mathf.RoundToInt(finalPower);
-		}
         public void NotifySuddenDeathRequested()
         {
             // サーバーへリクエスト送信
@@ -605,10 +575,7 @@ namespace GamblingAction.Domain
 			foreach (var kv in incoming)
 			{
 				var player = kv.Value;
-				// modifierはnullならインスタンス化しておく
-				player.PushModifier ??= new ModifierContainer {Modifiers = new()};
-				player.MoveModifier ??= new ModifierContainer {Modifiers = new()};
-				player.StaminaModifier ??= new ModifierContainer {Modifiers = new()};
+
 
 				m_Players[kv.Key] = kv.Value;
 				
@@ -622,18 +589,10 @@ namespace GamblingAction.Domain
 		{
 			if (player == null) return;
 
-			if (player.Modifiers != null)
-			{
-				Debug.Log($"[GameState] PlayerStats Refreshed via Server Modifiers: {player.Id}, " +
-				          $"MaxStamina={player.MaxStamina}, " +
-				          $"MaxStaminaBonus={player.Modifiers.MaxStaminaBonus}, " +
-				          $"MoveSpeedBonus={player.Modifiers.MoveSpeedBonus}, " +
-				          $"PushPowerBonus={player.Modifiers.PushPowerBonus}");
-			}
-			else
-			{
-				Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
-			}
+			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, " +
+			          $"CurrentMaxStamina={player.CurrentMaxStamina} (Base={player.MaxStamina}), " +
+			          $"CurrentPushPower={player.CurrentPushPower}, " +
+			          $"CurrentDefensePower={player.CurrentDefensePower}");
 		}
 
 		private void SetPhase(EGamePhase phase)
@@ -678,34 +637,7 @@ namespace GamblingAction.Domain
 
     }
 
-    // Modifierの拡張メソッド定義
-    public static class ModifierDomainExtensions
-	{
-		public static float GetModifiedValue(this ModifierContainer container, float baseValue)
-		{
-			if (container == null || container.Modifiers == null) return baseValue;
-			float totalRaw = 0.0f;
-			float totalRatio = 0.0f;
-			foreach (var modifier in container.Modifiers.Values)
-			{
-				totalRaw += modifier.RawValue;
-				totalRatio += modifier.RatioValue;
-			}
-			return (baseValue + totalRaw) * (1 + totalRatio);
-		}
 
-		public static void AddModifier(this ModifierContainer container, string tag, Modifier modifier)
-		{
-			if (container.Modifiers == null) container.Modifiers = new Dictionary<string, Modifier>();
-			container.Modifiers[tag] = modifier;
-		}
-
-		public static void RemoveModifier(this ModifierContainer container, string tag)
-		{
-			container.Modifiers?.Remove(tag);
-		}
-
-	}
 
 
 }

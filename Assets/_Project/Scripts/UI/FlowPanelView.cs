@@ -1,4 +1,4 @@
-﻿﻿using DG.Tweening;
+using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using System.Collections;
@@ -54,8 +54,8 @@ namespace GamblingAction.UI
 		[Header("Command Buttons & Animation Settings")]
 		[SerializeField, Tooltip("押し込みコマンド選択ボタン")]
 		private Button m_PushButton;
-		[SerializeField, Tooltip("攻撃コマンド選択ボタン")]
-		private Button m_AttackButton;
+		//[SerializeField, Tooltip("攻撃コマンド選択ボタン")]
+		//private Button m_AttackButton;
 		[SerializeField, Tooltip("防御コマンド選択ボタン")]
 		private Button m_DefenseButton;
 		[SerializeField, Tooltip("スキルコマンド選択ボタン")]
@@ -238,6 +238,7 @@ namespace GamblingAction.UI
 			UpdateExchangeRange();
 			UpdateBeatVisual();
 			m_IsStarted = true;
+
 			EnableUiActions();
 		}
 
@@ -664,7 +665,7 @@ namespace GamblingAction.UI
 
 			// バトル用の各コマンド選択ボタン（Push, Attack, Defense, Skill）を再帰検索して取得
 			m_PushButton    = FindChild<Button>(m_MainGameStage.transform, "Push");
-			m_AttackButton  = FindChild<Button>(m_MainGameStage.transform, "Attack");
+			//m_AttackButton  = FindChild<Button>(m_MainGameStage.transform, "Attack");
 			m_DefenseButton = FindChild<Button>(m_MainGameStage.transform, "Defense");
 			m_SkillButton   = FindChild<Button>(m_MainGameStage.transform, "Skill");
 
@@ -1000,22 +1001,22 @@ namespace GamblingAction.UI
 			// 色は role 固定（ワールドのプレイヤー色と一致させる）。スロット位置は self/opponent。
 			Color slotColor = dto.Role == "P2" ? m_P2SlotColor : m_P1SlotColor;
 
-            if (nameText != null)
-            {
-                string displayName = dto.Role;
+			if (nameText != null)
+			{
+				string displayName = dto.Role;
 
-                if (displayName == "P1")
-                    displayName = "1P";
-                else if (displayName == "P2")
-                    displayName = "2P";
+				if (displayName == "P1")
+					displayName = "1P";
+				else if (displayName == "P2")
+					displayName = "2P";
 
-                if (dto.IsAI)
-                    displayName += " (AI)";
+				if (dto.IsAI)
+					displayName += " (AI)";
 
-                nameText.text = displayName;
-                nameText.color = slotColor;
-            }
-            if (moneyText != null)
+				nameText.text = displayName;
+				nameText.color = slotColor;
+			}
+			if (moneyText != null)
 			{
 				moneyText.text = $"¥{dto.Money:N0}";
 				moneyText.color = slotColor;
@@ -1075,15 +1076,15 @@ namespace GamblingAction.UI
 				{
 					if (m_NormalBeats[i] == null) continue;
 					bool on = battle && beat == i + 1;
-                    m_NormalBeats[i].color = on ? m_BeatOnColor : m_BeatOffColor;
-                }
+					m_NormalBeats[i].color = on ? m_BeatOnColor : m_BeatOffColor;
+				}
 			}
 			if (m_FinalBeat != null)
 			{
-                bool finalOn = battle && beat == 4;
-                m_FinalBeat.color = finalOn ? m_FinalBeatOnColor : m_BeatOffColor;
-            }
-        }
+				bool finalOn = battle && beat == 4;
+				m_FinalBeat.color = finalOn ? m_FinalBeatOnColor : m_BeatOffColor;
+			}
+		}
 
 		private void UpdateTimeBar()
 		{
@@ -1244,10 +1245,10 @@ namespace GamblingAction.UI
 			m_RoundText.text = $"Round {m_RoundCount}";
 		}
 
-        private void UpdateTurn()
-        {
+		private void UpdateTurn()
+		{
 			m_TurnText.text = $"ターン{m_State.CycleCount}/20";
-        }
+		}
 
 		/// <summary>
 		/// ローカルプレイヤーのインテント変更イベントを受け取り、選択状態の背景色（倍率による3段階）およびボタンの位置を更新します。
@@ -1313,10 +1314,10 @@ namespace GamblingAction.UI
 				{
 					isSelected = true;
 				}
-				else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
-				{
-					isSelected = true;
-				}
+				// else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
+				// {
+				// 	isSelected = true;
+				// }
 				else if (btn == m_DefenseButton && activeIntentType == IntentTypes.Defense)
 				{
 					isSelected = true;
@@ -1415,7 +1416,7 @@ namespace GamblingAction.UI
 			m_CommandButtons = new Button[]
 			{
 				m_PushButton,
-				m_AttackButton,
+				//m_AttackButton,
 				m_DefenseButton,
 				m_SkillButton
 			};
@@ -1492,10 +1493,10 @@ namespace GamblingAction.UI
 				{
 					isSelected = true;
 				}
-				else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
-				{
-					isSelected = true;
-				}
+				// else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
+				// {
+				// 	isSelected = true;
+				// }
 				else if (btn == m_DefenseButton && activeIntentType == IntentTypes.Defense)
 				{
 					isSelected = true;

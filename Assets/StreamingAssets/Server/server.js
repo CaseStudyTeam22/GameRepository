@@ -61,6 +61,33 @@ let finalRaiseFavoredRole = null;
 // ファイナルレイズ時のターンカウント
 let finalRaiseTurnCount = 0;
 
+function updatePlayerCurrentStats(p) {
+    if (!p) return;
+    const baseMax = p.maxStamina || Config.MAX_STAMINA;
+    const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
+    const bonus = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
+    p.currentMaxStamina = maxStamina + bonus;
+
+    const basePush = p.basePushPower || 0;
+    const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+    p.currentPushPower = basePush + pushBonus;
+
+    const baseDef = p.baseDefensePower || 0;
+    const defBonus = (p.modifiers && p.modifiers.defenseReductionBonus) ? Math.round(p.modifiers.defenseReductionBonus * 10) : 0;
+    p.currentDefensePower = baseDef + defBonus;
+}
+
+// sync_state 送信時に自動的にステータスを更新するラッパー
+const originalEmit = io.emit;
+io.emit = function (event, ...args) {
+    if (event === 'sync_state') {
+        for (let id in players) {
+            updatePlayerCurrentStats(players[id]);
+        }
+    }
+    return originalEmit.apply(io, [event, ...args]);
+};
+
 function resetPlayerPos(id) {
     const p = players[id];
     if (!p) return;
@@ -68,10 +95,8 @@ function resetPlayerPos(id) {
     p.x = startPos.x; p.y = startPos.y;
     p.color = p.role === 'P1' ? '#00f2fe' : '#ff4444';
     // クランプ・バリデーションされた maxStamina と modifiers のボーナスを加味して定力をリセット
-    const baseMax = p.maxStamina || Config.MAX_STAMINA;
-    const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
-    const bonus = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
-    p.stamina = maxStamina + bonus;
+    updatePlayerCurrentStats(p);
+    p.stamina = p.currentMaxStamina;
     p.falling = false; p.intent = null;
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
     // 債務者の次回突進強化はラウンド間で持ち越さない
@@ -699,6 +724,9 @@ io.on('connection', (socket) => {
             charaIndex: 0,
             charaName: 'Normal',
             maxStamina: Config.MAX_STAMINA,
+            currentMaxStamina: Config.MAX_STAMINA,
+            currentPushPower: 0,
+            currentDefensePower: 0,
             initMoney: Config.INITIAL_MONEY,
             initChips: Config.INITIAL_CHIPS,
             basePushPower: 0,

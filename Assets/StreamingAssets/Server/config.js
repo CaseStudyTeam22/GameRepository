@@ -59,7 +59,7 @@ module.exports = {
 
     // キャラのパラメータ許容上限（改ざん対策用）
     LIMITS: {
-        MAX_STAMINA_LIMIT: 8,
+        MAX_STAMINA_LIMIT: 16,
         SKILL_STAMINA_REC_LIMIT: 3,
         SKILL_CHIP_COST_LIMIT: 1000
     },
