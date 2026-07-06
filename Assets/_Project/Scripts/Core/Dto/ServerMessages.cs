@@ -21,13 +21,6 @@ namespace GamblingAction.Core.Dto
         [JsonProperty("timeLeft")] public int TimeLeft;
         [JsonProperty("gameActive")] public bool GameActive;
         [JsonProperty("cycleCount")] public int CycleCount;
-        [JsonProperty("barIndex")] public int BarIndex;
-        [JsonProperty("beatSequence")] public long BeatSequence;
-        [JsonProperty("roundId")] public long RoundId;
-        [JsonProperty("beatStartServerMs")] public long BeatStartServerMs;
-        [JsonProperty("nextBoundaryServerMs")] public long NextBoundaryServerMs;
-        [JsonProperty("beatIntervalMs")] public int BeatIntervalMs;
-        [JsonProperty("beatsPerBar")] public int BeatsPerBar;
     }
 
     public class RoundOverMessage
@@ -117,3 +110,23 @@ namespace GamblingAction.Core.Dto
         public const string RoomFull = "room_full";
     }
 }
+
+/*既存のコードに追加
+ public class BeatMessage
+{
+		[JsonProperty("beat")]       public int Beat;
+		[JsonProperty("timeLeft")]   public int TimeLeft;
+		[JsonProperty("gameActive")] public bool GameActive;
+		[JsonProperty("beat")]					public int Beat;
+		[JsonProperty("timeLeft")]				public int TimeLeft;
+		[JsonProperty("gameActive")]			public bool GameActive;
+        [JsonProperty("cycleCount")]            public int CycleCount;
+        [JsonProperty("barIndex")]				public int BarIndex;
+        [JsonProperty("beatSequence")]			public long BeatSequence;
+        [JsonProperty("roundId")]				public long RoundId;
+        [JsonProperty("beatStartServerMs")]		public long BeatStartServerMs;
+        [JsonProperty("nextBoundaryServerMs")]	public long NextBoundaryServerMs;
+        [JsonProperty("beatIntervalMs")]		public int BeatIntervalMs;
+        [JsonProperty("beatsPerBar")]			public int BeatsPerBar;
+ 
+ */

@@ -176,12 +176,12 @@ namespace GamblingAction.Audio
             LastExpectedPositionMs = 0;
             LastActualPositionMs = 0;
 
-            if (m_GameState != null && m_GameState.BeatIntervalMs > 0)
-            {
-                m_BeatDurationSec = m_GameState.BeatIntervalMs / 1000f;
-                m_BeatsPerBar = m_GameState.BeatsPerBar > 0 ? m_GameState.BeatsPerBar : 4;
-                m_BarDurationSec = m_BeatDurationSec * m_BeatsPerBar;
-            }
+            //if (m_GameState != null && m_GameState.BeatIntervalMs > 0)
+            //{
+            //    m_BeatDurationSec = m_GameState.BeatIntervalMs / 1000f;
+            //    m_BeatsPerBar = m_GameState.BeatsPerBar > 0 ? m_GameState.BeatsPerBar : 4;
+            //    m_BarDurationSec = m_BeatDurationSec * m_BeatsPerBar;
+            //}
 
             ResetRtpc("syncStart", true);
         }
@@ -238,14 +238,14 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            if (m_GameState.BeatIntervalMs <= 0 || m_GameState.BeatsPerBar <= 0)
-            {
-                return;
-            }
+            //if (m_GameState.BeatIntervalMs <= 0 || m_GameState.BeatsPerBar <= 0)
+            //{
+            //    return;
+            //}
 
-            m_LastServerBeatReceivedLocalTimeSec = Time.unscaledTime;
-            m_LastServerBeatSequence = m_GameState.BeatSequence;
-            m_LastServerRoundId = m_GameState.RoundId;
+            //m_LastServerBeatReceivedLocalTimeSec = Time.unscaledTime;
+            //m_LastServerBeatSequence = m_GameState.BeatSequence;
+            //m_LastServerRoundId = m_GameState.RoundId;
         }
 
         public void HandleMusicSyncCallback(AkCallbackType type, AkMusicSyncCallbackInfo info)
@@ -310,14 +310,14 @@ namespace GamblingAction.Audio
 
             if (m_HasPendingSeek)
             {
-                if (m_GameState != null && m_GameState.NextAbsoluteBeat > m_PendingServerTargetAbsoluteBeat)
-                {
-                    InvalidatePendingSeek("serverTargetPassedByState");
-                }
-                else if (beatInBar == m_PendingExecuteWindowLoopEndBeatInBar)
-                {
-                    InvalidatePendingSeek("windowExpiredByBeatCue");
-                }
+                //if (m_GameState != null && m_GameState.NextAbsoluteBeat > m_PendingServerTargetAbsoluteBeat)
+                //{
+                //    InvalidatePendingSeek("serverTargetPassedByState");
+                //}
+                //else if (beatInBar == m_PendingExecuteWindowLoopEndBeatInBar)
+                //{
+                //    InvalidatePendingSeek("windowExpiredByBeatCue");
+                //}
             }
 
             if (m_EnableDebugLog)
@@ -380,12 +380,12 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            if (m_GameState.BeatIntervalMs > 0)
-            {
-                m_BeatDurationSec = m_GameState.BeatIntervalMs / 1000f;
-                m_BeatsPerBar = m_GameState.BeatsPerBar > 0 ? m_GameState.BeatsPerBar : 4;
-                m_BarDurationSec = m_BeatDurationSec * m_BeatsPerBar;
-            }
+            //if (m_GameState.BeatIntervalMs > 0)
+            //{
+            //    m_BeatDurationSec = m_GameState.BeatIntervalMs / 1000f;
+            //    m_BeatsPerBar = m_GameState.BeatsPerBar > 0 ? m_GameState.BeatsPerBar : 4;
+            //    m_BarDurationSec = m_BeatDurationSec * m_BeatsPerBar;
+            //}
 
             if (m_LastKnownTimeLeft >= 0 && m_GameState.TimeLeft > m_LastKnownTimeLeft)
             {
@@ -511,10 +511,10 @@ namespace GamblingAction.Audio
 
             if (m_EnableDebugLog && Time.unscaledTime - m_LastDebugLogTimeSec >= m_DebugLogIntervalSec)
             {
-                Debug.Log(
-                    $"[BGMSyncController] beat={m_GameState.CurrentBeat} bar={m_GameState.CurrentBarIndex} " +
-                    $"expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms " +
-                    $"targetAbs={targetAbsoluteBeat} remain={remainingMsToNextBoundary}ms rtpcActive={m_RtpcActive}");
+                //Debug.Log(
+                //    $"[BGMSyncController] beat={m_GameState.CurrentBeat} bar={m_GameState.CurrentBarIndex} " +
+                //    $"expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms " +
+                //    $"targetAbs={targetAbsoluteBeat} remain={remainingMsToNextBoundary}ms rtpcActive={m_RtpcActive}");
                 m_LastDebugLogTimeSec = Time.unscaledTime;
             }
 
@@ -708,55 +708,55 @@ namespace GamblingAction.Audio
                 return false;
             }
 
-            if (m_GameState.BeatIntervalMs <= 0 || m_GameState.BeatsPerBar <= 0)
-            {
-                return false;
-            }
+            //if (m_GameState.BeatIntervalMs <= 0 || m_GameState.BeatsPerBar <= 0)
+            //{
+            //    return false;
+            //}
 
-            if (m_GameState.CurrentBeat <= 0 || m_GameState.CurrentBarIndex <= 0)
-            {
-                return false;
-            }
+            //if (m_GameState.CurrentBeat <= 0 || m_GameState.CurrentBarIndex <= 0)
+            //{
+            //    return false;
+            //}
 
-            if (m_LastServerBeatReceivedLocalTimeSec <= 0f)
-            {
-                return false;
-            }
+            //if (m_LastServerBeatReceivedLocalTimeSec <= 0f)
+            //{
+            //    return false;
+            //}
 
-            if (m_LastServerBeatSequence != m_GameState.BeatSequence)
-            {
-                return false;
-            }
+            //if (m_LastServerBeatSequence != m_GameState.BeatSequence)
+            //{
+            //    return false;
+            //}
 
-            if (m_LastServerRoundId != m_GameState.RoundId)
-            {
-                return false;
-            }
+            //if (m_LastServerRoundId != m_GameState.RoundId)
+            //{
+            //    return false;
+            //}
 
-            int beatIntervalMs = m_GameState.BeatIntervalMs;
-            int beatsPerBar = m_GameState.BeatsPerBar;
-            int barDurationMs = beatIntervalMs * beatsPerBar;
+            //int beatIntervalMs = m_GameState.BeatIntervalMs;
+            //int beatsPerBar = m_GameState.BeatsPerBar;
+            //int barDurationMs = beatIntervalMs * beatsPerBar;
 
-            float elapsedLocalSec = Time.unscaledTime - m_LastServerBeatReceivedLocalTimeSec;
-            elapsedLocalSec = Mathf.Max(0f, elapsedLocalSec);
-            int elapsedLocalMs = Mathf.RoundToInt(elapsedLocalSec * 1000f);
+            //float elapsedLocalSec = Time.unscaledTime - m_LastServerBeatReceivedLocalTimeSec;
+            //elapsedLocalSec = Mathf.Max(0f, elapsedLocalSec);
+            //int elapsedLocalMs = Mathf.RoundToInt(elapsedLocalSec * 1000f);
 
-            int elapsedInBeatMs = Mathf.Clamp(elapsedLocalMs, 0, beatIntervalMs - 1);
-            remainingMsToNextBoundary = Mathf.Clamp(beatIntervalMs - elapsedLocalMs, 0, beatIntervalMs);
+            //int elapsedInBeatMs = Mathf.Clamp(elapsedLocalMs, 0, beatIntervalMs - 1);
+            //remainingMsToNextBoundary = Mathf.Clamp(beatIntervalMs - elapsedLocalMs, 0, beatIntervalMs);
 
-            int beatStartOffsetMs = (m_GameState.CurrentBeat - 1) * beatIntervalMs;
-            expectedMs = beatStartOffsetMs + elapsedInBeatMs;
+            //int beatStartOffsetMs = (m_GameState.CurrentBeat - 1) * beatIntervalMs;
+            //expectedMs = beatStartOffsetMs + elapsedInBeatMs;
 
-            if (barDurationMs > 0)
-            {
-                expectedMs %= barDurationMs;
-                if (expectedMs < 0)
-                {
-                    expectedMs += barDurationMs;
-                }
-            }
+            //if (barDurationMs > 0)
+            //{
+            //    expectedMs %= barDurationMs;
+            //    if (expectedMs < 0)
+            //    {
+            //        expectedMs += barDurationMs;
+            //    }
+            //}
 
-            targetAbsoluteBeat = m_GameState.NextAbsoluteBeat;
+            //targetAbsoluteBeat = m_GameState.NextAbsoluteBeat;
             return true;
         }
 
@@ -1036,7 +1036,7 @@ namespace GamblingAction.Audio
             m_PendingBgmLoopTargetBeatInBar = ((serverTargetAbsoluteBeat - 1) % m_BeatsPerBar) + 1;
             m_PendingExecuteWindowLoopStartBeatInBar = executeWindowStartBeatInBar;
             m_PendingExecuteWindowLoopEndBeatInBar = executeWindowEndBeatInBar;
-            m_PendingCreatedRoundId = (int)m_GameState.RoundId;
+            //m_PendingCreatedRoundId = (int)m_GameState.RoundId;
             m_PendingCreatedFromRtpcFailure =
                 m_RtpcFailedForTarget && m_RtpcFailedTargetAbsoluteBeat == serverTargetAbsoluteBeat;
 
@@ -1074,18 +1074,18 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            if ((int)m_GameState.RoundId != m_PendingCreatedRoundId)
-            {
-                InvalidatePendingSeek("roundChanged");
-                return;
-            }
+            //if ((int)m_GameState.RoundId != m_PendingCreatedRoundId)
+            //{
+            //    InvalidatePendingSeek("roundChanged");
+            //    return;
+            //}
 
-            int targetAbsoluteBeatNow = m_GameState.NextAbsoluteBeat;
-            if (targetAbsoluteBeatNow > m_PendingServerTargetAbsoluteBeat)
-            {
-                InvalidatePendingSeek("serverTargetAdvanced");
-                return;
-            }
+            //int targetAbsoluteBeatNow = m_GameState.NextAbsoluteBeat;
+            //if (targetAbsoluteBeatNow > m_PendingServerTargetAbsoluteBeat)
+            //{
+            //    InvalidatePendingSeek("serverTargetAdvanced");
+            //    return;
+            //}
 
             if (preBeatMeasure != m_PendingExecutePreBeatMeasure)
             {
