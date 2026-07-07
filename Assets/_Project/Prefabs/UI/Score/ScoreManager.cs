@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using System.Collections;
 
 namespace GamblingAction.UI
 {
@@ -90,6 +91,12 @@ namespace GamblingAction.UI
             m_State.OnStateInitialized -= RefreshScores;
             m_State.OnPlayersChanged -= RefreshScores;
             m_State.OnSuddenDeathStarted -= OnSuddenDeathStarted;
+
+            // 念のためパネルのグローを停止しておく
+            var topGlow = m_SuddenDeathPanelTop != null ? m_SuddenDeathPanelTop.GetComponent<SuddenDeathPanelGlow>() : null;
+            if (topGlow != null) topGlow.StopGlow();
+            var bottomGlow = m_SuddenDeathPanelBottom != null ? m_SuddenDeathPanelBottom.GetComponent<SuddenDeathPanelGlow>() : null;
+            if (bottomGlow != null) bottomGlow.StopGlow();
         }
 
         private void RefreshScores()
@@ -130,6 +137,9 @@ namespace GamblingAction.UI
             {
                 m_SuddenDeathTriggered = true;
                 Debug.Log("[ScoreManager] Sudden Death Triggered!");
+
+
+
                 m_State.NotifySuddenDeathRequested();
             }
         }
@@ -142,12 +152,20 @@ namespace GamblingAction.UI
             SetAlpha(m_SuddenDeathPanelTop, 1f);
             SetAlpha(m_SuddenDeathPanelBottom, 1f);
 
+            StartCoroutine(FadeOutDeathText());
+
             // スクロール開始
             m_IsSuddenDeathScrolling = true;
 
             // 初期位置（右端からスタート）
             m_TopRect.anchoredPosition = new Vector2(m_ScreenWidth, m_TopRect.anchoredPosition.y);
             m_BottomRect.anchoredPosition = new Vector2(-m_ScreenWidth, m_BottomRect.anchoredPosition.y);
+
+            // パネルのグロー開始（SuddenDeathPanelGlow に任せる）
+            var topGlow = m_SuddenDeathPanelTop != null ? m_SuddenDeathPanelTop.GetComponent<SuddenDeathPanelGlow>() : null;
+            if (topGlow != null) topGlow.StartGlow();
+            var bottomGlow = m_SuddenDeathPanelBottom != null ? m_SuddenDeathPanelBottom.GetComponent<SuddenDeathPanelGlow>() : null;
+            if (bottomGlow != null) bottomGlow.StartGlow();
         }
 
         private int? TryGetScore(string role)
@@ -213,6 +231,19 @@ namespace GamblingAction.UI
                 m_BottomRect.anchoredPosition = new Vector2(-m_ScreenWidth, m_BottomRect.anchoredPosition.y);
             }
         }
+
+        private IEnumerator FadeOutDeathText()
+        {
+            // まず Alpha を 1 にする
+            SetAlpha(m_DeathText, 1f);
+
+            // 5秒待つ
+            yield return new WaitForSeconds(5f);
+
+            // Alpha を 0 にする
+            SetAlpha(m_DeathText, 0f);
+        }
+
 
         private void SetAlpha(TMP_Text text, float alpha)
         {
