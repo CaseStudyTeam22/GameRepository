@@ -29,6 +29,9 @@ let currentBeat = 0;
 let cycleCount = 0;
 let timeLeft = Config.GAME_DURATION;
 let gameActive = false;
+let beatSequence = 0;
+let roundId = 0;
+let beatStartServerMs = 0;
 
 // 双方準備完了後のカウントダウン中の setTimeout 句柄。取り消し時に clear する。
 let lobbyCountdownTimer = null;
@@ -114,6 +117,9 @@ function resetPlayerPos(id) {
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
 // resetMatch / round_over の直後にここを通し、双方の round_ready を待つ。
 function beginRound() {
+    roundId++;
+    beatSequence = 0;
+    beatStartServerMs = 0
     for (let id in players) players[id].roundReady = false;
     if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
     // 位置を先に初期化して配る。クライアントは再生成時に新しい位置のキャラを出せる。
@@ -226,7 +232,7 @@ function checkNouveauRicheAutoExchange() {
 }
 
 function prepareExchangePhase() {
-    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION; cycleCount = 0;
+    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION; cycleCount = 0; beatSequence = 0; beatStartServerMs = 0;
     for (let id in players) {
         resetPlayerPos(id);
         players[id].exchanged = false;
@@ -289,6 +295,8 @@ function handleAIExchange(id) {
 setInterval(() => {
     if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
+    beatSequence++;
+    beatStartServerMs = getCurrentServerTimeMs();
 
     // ターンの上限数に達したら、引き分け処理
     if (cycleCount >= Config.TURN_MAX) {
@@ -446,7 +454,10 @@ setInterval(() => {
 
         io.emit('sync_items', items);
     }
-    io.emit('beat', { beat: currentBeat, timeLeft, gameActive, cycleCount });
+    const beatsPerBar = 4;
+    const barIndex = getBarIndexFromSequence(beatSequence - 1, beatsPerBar);
+    const nextBoundaryServerMs = beatStartServerMs + Config.BEAT_INTERVAL;
+    io.emit('beat', { beat: currentBeat, timeLeft, gameActive, cycleCount, barIndex, beatSequence, roundId, beatStartServerMs, nextBoundaryServerMs, beatIntervalMs: Config.BEAT_INTERVAL, beatsPerBar });
 }, Config.BEAT_INTERVAL);
 
 // --- AI Brain: 普通难度，目标是推对手下平台 ---
@@ -969,6 +980,16 @@ io.on('connection', (socket) => {
     socket.on('request_sudden_death', () => {
         console.log("[Server] Sudden Death Requested");
 
+        // ここで資金全消費 → チップ変換を行う
+        for (let id in players) {
+            const p = players[id];
+            const amount = Math.floor(p.money / 100);
+            p.money = 0;
+            p.chips += amount;
+        }
+
+        io.emit("sync_state", { players });
+
         // サドンデス開始フラグ
         isFinalDuel = true;
         finalRaiseTurnCount = 0;
@@ -1420,7 +1441,7 @@ function startFinalDuel() {
 // Lobby 関連フラグ（ready / inLobby / isAI / roundReady / buffReady）もここで初期化する。
 // 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
 function resetMatchState(isMatchStart = false) {
-    gameActive = false; items = []; currentBeat = 0;
+    gameActive = false; items = []; currentBeat = 0; beatSequence = 0; beatStartServerMs = 0;
 
     // 全ての進行管理タイマーをリセット
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
@@ -1559,6 +1580,10 @@ function generateMissions(selectedBuff) {
     return missions;
 }
 
+function getCurrentServerTimeMs() { return Date.now(); }
+
+function getBarIndexFromSequence(sequence, beatsPerBar) { return Math.floor(sequence / beatsPerBar) + 1; }
+
 // --- グローバル・エラーハンドラ ---
 // 予期せぬクラッシュを防ぎ、エラー内容をコンソールに出力してサーバーを延命させる
 process.on('uncaughtException', (err) => {
@@ -1570,19 +1595,4 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('[Warning] 未処理の Promise 拒否:', reason);
 });
 
-socket.on("request_sudden_death", () => {
-    console.log("[Server] sudden death requested");
 
-    // ここで資金全消費 → チップ変換を行う
-    for (let id in players) {
-        const p = players[id];
-        const amount = Math.floor(p.money / 100);
-        p.money = 0;
-        p.chips += amount;
-    }
-
-    io.emit("sync_state", { players });
-
-    // Unity にサドンデス開始を通知
-    io.emit("sudden_death_started");
-});

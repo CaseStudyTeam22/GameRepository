@@ -108,5 +108,15 @@ namespace GamblingAction.Audio
 
             AkUnitySoundEngine.SetRTPCValue(rtpcName, value, gameObject);
         }
+
+        public static void SetPlaybackSpeedRtpc(string rtpcName, float value, GameObject gameObject)
+        {
+            SetRTPCValueForObject(rtpcName, value, gameObject);
+        }
+
+        public static void ResetPlaybackSpeedRtpc(string rtpcName, float neutralValue, GameObject gameObject)
+        {
+            SetRTPCValueForObject(rtpcName, neutralValue, gameObject);
+        }
     }
 }

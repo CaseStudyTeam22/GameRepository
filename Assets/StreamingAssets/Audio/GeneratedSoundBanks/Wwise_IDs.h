@@ -15,11 +15,9 @@ namespace AK
     {
         static const AkUniqueID PLAY_BEAT_1_TO_3 = 18931912U;
         static const AkUniqueID PLAY_BEAT_4 = 3323077879U;
-        static const AkUniqueID PLAY_BGM_SWTICH_CUE = 1967054745U;
-        static const AkUniqueID PLAY_BGM_SWTICH_OFFSET = 2188851721U;
         static const AkUniqueID PLAY_MAIN = 1193902085U;
         static const AkUniqueID PLAY_START = 2230670290U;
-        static const AkUniqueID STOP_MAIN = 3435675815U;
+        static const AkUniqueID SEEK_MAIN = 1393704115U;
     } // namespace EVENTS
 
     namespace STATES
@@ -37,6 +35,11 @@ namespace AK
         } // namespace GAMEPLAY_STATE
 
     } // namespace STATES
+
+    namespace GAME_PARAMETERS
+    {
+        static const AkUniqueID PLAYBACKSPEED = 1897326479U;
+    } // namespace GAME_PARAMETERS
 
     namespace BANKS
     {

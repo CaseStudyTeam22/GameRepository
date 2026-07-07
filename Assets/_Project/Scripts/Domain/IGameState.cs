@@ -14,6 +14,17 @@ namespace GamblingAction.Domain
 		int TimeLeft { get; }
 		bool GameActive { get; }
 		int CycleCount { get; }
+		int CurrentBarIndex { get; }
+		int CurrentAbsoluteBeat { get; }
+		int NextBeat { get; }
+		int NextBarIndex { get; }
+		int NextAbsoluteBeat { get; }
+		long BeatSequence { get; }
+		long RoundId { get; }
+		long BeatStartServerMs { get; }
+		long NextBoundaryServerMs { get; }
+		int BeatIntervalMs { get; }
+		int BeatsPerBar { get; }
 		EGamePhase Phase { get; }
 		bool IsConnected { get; }
 		// ファイナルレイズ本番ラウンド進行中なら true。
@@ -21,7 +32,7 @@ namespace GamblingAction.Domain
 		bool IsFinalDuel { get; }
 		bool SuddenDeathAlreadyStarted { get; }
 
-        PlayerDto Me { get; }
+		PlayerDto Me { get; }
 		PlayerDto Opponent { get; }
 
 		void SubmitIntent(string type, string dir, int power);
@@ -38,9 +49,9 @@ namespace GamblingAction.Domain
 		// 勝者がファイナルレイズを受諾するか（accept=true）拒否するかを送信。
 		void SubmitFinalRaiseRespond(bool accept);
 
-        void NotifySuddenDeathRequested();
+		void NotifySuddenDeathRequested();
 
-        event Action OnStateInitialized;
+		event Action OnStateInitialized;
 		event Action OnPlayersChanged;
 		event Action OnItemsChanged;
 		event Action OnBeatChanged;
@@ -67,7 +78,7 @@ namespace GamblingAction.Domain
 		event Action OnFinalRaiseStarted;
 		// 相手の意図（イカサマなどのスキルで公開されたインテント）が明かされたときの通知。
 		event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
-        // サドンデス開始通知。ファイナルレイズとは別のフェーズ。
-        event Action OnSuddenDeathStarted;
+		// サドンデス開始通知。ファイナルレイズとは別のフェーズ。
+		event Action OnSuddenDeathStarted;
 	}
 }

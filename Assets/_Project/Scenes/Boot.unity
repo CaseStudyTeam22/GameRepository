@@ -558,6 +558,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: BootAuido
       objectReference: {fileID: 0}
+    - target: {fileID: 3875539403443162009, guid: e84ca2a7f7446ce4cabbfad03f6318a7, type: 3}
+      propertyPath: m_SeekEvent.WwiseObjectReference
+      value: 
+      objectReference: {fileID: 11400000, guid: 011bf78d31f0a6e47b5791b3f53cfe3f, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

@@ -55,15 +55,8 @@ namespace GamblingAction.Audio
         {
             string objectName = gameObject != null ? gameObject.name : "null";
 
-            if (wwiseEvent == null)
+            if (wwiseEvent == null || gameObject == null)
             {
-                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked:無効なEventが指定されました。GameObject: {objectName}");
-                return 0;
-            }
-
-            if (gameObject == null)
-            {
-                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked:無効なGameObjectが指定されました。Event: {wwiseEvent.Name}");
                 return 0;
             }
 
@@ -83,15 +76,8 @@ namespace GamblingAction.Audio
         {
             string objectName = gameObject != null ? gameObject.name : "null";
 
-            if (wwiseEvent == null)
+            if (wwiseEvent == null || gameObject == null)
             {
-                Debug.LogWarning($"[WwiseSoundAPI] PlayOneShot: 無効なEventが指定されました。GameObject: {objectName}");
-                return;
-            }
-
-            if (gameObject == null)
-            {
-                Debug.LogWarning($"[WwiseSoundAPI] PlayOneShot: 無効なGameObjectが指定されました。Event: {wwiseEvent.Name}");
                 return;
             }
 
@@ -112,20 +98,16 @@ namespace GamblingAction.Audio
 
             if (gameObject == null)
             {
-                Debug.LogWarning("[WwiseSoundAPI] Stop対象のGameObjectがnullです。");
                 return;
             }
 
             if (playingID == 0)
             {
-                string objectName = gameObject != null ? gameObject.name : "null";
-                Debug.LogWarning($"[WwiseSoundAPI] 無効なPlayingIDが指定されました。GameObject: {objectName}");
                 return;
             }
 
             if (!m_PlayingIDs.ContainsKey(gameObject))
             {
-                Debug.LogWarning($"[WwiseSoundAPI] 未登録のGameObjectです。GameObject: {gameObject.name}");
                 return;
             }
 
@@ -186,6 +168,33 @@ namespace GamblingAction.Audio
             {
                 m_PlayingIDs.Remove(gameObject);
             }
+        }
+
+        public uint PlayTracked(AK.Wwise.Event wwiseEvent, GameObject gameObject, uint callbackFlags, AkCallbackManager.EventCallback callback)
+        {
+            string objectName = gameObject != null ? gameObject.name : "null";
+
+            if (wwiseEvent == null || gameObject == null)
+            {
+                return 0;
+            }
+
+            if (callback == null)
+            {
+                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked(callback): callback が null です。Event: {wwiseEvent.Name}, GameObject: {objectName}");
+                return 0;
+            }
+
+            uint playingID = wwiseEvent.Post(gameObject, callbackFlags, callback);
+
+            if (playingID == 0)
+            {
+                Debug.LogWarning($"[WwiseSoundAPI] PlayTracked(callback): 再生失敗。Event: {wwiseEvent.Name}, GameObject: {gameObject.name}");
+                return 0;
+            }
+
+            AddPlayingID(gameObject, playingID);
+            return playingID;
         }
     }
 }
