@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace GamblingAction.Gameplay
 {
@@ -41,19 +41,20 @@ namespace GamblingAction.Gameplay
 
         private static float ToZAngle(string dir)
         {
-            // ��X�v���C�g�͔Ֆʏ�� Up�i�E��j�������Ă���O��
+            // スプライトがトップビュー基準で Up（右）を向いている前提
+            // 元がアイソメトリック用sprite（45度傾き）のため -45f 補正
             switch (dir)
             {
                 case Core.Dto.Directions.Up:
-                    return 0f;
+                    return 45f;
                 case Core.Dto.Directions.Right:
-                    return -90f;
+                    return -45f;
                 case Core.Dto.Directions.Down:
-                    return 180f;
+                    return -135f;
                 case Core.Dto.Directions.Left:
-                    return 90f;
+                    return 135f;
                 default:
-                    return 0f;
+                    return 45f;
             }
         }
     }

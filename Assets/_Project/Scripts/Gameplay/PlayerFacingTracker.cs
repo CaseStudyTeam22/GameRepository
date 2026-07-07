@@ -1,4 +1,4 @@
-using GamblingAction.Core.Dto;
+﻿using GamblingAction.Core.Dto;
 
 namespace GamblingAction.Gameplay
 {

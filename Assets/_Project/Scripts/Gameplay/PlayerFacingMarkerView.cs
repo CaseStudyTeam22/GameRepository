@@ -1,4 +1,4 @@
-using GamblingAction.Core.Dto;
+ï»¿using GamblingAction.Core.Dto;
 using UnityEngine;
 
 namespace GamblingAction.Gameplay
@@ -35,7 +35,7 @@ namespace GamblingAction.Gameplay
 
         private static float ToZAngle(string dir)
         {
-            // Šî€ƒXƒvƒ‰ƒCƒg‚Í”Õ–Êã‚Ì Upi‰Eãj‚ğŒü‚¢‚Ä‚¢‚é‘O’ñ
+            // åŸºæº–ã‚¹ãƒ—ãƒ©ã‚¤ãƒˆã¯ç›¤é¢ä¸Šã® Upï¼ˆå³ä¸Šï¼‰ã‚’å‘ã„ã¦ã„ã‚‹å‰æ
             switch (dir)
             {
                 case Directions.Up:
