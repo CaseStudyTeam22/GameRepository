@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GamblingAction.Core.Dto;
 
@@ -14,6 +14,17 @@ namespace GamblingAction.Domain
         int TimeLeft { get; }
         bool GameActive { get; }
         int CycleCount { get; }
+        int CurrentBarIndex { get; }
+        int CurrentAbsoluteBeat { get; }
+        int NextBeat { get; }
+        int NextBarIndex { get; }
+        int NextAbsoluteBeat { get; }
+        long BeatSequence { get; }
+        long RoundId { get; }
+        long BeatStartServerMs { get; }
+        long NextBoundaryServerMs { get; }
+        int BeatIntervalMs { get; }
+        int BeatsPerBar { get; }
         EGamePhase Phase { get; }
         bool IsConnected { get; }
         // ファイナルレイズ本番ラウンド進行中なら true。
@@ -71,19 +82,3 @@ namespace GamblingAction.Domain
         event Action OnSuddenDeathStarted;
     }
 }
-
-/*
-"        int CycleCount { get; } "
-        CycleCountの下に追加
-        int CurrentBarIndex { get; }
-        int CurrentAbsoluteBeat { get; }
-        int NextBeat { get; }
-        int NextBarIndex { get; }
-        int NextAbsoluteBeat { get; }
-        long BeatSequence { get; }
-        long RoundId { get; }
-        long BeatStartServerMs { get; }
-        long NextBoundaryServerMs { get; }
-        int BeatIntervalMs { get; }
-        int BeatsPerBar { get; }
-*/

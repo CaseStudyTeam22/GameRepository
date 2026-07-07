@@ -1,11 +1,11 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using GamblingAction.Domain;
 
 namespace GamblingAction.Audio
 {
     /// <summary>
-    /// ƒT[ƒo[”‚ğŠî€‚É‚µ‚½‹ß—Ä¶ˆÊ’u‚ÆAÀÛ‚ÌÄ¶ˆÊ’u‚Æ‚Ì·•ª‚ğŠÏ‘ª‚µA
-    /// Cue –¢æ“¾‚Í expectedMsACue æ“¾Œã‚Í Cue Šî€ˆÊ’u‚Ö Seek ‚·‚éB
+    /// ã‚µãƒ¼ãƒãƒ¼æ‹ã‚’åŸºæº–ã«ã—ãŸè¿‘ä¼¼å†ç”Ÿä½ç½®ã¨ã€å®Ÿéš›ã®å†ç”Ÿä½ç½®ã¨ã®å·®åˆ†ã‚’è¦³æ¸¬ã—ã€
+    /// Cue æœªå–å¾—æ™‚ã¯ expectedMsã€Cue å–å¾—å¾Œã¯ Cue åŸºæº–ä½ç½®ã¸ Seek ã™ã‚‹ã€‚
     /// </summary>
     public class BGMSyncController : MonoBehaviour
     {
@@ -123,13 +123,13 @@ namespace GamblingAction.Audio
         {
             if (m_BeatClock == null || m_GameState == null)
             {
-                Debug.LogWarning("[BGMSyncController] ‰Šú‰»•s‘«‚Å‚·B");
+                Debug.LogWarning("[BGMSyncController] åˆæœŸåŒ–ä¸è¶³ã§ã™ã€‚");
                 return;
             }
 
             if (playingId == 0u)
             {
-                Debug.LogWarning("[BGMSyncController] –³Œø‚È playingID ‚Å‚·B");
+                Debug.LogWarning("[BGMSyncController] ç„¡åŠ¹ãª playingID ã§ã™ã€‚");
                 return;
             }
 
@@ -283,7 +283,7 @@ namespace GamblingAction.Audio
             {
                 if (m_EnableDebugLog)
                 {
-                    Debug.Log($"[BGMSyncController] BeatCue–¼‚ğ‰ğß‚Å‚«‚Ü‚¹‚ñBcue={info.userCueName}");
+                    Debug.Log($"[BGMSyncController] BeatCueåã‚’è§£é‡ˆã§ãã¾ã›ã‚“ã€‚cue={info.userCueName}");
                 }
                 return;
             }
@@ -336,7 +336,7 @@ namespace GamblingAction.Audio
             {
                 if (m_EnableDebugLog)
                 {
-                    Debug.Log($"[BGMSyncController] PreBeatCue–¼‚ğ‰ğß‚Å‚«‚Ü‚¹‚ñBcue={info.userCueName}");
+                    Debug.Log($"[BGMSyncController] PreBeatCueåã‚’è§£é‡ˆã§ãã¾ã›ã‚“ã€‚cue={info.userCueName}");
                 }
                 return;
             }
@@ -345,7 +345,7 @@ namespace GamblingAction.Audio
             {
                 if (m_EnableDebugLog)
                 {
-                    Debug.Log($"[BGMSyncController] PreBeatCue cue={info.userCueName} ‚ğóM‚µ‚Ü‚µ‚½‚ªA’¼‘O‚ÌBeatCue‚ª‚ ‚è‚Ü‚¹‚ñB");
+                    Debug.Log($"[BGMSyncController] PreBeatCue cue={info.userCueName} ã‚’å—ä¿¡ã—ã¾ã—ãŸãŒã€ç›´å‰ã®BeatCueãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
                 }
                 return;
             }
@@ -447,7 +447,7 @@ namespace GamblingAction.Audio
                     if (m_EnableDebugLog)
                     {
                         Debug.Log(
-                            $"[BGMSyncController] focus•œ‹A”»’è lock drift={driftMs:F1}ms threshold={m_FocusRecoveryLockThresholdMs:F1}ms");
+                            $"[BGMSyncController] focuså¾©å¸°åˆ¤å®š lock drift={driftMs:F1}ms threshold={m_FocusRecoveryLockThresholdMs:F1}ms");
                     }
 
                     return;
@@ -456,7 +456,7 @@ namespace GamblingAction.Audio
                 if (m_EnableDebugLog)
                 {
                     Debug.Log(
-                        $"[BGMSyncController] focus•œ‹A”»’è unlock drift={driftMs:F1}ms threshold={m_FocusRecoveryLockThresholdMs:F1}ms");
+                        $"[BGMSyncController] focuså¾©å¸°åˆ¤å®š unlock drift={driftMs:F1}ms threshold={m_FocusRecoveryLockThresholdMs:F1}ms");
                 }
             }
 
@@ -475,7 +475,7 @@ namespace GamblingAction.Audio
                         if (m_EnableDebugLog)
                         {
                             Debug.Log(
-                                $"[BGMSyncController] focusRecovery‰ğœ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
+                                $"[BGMSyncController] focusRecoveryè§£é™¤ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
                                 $"drift={driftMs:F1}ms unlockThreshold={m_FocusRecoveryUnlockThresholdMs:F1}ms " +
                                 $"stableFrames={m_FocusRecoveryUnlockStableFrames} resumeUntil={m_FocusRecoveryResumeUntilSec:F3}");
                         }
@@ -487,7 +487,7 @@ namespace GamblingAction.Audio
                         if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
                         {
                             Debug.Log(
-                                $"[BGMSyncController] •â³’â~’† reason=focusRecovery drift={driftMs:F1}ms recoverCount={m_FocusRecoveryRecoverCount}");
+                                $"[BGMSyncController] è£œæ­£åœæ­¢ä¸­ reason=focusRecovery drift={driftMs:F1}ms recoverCount={m_FocusRecoveryRecoverCount}");
                             m_LastSeekSkipLogTimeSec = Time.unscaledTime;
                         }
 
@@ -501,7 +501,7 @@ namespace GamblingAction.Audio
                     if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
                     {
                         Debug.Log(
-                            $"[BGMSyncController] •â³’â~’† reason=focusRecovery drift={driftMs:F1}ms recoverCount=0");
+                            $"[BGMSyncController] è£œæ­£åœæ­¢ä¸­ reason=focusRecovery drift={driftMs:F1}ms recoverCount=0");
                         m_LastSeekSkipLogTimeSec = Time.unscaledTime;
                     }
 
@@ -523,7 +523,7 @@ namespace GamblingAction.Audio
                 if (m_EnableDebugLog && Time.unscaledTime - m_LastSeekSkipLogTimeSec >= m_DebugLogIntervalSec)
                 {
                     Debug.Log(
-                        $"[BGMSyncController] •â³ÄŠJ‘Ò‹@’† frame={Time.frameCount} now={Time.unscaledTime:F3} " +
+                        $"[BGMSyncController] è£œæ­£å†é–‹å¾…æ©Ÿä¸­ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
                         $"resumeUntil={m_FocusRecoveryResumeUntilSec:F3} remain={(m_FocusRecoveryResumeUntilSec - Time.unscaledTime):F3} " +
                         $"drift={driftMs:F1}ms");
                     m_LastSeekSkipLogTimeSec = Time.unscaledTime;
@@ -627,7 +627,7 @@ namespace GamblingAction.Audio
                 if (m_EnableDebugLog)
                 {
                     Debug.Log(
-                        $"[BGMSyncController] RTPCŠJn targetAbs={targetAbsoluteBeat} expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms");
+                        $"[BGMSyncController] RTPCé–‹å§‹ targetAbs={targetAbsoluteBeat} expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms");
                 }
             }
             else if (m_RtpcTargetAbsoluteBeat != targetAbsoluteBeat)
@@ -645,13 +645,13 @@ namespace GamblingAction.Audio
 
             if (activeDurationSec >= m_RtpcMaxEvaluateSec && totalImprovementMs < m_RtpcMinImproveMs)
             {
-                MarkRtpcFailure(targetAbsoluteBeat, "improve•s‘«", driftMs);
+                MarkRtpcFailure(targetAbsoluteBeat, "improveä¸è¶³", driftMs);
                 return;
             }
 
             if (activeDurationSec >= 0.10f && worseningMs > m_RtpcMinImproveMs)
             {
-                MarkRtpcFailure(targetAbsoluteBeat, "driftˆ«‰»", driftMs);
+                MarkRtpcFailure(targetAbsoluteBeat, "driftæ‚ªåŒ–", driftMs);
                 return;
             }
 
@@ -666,7 +666,7 @@ namespace GamblingAction.Audio
             if (m_EnableDebugLog)
             {
                 Debug.Log(
-                    $"[BGMSyncController] RTPC¸”s reason={reason} targetAbs={targetAbsoluteBeat} drift={driftMs:F1}ms");
+                    $"[BGMSyncController] RTPCå¤±æ•— reason={reason} targetAbs={targetAbsoluteBeat} drift={driftMs:F1}ms");
             }
 
             ResetRtpc("failure", false);
@@ -681,7 +681,7 @@ namespace GamblingAction.Audio
 
             if (m_EnableDebugLog && m_RtpcActive)
             {
-                Debug.Log($"[BGMSyncController] RTPC‰ğœ reason={reason}");
+                Debug.Log($"[BGMSyncController] RTPCè§£é™¤ reason={reason}");
             }
 
             m_RtpcActive = false;
@@ -948,19 +948,19 @@ namespace GamblingAction.Audio
 
             if (m_HasPendingSeek)
             {
-                LogSeekSkip("seek—\–ñ’†", expectedMs, actualMs, driftMs);
+                LogSeekSkip("seekäºˆç´„ä¸­", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (!m_HasLastBeatCue)
             {
-                LogSeekSkip("lastBeatCue–¢Šm’è", expectedMs, actualMs, driftMs);
+                LogSeekSkip("lastBeatCueæœªç¢ºå®š", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (m_PreBeatCountSinceLastBeat >= 2)
             {
-                LogSeekSkip("Œ»İ‹æŠÔ‚ÌPreBeatÁ”ïÏ‚İ", expectedMs, actualMs, driftMs);
+                LogSeekSkip("ç¾åœ¨åŒºé–“ã®PreBeatæ¶ˆè²»æ¸ˆã¿", expectedMs, actualMs, driftMs);
                 return;
             }
 
@@ -972,25 +972,25 @@ namespace GamblingAction.Audio
 
             if (m_ObservationCount < m_MinObservationCountBeforeSeek)
             {
-                LogSeekSkip("observation•s‘«", expectedMs, actualMs, driftMs);
+                LogSeekSkip("observationä¸è¶³", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (Time.unscaledTime - m_LastSeekTimeSec < m_SeekCooldownSec)
             {
-                LogSeekSkip("cooldown’†", expectedMs, actualMs, driftMs);
+                LogSeekSkip("cooldownä¸­", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (m_SeekCount >= m_MaxSeekCountPerPlay && Mathf.Abs(driftMs) < (m_SeekThresholdMs * 2f))
             {
-                LogSeekSkip("seek‰ñ”ãŒÀ", expectedMs, actualMs, driftMs);
+                LogSeekSkip("seekå›æ•°ä¸Šé™", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (m_SeekCountInCurrentBarWindow >= m_MaxSeekCountPerBarWindow)
             {
-                LogSeekSkip("bar“àseek‰ñ”ãŒÀ", expectedMs, actualMs, driftMs);
+                LogSeekSkip("barå†…seekå›æ•°ä¸Šé™", expectedMs, actualMs, driftMs);
                 return;
             }
 
@@ -1001,13 +1001,13 @@ namespace GamblingAction.Audio
 
             if (remainingMsToNextBoundary < m_MinRemainingMsToReserveSeek)
             {
-                LogSeekSkip("c‚èŠÔ•s‘«", expectedMs, actualMs, driftMs);
+                LogSeekSkip("æ®‹ã‚Šæ™‚é–“ä¸è¶³", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (rtpcFailedForThisTarget && absDriftMs < m_SeekAfterRtpcFailureThresholdMs)
             {
-                LogSeekSkip("RTPC¸”sŒãdrift¬", expectedMs, actualMs, driftMs);
+                LogSeekSkip("RTPCå¤±æ•—å¾Œdriftå°", expectedMs, actualMs, driftMs);
                 return;
             }
 
@@ -1017,13 +1017,13 @@ namespace GamblingAction.Audio
 
             if (!shouldSeek)
             {
-                LogSeekSkip("seek•s—v", expectedMs, actualMs, driftMs);
+                LogSeekSkip("seekä¸è¦", expectedMs, actualMs, driftMs);
                 return;
             }
 
             if (!TryBuildSeekPlan(remainingMsToNextBoundary, serverTargetAbsoluteBeat, out int bgmTargetAbsoluteBeat, out int seekTargetMs, out int executeWindowStartBeatInBar, out int executeWindowEndBeatInBar))
             {
-                LogSeekSkip("seekPlan\’z¸”s", expectedMs, actualMs, driftMs);
+                LogSeekSkip("seekPlanæ§‹ç¯‰å¤±æ•—", expectedMs, actualMs, driftMs);
                 return;
             }
 
@@ -1041,7 +1041,7 @@ namespace GamblingAction.Audio
                 m_RtpcFailedForTarget && m_RtpcFailedTargetAbsoluteBeat == serverTargetAbsoluteBeat;
 
             Debug.Log(
-                $"[BGMSyncController] Seek—\–ñ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
+                $"[BGMSyncController] Seekäºˆç´„ frame={Time.frameCount} now={Time.unscaledTime:F3} " +
                 $"serverTargetAbs={m_PendingServerTargetAbsoluteBeat} bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} " +
                 $"loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} remain={m_PendingRemainingMsToBoundary}ms " +
                 $"execLoopWindow={m_PendingExecuteWindowLoopStartBeatInBar}->{m_PendingExecuteWindowLoopEndBeatInBar} " +
@@ -1112,25 +1112,25 @@ namespace GamblingAction.Audio
 
             if (m_SeekCount >= m_MaxSeekCountPerPlay)
             {
-                InvalidatePendingSeek("seek‰ñ”ãŒÀAtExecute");
+                InvalidatePendingSeek("seekå›æ•°ä¸Šé™AtExecute");
                 return;
             }
 
             if (m_SeekCountInCurrentBarWindow >= m_MaxSeekCountPerBarWindow)
             {
-                InvalidatePendingSeek("bar“àseek‰ñ”ãŒÀAtExecute");
+                InvalidatePendingSeek("barå†…seekå›æ•°ä¸Šé™AtExecute");
                 return;
             }
 
             if (!TryGetActualPositionMs(out int actualMsNow))
             {
-                InvalidatePendingSeek("actualPositionæ“¾¸”s");
+                InvalidatePendingSeek("actualPositionå–å¾—å¤±æ•—");
                 return;
             }
 
             if (!TryCalculateExpectedPositionMsFromServer(out int expectedMsNow, out int remainingMsNow, out int recalculatedTargetAbsoluteBeat))
             {
-                InvalidatePendingSeek("expectedÄŒvZ¸”s");
+                InvalidatePendingSeek("expectedå†è¨ˆç®—å¤±æ•—");
                 return;
             }
 
@@ -1144,7 +1144,7 @@ namespace GamblingAction.Audio
 
             if (remainingMsNow < m_MinRemainingMsToReserveSeek)
             {
-                InvalidatePendingSeek("executec‚èŠÔ•s‘«");
+                InvalidatePendingSeek("executeæ™‚æ®‹ã‚Šæ™‚é–“ä¸è¶³");
                 return;
             }
 
@@ -1160,13 +1160,13 @@ namespace GamblingAction.Audio
                 if (m_EnableDebugLog)
                 {
                     Debug.Log(
-                        $"[BGMSyncController] SeekŒ©‘—‚è reason=jump‘å preCue={preBeatCueName} " +
+                        $"[BGMSyncController] Seekè¦‹é€ã‚Š reason=jumpå¤§ preCue={preBeatCueName} " +
                         $"serverTargetAbs={m_PendingServerTargetAbsoluteBeat} bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} " +
                         $"loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} targetMs={seekTargetMsNow}ms " +
                         $"actualNow={actualMsNow}ms jump={seekJumpMs}ms driftNow={driftMsNow:F1}ms");
                 }
 
-                InvalidatePendingSeek("jump‘å");
+                InvalidatePendingSeek("jumpå¤§");
                 return;
             }
 
@@ -1174,7 +1174,7 @@ namespace GamblingAction.Audio
             if (result != AKRESULT.AK_Success)
             {
                 Debug.LogWarning(
-                    $"[BGMSyncController] Seek¸”s result={result} preCue={preBeatCueName} " +
+                    $"[BGMSyncController] Seekå¤±æ•— result={result} preCue={preBeatCueName} " +
                     $"serverTargetAbs={m_PendingServerTargetAbsoluteBeat} bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} " +
                     $"loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} targetMs={seekTargetMsNow}ms " +
                     $"expectedNow={expectedMsNow}ms actualNow={actualMsNow}ms jump={seekJumpMs}ms driftNow={driftMsNow:F1}ms"); InvalidatePendingSeek("seekCallFailed");
@@ -1190,7 +1190,7 @@ namespace GamblingAction.Audio
             m_ObservationCount = 0;
 
             Debug.Log(
-                $"[BGMSyncController] SeekÀs preCue={preBeatCueName} serverTargetAbs={m_PendingServerTargetAbsoluteBeat} " +
+                $"[BGMSyncController] Seekå®Ÿè¡Œ preCue={preBeatCueName} serverTargetAbs={m_PendingServerTargetAbsoluteBeat} " +
                 $"bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} " +
                 $"targetMs={seekTargetMsNow}ms expectedNow={expectedMsNow}ms actualNow={actualMsNow}ms " +
                 $"jump={seekJumpMs}ms driftNow={driftMsNow:F1}ms seekCount={m_SeekCount}");
@@ -1311,7 +1311,7 @@ namespace GamblingAction.Audio
 
                 if (m_EnableDebugLog)
                 {
-                    Debug.Log("[BGMSyncController] focus‘r¸ pending=true");
+                    Debug.Log("[BGMSyncController] focuså–ªå¤± pending=true");
                 }
 
                 return;
@@ -1319,7 +1319,7 @@ namespace GamblingAction.Audio
 
             if (m_EnableDebugLog)
             {
-                Debug.Log("[BGMSyncController] focus•œ‹A");
+                Debug.Log("[BGMSyncController] focuså¾©å¸°");
             }
         }
 
@@ -1328,7 +1328,7 @@ namespace GamblingAction.Audio
             if (m_EnableDebugLog)
             {
                 Debug.Log(
-                    $"[BGMSyncController] Seek¸Œø reason={reason} " +
+                    $"[BGMSyncController] Seekå¤±åŠ¹ reason={reason} " +
                     $"serverTargetAbs={m_PendingServerTargetAbsoluteBeat} bgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} " +
                     $"loopTargetBeat={m_PendingBgmLoopTargetBeatInBar} " +
                     $"targetMs={m_PendingSeekTargetMs}ms execLoopWindow={m_PendingExecuteWindowLoopStartBeatInBar}->{m_PendingExecuteWindowLoopEndBeatInBar} " +
@@ -1378,7 +1378,7 @@ namespace GamblingAction.Audio
                 : m_LastPreBeatName;
 
             Debug.Log(
-                $"[BGMSyncController] SeekŒ©‘—‚è reason={reason} expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms " +
+                $"[BGMSyncController] Seekè¦‹é€ã‚Š reason={reason} expected={expectedMs}ms actual={actualMs}ms drift={driftMs:F1}ms " +
                 $"lastBeatCue={lastBeatText} lastPreBeat={lastPreBeatText} " +
                 $"pendingServerTargetAbs={m_PendingServerTargetAbsoluteBeat} pendingBgmTargetAbs={m_PendingBgmTargetAbsoluteBeat} " +
                 $"pendingLoopTargetBeat={m_PendingBgmLoopTargetBeatInBar} " +
