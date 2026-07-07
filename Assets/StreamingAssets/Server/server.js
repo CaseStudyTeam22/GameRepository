@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -28,8 +28,6 @@ let items = [];
 let currentBeat = 0;
 let cycleCount = 0;
 let timeLeft = Config.GAME_DURATION;
-let gameActive = false;
-
 let gameActive = false;
 let beatSequence = 0;
 let roundId = 0;
@@ -982,6 +980,16 @@ io.on('connection', (socket) => {
     socket.on('request_sudden_death', () => {
         console.log("[Server] Sudden Death Requested");
 
+        // ここで資金全消費 → チップ変換を行う
+        for (let id in players) {
+            const p = players[id];
+            const amount = Math.floor(p.money / 100);
+            p.money = 0;
+            p.chips += amount;
+        }
+
+        io.emit("sync_state", { players });
+
         // サドンデス開始フラグ
         isFinalDuel = true;
         finalRaiseTurnCount = 0;
@@ -1587,19 +1595,4 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('[Warning] 未処理の Promise 拒否:', reason);
 });
 
-socket.on("request_sudden_death", () => {
-    console.log("[Server] sudden death requested");
 
-    // ここで資金全消費 → チップ変換を行う
-    for (let id in players) {
-        const p = players[id];
-        const amount = Math.floor(p.money / 100);
-        p.money = 0;
-        p.chips += amount;
-    }
-
-    io.emit("sync_state", { players });
-
-    // Unity にサドンデス開始を通知
-    io.emit("sudden_death_started");
-});

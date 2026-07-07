@@ -55,7 +55,7 @@ namespace GamblingAction.UI
 		private Ease m_SlideEase = Ease.OutQuad;
 
 		[Header("キャラ切替（自分側 Portrait）")]
-		[SerializeField, Tooltip("キャラ立ち絵。index 0=ランダム（初期表示）, 1=A, 2=B, 3=C")]
+		[SerializeField, Tooltip("キャラ立ち絵。index 0=Normal/Random, 1=Doctor, 2=NouveauRiche, 3=Fighter, 4=Guardian, 5=Scammer, 6=Debtor")]
 		private Sprite[] m_CharaSprites;
 		[SerializeField, Tooltip("退場時に旧絵が外側（左）へ退く距離（px）")]
 		private float m_CharaExitOffset = 60f;
@@ -160,9 +160,12 @@ namespace GamblingAction.UI
 
 			m_CharaButtons = new[]
 			{
-				Find<Button>(m_PreparingPanel, "CharaOption/Chara_A"),
-				Find<Button>(m_PreparingPanel, "CharaOption/Chara_B"),
-				Find<Button>(m_PreparingPanel, "CharaOption/Chara_C"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Doctor"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_NouveauRiche"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Fighter"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Guardian"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Scammer"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Debtor"),
 			};
 			m_RandomButton = Find<Button>(m_PreparingPanel, "CharaOption/Chara_Random");
 
@@ -375,7 +378,7 @@ namespace GamblingAction.UI
 			{
 				for (int i = 0; i < m_CharaButtons.Length; i++)
 				{
-					// ボタン index 0/1/2（A/B/C）は立ち絵 index 1/2/3 に対応。
+					// ボタン index 0~5 は立ち絵 index 1~6 に対応。
 					int spriteIndex = i + 1;
 					if (m_CharaButtons[i] != null)
 						m_CharaButtons[i].onClick.AddListener(() => SelectChara(spriteIndex));
@@ -387,7 +390,7 @@ namespace GamblingAction.UI
 		}
 
 		// 自分のキャラ選択（ボタン押下）。選択中ボタンを拡大し、自分側 Portrait を切り替え、
-		// サーバへ通知して相手側にも同期させる。引数は立ち絵 index：0=ランダム, 1=A, 2=B, 3=C。
+		// サーバへ通知して相手側にも同期させる。引数は立ち絵 index：0=Normal/Random, 1=Doctor, 2=NouveauRiche, 3=Fighter, 4=Guardian, 5=Scammer, 6=Debtor。
 		private void SelectChara(int spriteIndex)
 		{
 			// ランダム + A/B/C を 1 グループとして、選択中だけ拡大する。

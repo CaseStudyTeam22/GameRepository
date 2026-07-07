@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace GamblingAction.Core.Dto
@@ -13,6 +13,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("ready")]       public bool Ready;
 		[JsonProperty("inLobby")]     public bool InLobby;
 		[JsonProperty("exchanged")]   public bool Exchanged;
+		[JsonProperty("pendingExchange")] public int PendingExchange;
 		[JsonProperty("score")]       public int Score;
 		[JsonProperty("money")]       public int Money;
 		[JsonProperty("chips")]       public int Chips;
@@ -27,15 +28,24 @@ namespace GamblingAction.Core.Dto
 
 		[JsonProperty("mission")] public MissionDto Mission; // 現在のミッション
 		[JsonProperty("availableMissions")] public List<MissionDto> AvailableMissions; // 選択可能なミッション候補
-
-		[JsonProperty("pushModifier")] public ModifierContainer PushModifier;
-		// 上記の合体値用フィールド
-		[JsonProperty("moveModifier")]   public ModifierContainer MoveModifier;
-		// 上記の合体値用フィールド
-		[JsonProperty("staminaModifier")] public ModifierContainer StaminaModifier;
-		// 上記の合体値用フィールド
+		[JsonProperty("modifiers")]   public PlayerModifiersDto Modifiers;
+		[JsonProperty("scammerActive")] public bool ScammerActive;
 		[JsonProperty("stamina")]     public int Stamina;
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
+
+		// --- サーバー側でバフや補正値を適用した後の最終的な現在能力値 ---
+		[JsonProperty("currentMaxStamina")]   public int CurrentMaxStamina;   // バフ・ボーナス適用後の最大スタミナ。UI等でメモリ数を決める際はこちらを直接参照してください。
+		[JsonProperty("currentPushPower")]    public int CurrentPushPower;    // バフ・ボーナス適用後の突進力。
+		[JsonProperty("currentDefensePower")] public int CurrentDefensePower; // バフ・ボーナス適用後の防御力。
+	}
+
+	public class PlayerModifiersDto
+	{
+		[JsonProperty("maxStaminaBonus")]       public int MaxStaminaBonus;
+		[JsonProperty("pushPowerBonus")]        public int PushPowerBonus;
+		[JsonProperty("moveSpeedBonus")]        public int MoveSpeedBonus;
+		[JsonProperty("chipCostMultiplier")]    public float ChipCostMultiplier;
+		[JsonProperty("defenseReductionBonus")] public float DefenseReductionBonus;
 	}
 
 	// キャラクターの初期データの定義
@@ -71,12 +81,6 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("power")] public int Power;
 	}
 
-	// stats乗算
-	// バフごとに持たないといけないため形状は変わるかも
-	public class BuffEffectDto
-	{
-		[JsonProperty("buff")] public ModifierContainer Buff;
-	}
 
 	public enum EMissionType
 	{
