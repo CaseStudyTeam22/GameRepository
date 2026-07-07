@@ -234,23 +234,26 @@ namespace GamblingAction.UI
 			return c;
 		}
 
-		private void OnReadyClicked()
-		{
-			if (!m_IsReady)
-			{
-				bool isAI = m_ReadyAsAIToggle != null && m_ReadyAsAIToggle.isOn;
-				m_State.SubmitReady(isAI);
-				m_IsReady = true;
-			}
-			else
-			{
-				m_State.SubmitUnready();
-				m_IsReady = false;
-			}
-			UpdateReadyButtonText();
-		}
+        private void OnReadyClicked()
+        {
+            if (!m_IsReady)
+            {
+                bool isAI = m_ReadyAsAIToggle != null &&
+                            m_ReadyAsAIToggle.isOn;
 
-		private void UpdateReadyButtonText()
+                m_State.SubmitReady(isAI);
+                m_IsReady = true;
+            }
+            else
+            {
+                m_State.SubmitUnready();
+                m_IsReady = false;
+            }
+
+            UpdateReadyButtonText();
+            UpdateCharaButtons(); 
+        }
+        private void UpdateReadyButtonText()
 		{
 			if (m_ReadyButtonText != null)
 				m_ReadyButtonText.text = m_IsReady ? "Cancel" : "I'm Ready";
@@ -543,7 +546,24 @@ namespace GamblingAction.UI
 					slot.color = new Color(c.r, c.g, c.b, a);
 				}, targetAlpha, m_Config.Duration).SetEase(m_Config.Ease);
 			}
-		}
 
-	}
+		}
+        private void UpdateCharaButtons()
+        {
+            bool interactable = !m_IsReady;
+
+            if (m_RandomButton != null)
+                m_RandomButton.interactable = interactable;
+
+            if (m_CharaButtons != null)
+            {
+                foreach (var button in m_CharaButtons)
+                {
+                    if (button != null)
+                        button.interactable = interactable;
+                }
+            }
+        }
+
+    }
 }
