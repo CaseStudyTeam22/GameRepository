@@ -83,6 +83,9 @@ io.emit = function (event, ...args) {
     if (event === 'sync_state') {
         for (let id in players) {
             updatePlayerCurrentStats(players[id]);
+            // 配信直前に所持チップを上限まで丸める（入手経路を問わない収束点）
+            const pl = players[id];
+            if (pl.chips > Config.MAX_CHIPS) pl.chips = Config.MAX_CHIPS;
         }
     }
     return originalEmit.apply(io, [event, ...args]);
