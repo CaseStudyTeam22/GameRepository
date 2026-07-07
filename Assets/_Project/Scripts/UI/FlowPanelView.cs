@@ -742,7 +742,9 @@ namespace GamblingAction.UI
 			m_PendingExchange = amount;
 			m_State.SubmitExchange(amount);
 			m_ExchangeConfirmButton.interactable = false;
-		}
+			m_ExchangeSlider.interactable = false;
+
+        }
 
 		/// <summary>ミッション選択の本処理。</summary>
 		private void DoSubmitMission(int index)
@@ -811,7 +813,11 @@ namespace GamblingAction.UI
 			{
 				m_PendingExchange = 0;
 				if (m_ExchangeConfirmButton != null) m_ExchangeConfirmButton.interactable = true;
-				UpdateExchangeRange();
+				if (m_ExchangeSlider != null) m_ExchangeSlider.interactable = true;
+                {
+                    
+                }
+                UpdateExchangeRange();
 			}
 
 			if (phase == EGamePhase.BuffSelection)
