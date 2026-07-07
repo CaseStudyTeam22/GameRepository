@@ -112,7 +112,7 @@ namespace GamblingAction.Core.Dto
 }
 
 /*既存のコードに追加
- public class BeatMessage
+" public class BeatMessage "
 {
 		[JsonProperty("beat")]       public int Beat;
 		[JsonProperty("timeLeft")]   public int TimeLeft;

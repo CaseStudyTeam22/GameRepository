@@ -73,7 +73,7 @@ namespace GamblingAction.Domain
 }
 
 /*
-        int CycleCount { get; }
+"        int CycleCount { get; } "
         CycleCountの下に追加
         int CurrentBarIndex { get; }
         int CurrentAbsoluteBeat { get; }

@@ -644,7 +644,7 @@ namespace GamblingAction.Domain
 
 
 /*既存のコードに追加
-        public int CycleCount { get; private set; }
+"        public int CycleCount { get; private set; } "
         CycleCountの下に追加
         public int CurrentBarIndex { get; private set; }
         public int CurrentAbsoluteBeat { get; private set; }
@@ -658,7 +658,7 @@ namespace GamblingAction.Domain
         public int BeatIntervalMs { get; private set; }
         public int BeatsPerBar { get; private set; } = 4; 
 
-private void HandleInit(InitMessage msg)
+" private void HandleInit(InitMessage msg) "
 {
         CurrentBeat = 0;
         CurrentBarIndex = 0;
@@ -676,7 +676,7 @@ private void HandleInit(InitMessage msg)
         MyId = msg.Id;
 
 
-private void HandleBeat(BeatMessage msg)
+" private void HandleBeat(BeatMessage msg) "
 {
 			CurrentBeat = msg.Beat;
 			TimeLeft = msg.TimeLeft;
@@ -708,7 +708,7 @@ private void HandleBeat(BeatMessage msg)
 			 OnBeatChanged?.Invoke();
 		}
 
-private void HandleGameOver(GameOverMessage msg)
+" private void HandleGameOver(GameOverMessage msg) "
 {
     RoundId = 0;
     SetPhase(EGamePhase.GameOver);

@@ -1603,15 +1603,15 @@ let beatStartServerMs = 0;
 
 
 既存のコードに追加
-function beginRound() {
+" function beginRound() { ""
 roundId++;
 beatSequence = 0;
 beatStartServerMs = 0
 
-function prepareExchangePhase() {
+" function prepareExchangePhase() { ""
     items = []; currentBeat = 0; beatSequence = 0; beatStartServerMs = 0; timeLeft = Config.GAME_DURATION;
 
-    setInterval(() => {
+"    setInterval(() => { ""
         if (!gameActive) return;
         currentBeat = (currentBeat % 4) + 1;
         beatSequence++;
@@ -1621,10 +1621,10 @@ function prepareExchangePhase() {
         const beatsPerBar = 4;
         const barIndex = getBarIndexFromSequence(beatSequence - 1, beatsPerBar);
         const nextBoundaryServerMs = beatStartServerMs + Config.BEAT_INTERVAL;
-        io.emit('beat', { beat: currentBeat, timeLeft, gameActive, barIndex, beatSequence, roundId, beatStartServerMs, nextBoundaryServerMs, beatIntervalMs: Config.BEAT_INTERVAL, beatsPerBar });
-    }, Config.BEAT_INTERVAL);
+"        io.emit('beat', { beat: currentBeat, timeLeft, gameActive, barIndex, beatSequence, roundId, beatStartServerMs, nextBoundaryServerMs, beatIntervalMs: Config.BEAT_INTERVAL, beatsPerBar });
+    }, Config.BEAT_INTERVAL); ""
 
-    function resetMatchState() {
+"    function resetMatchState() { ""
         gameActive = false; items = []; currentBeat = 0; beatSequence = 0; beatStartServerMs = 0;
 
 
