@@ -49,20 +49,16 @@ const Engine = {
             p.prevX = p.x; p.prevY = p.y;
             p.targetX = p.x; p.targetY = p.y;
 
-            // 计算预想目标：push 自己前进 1 格；move 前进 power 格（遇障碍/越界会在后面限制）
+            // 计算预想目标：push/move 均前进 power (1-3) 格（遇障碍/越界会在后面限制）
             if (intent.type === 'push') {
-                const basePush = p.basePushPower || 0;
-                const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-                const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
-                const finalPushDist = Math.max(1, power + basePush + pushBonus + nextBonus);
+                const finalPushDist = Math.max(1, Math.min(3, power));
+                console.log(`[Server ENGINE] PUSH target calculation: Player=${p.id}, power=${power}, finalPushDist=${finalPushDist}, dir=${intent.dir}`);
                 if (intent.dir === 'up') p.targetY -= finalPushDist;
                 else if (intent.dir === 'down') p.targetY += finalPushDist;
                 else if (intent.dir === 'left') p.targetX -= finalPushDist;
                 else if (intent.dir === 'right') p.targetX += finalPushDist;
             } else if (intent.type === 'move') {
-                const baseSpeed = p.baseMoveSpeed || 0;
-                const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
-                const finalPower = Math.max(1, power + baseSpeed + speedBonus);
+                const finalPower = Math.max(1, Math.min(3, power));
                 if (intent.dir === 'up') p.targetY -= finalPower;
                 else if (intent.dir === 'down') p.targetY += finalPower;
                 else if (intent.dir === 'left') p.targetX -= finalPower;
@@ -85,14 +81,9 @@ const Engine = {
 
             let maxDist = 1;
             if (intent.type === 'move') {
-                const baseSpeed = p.baseMoveSpeed || 0;
-                const speedBonus = (p.modifiers && p.modifiers.moveSpeedBonus) || 0;
-                maxDist = Math.max(1, power + baseSpeed + speedBonus);
+                maxDist = Math.max(1, Math.min(3, power));
             } else if (intent.type === 'push') {
-                const basePush = p.basePushPower || 0;
-                const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-                const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
-                maxDist = Math.max(1, power + basePush + pushBonus + nextBonus);
+                maxDist = Math.max(1, Math.min(3, power));
             }
 
             // 从 prev 出发逐格推进，遇到对方（用其 prev 位置判定，避免交错冲突）或越界则停止

@@ -1,6 +1,7 @@
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 using UnityInput = UnityEngine.Input;
 
@@ -29,6 +30,14 @@ namespace GamblingAction.Input
 		private string m_LastSentDir;
 		private int m_Power = 1;
 
+		private InputAction m_ConfirmAction;
+		private InputAction m_GamepadNavAction;
+		private float m_GamepadNavCooldown;
+		private const float k_GamepadNavCooldownTime = 0.2f;
+
+		private int m_GamepadHoverX = -1;
+		private int m_GamepadHoverY = -1;
+
 		private void Start()
 		{
 			if (m_WorldCamera == null) m_WorldCamera = Camera.main;
@@ -39,11 +48,32 @@ namespace GamblingAction.Input
 			if (m_Board == null) Debug.LogError("[Input] BoardCoordsLocator.Current is null");
 
 			if (m_State != null) m_State.OnBeatChanged += HandleBeatChanged;
+
+			// InputAction 構築
+			m_ConfirmAction = new InputAction("ConfirmIntent", InputActionType.Button);
+			m_ConfirmAction.AddBinding("<Gamepad>/buttonSouth");
+			m_ConfirmAction.AddBinding("<Mouse>/leftButton");
+			m_ConfirmAction.performed += OnConfirmActionPerformed;
+			m_ConfirmAction.Enable();
+
+			m_GamepadNavAction = new InputAction("GamepadNav", InputActionType.Value, expectedControlType: "Vector2");
+			m_GamepadNavAction.AddBinding("<Gamepad>/leftStick");
+			m_GamepadNavAction.AddCompositeBinding("Dpad")
+				.With("Up",    "<Gamepad>/dpad/up")
+				.With("Down",  "<Gamepad>/dpad/down")
+				.With("Left",  "<Gamepad>/dpad/left")
+				.With("Right", "<Gamepad>/dpad/right");
+			m_GamepadNavAction.Enable();
 		}
 
 		private void OnDestroy()
 		{
 			if (m_State != null) m_State.OnBeatChanged -= HandleBeatChanged;
+
+			m_ConfirmAction?.Disable();
+			m_ConfirmAction?.Dispose();
+			m_GamepadNavAction?.Disable();
+			m_GamepadNavAction?.Dispose();
 		}
 
 		private void HandleBeatChanged()
@@ -58,6 +88,8 @@ namespace GamblingAction.Input
 			m_ActiveMode = null;
 			m_LastSentDir = null;
 			m_Power = 1;
+			m_GamepadHoverX = -1;
+			m_GamepadHoverY = -1;
 			LocalIntentBus.Clear();
 		}
 
@@ -73,10 +105,7 @@ namespace GamblingAction.Input
 			HandleSkillKeys();
 			HandleSkillKeyReleased();
 			HandleEscape();
-			HandleWheel();
-			HandlePowerNumberKeys();
-			HandleMouseMove();
-			HandleMouseClick();
+			HandleHover();
 		}
 
 		private bool CanAcceptInput()
@@ -110,28 +139,27 @@ namespace GamblingAction.Input
 			if (mode == IntentTypes.Skill)
 			{
 				m_LastSentDir = null;
-				// スキルに掛け金の概念を持ち込んでパワー替えるかは不明なため元のrestを踏襲
 				m_State.SubmitIntent(IntentTypes.Skill, null, m_Power);
-				PublishLocal();
+				LocalIntentBus.Set(IntentTypes.Skill, null, m_Power, -1, -1, -1, -1, true);
 				return;
 			}
 
-			string dir = ResolveMouseDir();
-			if (mode == IntentTypes.Defense && dir == null)
+			if (mode == IntentTypes.Defense)
 			{
 				m_LastSentDir = null;
-				m_State.SubmitIntent(mode, null, m_Power);
-				PublishLocal();
+				m_State.SubmitIntent(IntentTypes.Defense, null, m_Power);
+				LocalIntentBus.Set(IntentTypes.Defense, null, m_Power, -1, -1, -1, -1, true);
 				return;
 			}
-			if (dir == null)
+
+			if (mode == IntentTypes.Push)
 			{
-				PublishLocal();
+				m_LastSentDir = null;
+				m_GamepadHoverX = -1;
+				m_GamepadHoverY = -1;
+				LocalIntentBus.Set(IntentTypes.Push, null, m_Power, -1, -1, -1, -1, false);
 				return;
 			}
-			m_LastSentDir = dir;
-			m_State.SubmitIntent(mode, dir, m_Power);
-			PublishLocal();
 		}
 
 		private void HandleSkillKeyReleased()
@@ -157,106 +185,198 @@ namespace GamblingAction.Input
 			m_ActiveMode = null;
 			m_LastSentDir = null;
 			m_Power = 1;
+			m_GamepadHoverX = -1;
+			m_GamepadHoverY = -1;
 			m_State.SubmitIntent(IntentTypes.None, null, 1);
 			LocalIntentBus.Clear();
 		}
 
-		private void HandleWheel()
+		private void OnConfirmActionPerformed(InputAction.CallbackContext context)
 		{
-			float scroll = UnityInput.mouseScrollDelta.y;
-			if (Mathf.Approximately(scroll, 0f)) return;
-			if (!HasIntentToCharge()) return;
+			Debug.Log($"[Input] OnConfirmAction: device={context.control.device.name}, activeMode={m_ActiveMode}");
+			if (m_State == null) { Debug.LogWarning("[Input] m_State is null"); return; }
+			if (!CanAcceptInput()) { Debug.LogWarning($"[Input] CanAcceptInput is false (GameActive={m_State.GameActive}, Beat={m_State.CurrentBeat})"); return; }
+			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
+			if (LocalIntentBus.Current.IsConfirmed) { Debug.Log("[Input] Already confirmed"); return; }
 
-			int prev = m_Power;
-			int next = scroll > 0 ? Mathf.Min(3, prev + 1) : Mathf.Max(1, prev - 1);
-			if (next == prev) return;
-			SetPowerAndResend(next);
-		}
+			var me = m_State.Me;
+			if (me == null) { Debug.LogWarning("[Input] Local player Me is null"); return; }
 
-		private void HandlePowerNumberKeys()
-		{
-			int pick = 0;
-			if (UnityInput.GetKeyDown(KeyCode.Alpha1) || UnityInput.GetKeyDown(KeyCode.Keypad1)) pick = 1;
-			else if (UnityInput.GetKeyDown(KeyCode.Alpha2) || UnityInput.GetKeyDown(KeyCode.Keypad2)) pick = 2;
-			else if (UnityInput.GetKeyDown(KeyCode.Alpha3) || UnityInput.GetKeyDown(KeyCode.Keypad3)) pick = 3;
-			if (pick == 0) return;
-			if (!HasIntentToCharge()) return;
-			if (pick == m_Power) return;
-			SetPowerAndResend(pick);
-		}
+			int targetX = -1;
+			int targetY = -1;
 
-		private bool HasIntentToCharge()
-		{
-			if (!string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None) return true;
-			if (!string.IsNullOrEmpty(m_LastSentDir)) return true;
-			return false;
-		}
-
-		private void SetPowerAndResend(int newPower)
-		{
-			m_Power = newPower;
-			string type = !string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None
-				? m_ActiveMode
-				: IntentTypes.Move;
-			bool needsDir = type != IntentTypes.Skill && type != IntentTypes.Defense;
-			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
+			if (context.control.device is Mouse)
 			{
-				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
-				LocalIntentBus.Set(type, m_LastSentDir, m_Power);
+				if (ResolveMouseGrid(out int gx, out int gy))
+				{
+					targetX = gx;
+					targetY = gy;
+					Debug.Log($"[Input] Mouse target resolved: {gx}, {gy}");
+				}
+				else
+				{
+					Debug.LogWarning("[Input] Mouse grid could not be resolved");
+				}
+			}
+			else
+			{
+				if (m_GamepadHoverX >= 0 && m_GamepadHoverY >= 0)
+				{
+					targetX = m_GamepadHoverX;
+					targetY = m_GamepadHoverY;
+					Debug.Log($"[Input] Gamepad target resolved: {targetX}, {targetY}");
+				}
+			}
+
+			if (targetX >= 0 && targetY >= 0)
+			{
+				ClampToReachable(me.X, me.Y, targetX, targetY, out int clampedX, out int clampedY);
+
+				int dx = clampedX - me.X;
+				int dy = clampedY - me.Y;
+				string dir = null;
+				int power = 1;
+
+				if (dx != 0)
+				{
+					dir = dx > 0 ? Directions.Right : Directions.Left;
+					power = Mathf.Abs(dx);
+				}
+				else if (dy != 0)
+				{
+					dir = dy > 0 ? Directions.Down : Directions.Up;
+					power = Mathf.Abs(dy);
+				}
+
+				if (dir != null)
+				{
+					m_LastSentDir = dir;
+					m_Power = power;
+					Debug.Log($"[Input] Submitting push intent: dir={dir}, power={power}, target={clampedX},{clampedY}");
+					m_State.SubmitIntent(m_ActiveMode, dir, power);
+					LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
+				}
+				else
+				{
+					Debug.LogWarning("[Input] Calculated direction is null");
+				}
 			}
 		}
 
-		private void HandleMouseMove()
+		private void HandleHover()
 		{
-			if (string.IsNullOrEmpty(m_ActiveMode)) return;
-			if (m_ActiveMode == IntentTypes.Skill) return;
+			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
+			if (LocalIntentBus.Current.IsConfirmed) return;
 
-			string dir = ResolveMouseDir();
-			if (dir == null || dir == m_LastSentDir) return;
-			m_LastSentDir = dir;
-			m_State.SubmitIntent(m_ActiveMode, dir, m_Power);
-			PublishLocal();
-		}
-
-		private void HandleMouseClick()
-		{
-			if (!UnityInput.GetMouseButtonDown(0)) return;
-			string dir = ResolveMouseDir();
-			if (dir == null) return;
-
-			string type = string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode == IntentTypes.None
-				? IntentTypes.Move
-				: m_ActiveMode;
-			m_LastSentDir = dir;
-			m_State.SubmitIntent(type, dir, m_Power);
-			LocalIntentBus.Set(type, dir, m_Power);
-		}
-
-		private void PublishLocal()
-		{
-			if (string.IsNullOrEmpty(m_ActiveMode))
-				LocalIntentBus.Clear();
-			else
-				LocalIntentBus.Set(m_ActiveMode, m_LastSentDir, m_Power);
-		}
-
-		private string ResolveMouseDir()
-		{
-			if (m_WorldCamera == null || m_Board == null) return null;
 			var me = m_State.Me;
-			if (me == null) return null;
+			if (me == null) return;
 
+			// ゲームパッド入力を処理
+			Vector2 nav = m_GamepadNavAction.ReadValue<Vector2>();
+			bool hasGamepadInput = nav.magnitude > 0.5f;
+
+			if (m_GamepadNavCooldown > 0f)
+			{
+				m_GamepadNavCooldown -= Time.deltaTime;
+			}
+
+			if (hasGamepadInput && m_GamepadNavCooldown <= 0f)
+			{
+				if (m_GamepadHoverX < 0 || m_GamepadHoverY < 0)
+				{
+					m_GamepadHoverX = me.X;
+					m_GamepadHoverY = me.Y;
+				}
+
+				if (Mathf.Abs(nav.x) > Mathf.Abs(nav.y))
+				{
+					m_GamepadHoverX = Mathf.Clamp(m_GamepadHoverX + (nav.x > 0 ? 1 : -1), 0, m_Board.GridSize - 1);
+				}
+				else
+				{
+					m_GamepadHoverY = Mathf.Clamp(m_GamepadHoverY + (nav.y > 0 ? 1 : -1), 0, m_Board.GridSize - 1);
+				}
+
+				m_GamepadNavCooldown = k_GamepadNavCooldownTime;
+			}
+
+			// マウス移動があればホバーをマウスに切り替え、なければゲームパッドのホバーを使用
+			bool isMouseActive = UnityInput.mousePresent && (Mathf.Abs(UnityInput.GetAxis("Mouse X")) > 0.01f || Mathf.Abs(UnityInput.GetAxis("Mouse Y")) > 0.01f);
+
+			int hoverX = -1;
+			int hoverY = -1;
+
+			if (isMouseActive || (!hasGamepadInput && m_GamepadHoverX < 0))
+			{
+				if (ResolveMouseGrid(out int gx, out int gy))
+				{
+					hoverX = gx;
+					hoverY = gy;
+					m_GamepadHoverX = gx;
+					m_GamepadHoverY = gy;
+				}
+			}
+			else
+			{
+				hoverX = m_GamepadHoverX;
+				hoverY = m_GamepadHoverY;
+			}
+
+			if (hoverX >= 0 && hoverY >= 0)
+			{
+				ClampToReachable(me.X, me.Y, hoverX, hoverY, out int clampedX, out int clampedY);
+
+				int dx = clampedX - me.X;
+				int dy = clampedY - me.Y;
+				string dir = null;
+				int power = 1;
+
+				if (dx != 0)
+				{
+					dir = dx > 0 ? Directions.Right : Directions.Left;
+					power = Mathf.Abs(dx);
+				}
+				else if (dy != 0)
+				{
+					dir = dy > 0 ? Directions.Down : Directions.Up;
+					power = Mathf.Abs(dy);
+				}
+
+				LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, false);
+			}
+		}
+
+		private bool ResolveMouseGrid(out int gx, out int gy)
+		{
+			gx = -1;
+			gy = -1;
+			if (m_WorldCamera == null || m_Board == null) return false;
 			var ray = m_WorldCamera.ScreenPointToRay(UnityInput.mousePosition);
-			if (!m_GroundPlane.Raycast(ray, out float enter)) return null;
+			if (!m_GroundPlane.Raycast(ray, out float enter)) return false;
 			Vector3 hit = ray.GetPoint(enter);
+			return m_Board.TryWorldToGrid(hit, out gx, out gy);
+		}
 
-			Vector3 mePos = m_Board.GridToWorld(me.X, me.Y);
-			float dx = hit.x - mePos.x;
-			float dz = hit.z - mePos.z;
+		private void ClampToReachable(int myX, int myY, int targetX, int targetY, out int clampedX, out int clampedY)
+		{
+			clampedX = myX;
+			clampedY = myY;
 
-			if (Mathf.Abs(dx) > Mathf.Abs(dz))
-				return dx > 0 ? Directions.Right : Directions.Left;
-			return dz > 0 ? Directions.Up : Directions.Down;
+			int dx = targetX - myX;
+			int dy = targetY - myY;
+
+			if (Mathf.Abs(dx) >= Mathf.Abs(dy))
+			{
+				int sign = dx > 0 ? 1 : -1;
+				int dist = Mathf.Min(3, Mathf.Abs(dx));
+				clampedX = myX + sign * dist;
+			}
+			else
+			{
+				int sign = dy > 0 ? 1 : -1;
+				int dist = Mathf.Min(3, Mathf.Abs(dy));
+				clampedY = myY + sign * dist;
+			}
 		}
 	}
 }
