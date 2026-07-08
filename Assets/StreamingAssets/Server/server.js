@@ -49,6 +49,9 @@ const ROUND_INTRO_MS = 1500;
 
 // ファイナルレイズ進行中フラグ。true の間は次の round_over で勝者が直接全勝（game_over）。
 let isFinalDuel = false;
+// サドンデス進行中フラグ。ファイナルレイズと同じ決勝局だが、
+// こちらは両替・カード選択・ミッション選択を飛ばして即開戦する点が異なる。
+let isSuddenDeath = false;
 // 提案者（直前ラウンドの敗者）・応答者（直前ラウンドの勝者）の socket id を保持する。
 // 切断や resetMatch でクリアする。
 let finalRaiseProposerId = null;
@@ -123,15 +126,29 @@ function beginRound() {
 }
 
 // 双方のクライアントが盤面・キャラ生成を終えたら、少し間を置いてチップ交換フェーズへ進む。
+// サドンデス中は両替・カード選択・ミッション選択を飛ばして即開戦する。
 function checkAllRoundReady() {
     const pList = Object.values(players);
     if (pList.length >= 2 && pList.every(pl => pl.roundReady)) {
         if (roundIntroTimer) clearTimeout(roundIntroTimer);
         roundIntroTimer = setTimeout(() => {
             roundIntroTimer = null;
-            prepareExchangePhase();
+            if (isSuddenDeath) prepareSuddenDeathBattle();
+            else prepareExchangePhase();
         }, ROUND_INTRO_MS);
     }
+}
+
+// サドンデス用の開戦準備。両替・カード選択・ミッション選択のフェーズを飛ばし、
+// 対戦に必要な初期化だけ行って即カウントダウンへ進む。所持金のチップ変換は
+// startSuddenDeath で済ませてあるため、ここでは行わない。
+function prepareSuddenDeathBattle() {
+    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION; cycleCount = 0;
+    // resetPlayerPos は isFinalDuel が立っている間チップを保持するため、変換済みのチップは消えない。
+    for (let id in players) resetPlayerPos(id);
+    io.emit('sync_state', { players });
+    io.emit('sync_items', items);
+    startBattleCountdown();
 }
 
 function isNouveauRiche(player) {
@@ -319,18 +336,27 @@ setInterval(() => {
         if (isFinalDuel) {
             finalRaiseTurnCount++;
 
-            // 20ターン経過しても決着がつかなかった場合、優勢側を勝者とする。
+            // 20ターン経過しても決着がつかなかった場合の処理。
             if (finalRaiseTurnCount >= Config.TURN_MAX) {
-                const winner =
-                    Object.values(players)
-                        .find(p => p.role === finalRaiseFavoredRole);
+                // サドンデスは 2-2 の互角から始まり優勢側が存在しないため、時間切れは引き分けにする。
+                const winner = finalRaiseFavoredRole
+                    ? Object.values(players).find(p => p.role === finalRaiseFavoredRole)
+                    : null;
 
-                winner.score = Config.MAX_WINS;
-
-                handleRoundConcluded(
-                    winner.id,
-                    Object.keys(players).find(id => id !== winner.id)
-                );
+                if (winner) {
+                    // ファイナルレイズ：優勢側を勝者とする。
+                    winner.score = Config.MAX_WINS;
+                    handleRoundConcluded(
+                        winner.id,
+                        Object.keys(players).find(id => id !== winner.id)
+                    );
+                } else {
+                    // サドンデス：勝敗つかず時間切れ。引き分けで次ラウンドへ。
+                    gameActive = false;
+                    finalRaiseTurnCount = 0;
+                    io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
+                    setTimeout(beginRound, 3000);
+                }
 
                 return;
             }
@@ -968,13 +994,7 @@ io.on('connection', (socket) => {
     });
     socket.on('request_sudden_death', () => {
         console.log("[Server] Sudden Death Requested");
-
-        // サドンデス開始フラグ
-        isFinalDuel = true;
-        finalRaiseTurnCount = 0;
-
-        // クライアントへ通知
-        io.emit('sudden_death_started');
+        startSuddenDeath();
     });
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
     socket.on('disconnect', () => {
@@ -1121,9 +1141,14 @@ function checkAllMissionsSelected() {
 
         // カード選択フェーズを抜けるので制限時間タイマーを止める。
         if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
-        io.emit('start_match_countdown');
-        setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
+        startBattleCountdown();
     }
+}
+
+// 開戦カウントダウンを流し、一定時間後に対戦を開始する。
+function startBattleCountdown() {
+    io.emit('start_match_countdown');
+    setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
 }
 
 // ミッション選択の制限時間超過
@@ -1299,25 +1324,7 @@ function handleRoundConcluded(winnerId, loserId) {
 
     if (p1 && p2 && p1.score === 2 && p2.score === 2) {
         console.log("[Server] Sudden Death triggered!");
-
-        //  全員を強制 All-in
-        for (let id in players) {
-            const p = players[id];
-            p.chips = Math.floor(p.money / 100); // 全額チップ化
-            p.money = 0;
-        }
-
-        io.emit('sync_state', { players });
-
-        //  クライアントへサドンデス開始イベント
-        io.emit('sudden_death_started');
-
-        //  サドンデス専用のラウンド開始
-        isFinalDuel = true;
-        finalRaiseTurnCount = 0;
-
-        // 盤面リセットして次ラウンドへ
-        setTimeout(beginRound, 2000);
+        startSuddenDeath();
         return;
     }
     io.emit('round_over', { winnerRole: winner.role });
@@ -1379,6 +1386,28 @@ function cancelFinalRaise(reason) {
     setTimeout(beginRound, 3000);
 }
 
+// サドンデスを開始する。両替・カード選択・ミッション選択は行わず、
+// 所持金をすべてチップへ変換したうえで即開戦する決勝局。
+function startSuddenDeath() {
+    // 決勝局として扱うため、勝敗確定時に勝者を全勝にする isFinalDuel も立てる。
+    isFinalDuel = true;
+    isSuddenDeath = true;
+    finalRaiseTurnCount = 0;
+
+    // 所持金をすべてチップへ変換する（100 = チップ1枚）。
+    for (let id in players) {
+        const p = players[id];
+        p.chips += Math.floor(p.money / 100);
+        p.money = 0;
+    }
+
+    io.emit('sync_state', { players });
+    io.emit('sudden_death_started');
+
+    // 盤面・キャラ生成を待ってから開戦へ進む。準備フェーズは beginRound 側で飛ばす。
+    setTimeout(beginRound, 2000);
+}
+
 // 勝者が受諾した。ファイナルレイズ本番ラウンドを開始する。
 function startFinalDuel() {
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
@@ -1435,6 +1464,7 @@ function resetMatchState(isMatchStart = false) {
     timeLeft = Config.GAME_DURATION;
 
     isFinalDuel = false;
+    isSuddenDeath = false;
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
     finalRaiseFavoredRole = null;
@@ -1568,21 +1598,4 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[Warning] 未処理の Promise 拒否:', reason);
-});
-
-socket.on("request_sudden_death", () => {
-    console.log("[Server] sudden death requested");
-
-    // ここで資金全消費 → チップ変換を行う
-    for (let id in players) {
-        const p = players[id];
-        const amount = Math.floor(p.money / 100);
-        p.money = 0;
-        p.chips += amount;
-    }
-
-    io.emit("sync_state", { players });
-
-    // Unity にサドンデス開始を通知
-    io.emit("sudden_death_started");
 });
