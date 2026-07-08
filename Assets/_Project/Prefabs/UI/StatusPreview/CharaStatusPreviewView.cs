@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace GamblingAction.UI
 {
-    public class CharaStatusPreview : MonoBehaviour
+    public class CharaStatusPreviewView : MonoBehaviour
     {
         [Header("Texts")]
         [SerializeField] private TMP_Text m_NameText;
@@ -21,9 +21,21 @@ namespace GamblingAction.UI
         [SerializeField] private float m_MaxStaminaView = 7f;
         [SerializeField] private float m_MaxPushView = 5f;
         [SerializeField] private float m_MaxDefenseView = 5f;
+        [ContextMenu("Test Status")]
+        private void TestStatus()
+        {
+            SetStatus(new CharaDataMessage
+            {
+                Name = "Doctor",
+                MaxStamina = 5,
+                PushPower = 2,
+                DefensePower = 3
+            });
+        }
 
         public void SetStatus(CharaDataMessage data)
         {
+            Debug.Log("ÅöÅö SetStatusåƒÇŒÇÍÇΩ ÅöÅö");
             if (data == null)
             {
                 Clear();

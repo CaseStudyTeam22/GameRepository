@@ -244,7 +244,11 @@ namespace GamblingAction.Domain
 
             m_SelectedCharaData =
                 await BuildCharaDataAsync(index);
-
+            Debug.Log(
+    $"名前={m_SelectedCharaData.Name} " +
+    $"体力={m_SelectedCharaData.MaxStamina} " +
+    $"突進={m_SelectedCharaData.PushPower} " +
+    $"防御={m_SelectedCharaData.DefensePower}");
             OnSelectedCharaStatusLoaded?.Invoke(
                 m_SelectedCharaData);
         }
