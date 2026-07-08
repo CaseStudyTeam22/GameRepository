@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
