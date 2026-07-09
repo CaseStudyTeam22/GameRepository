@@ -247,19 +247,21 @@ const Engine = {
                 if (isGuardianBlocking(target, intents)) {
                     finalDist = 0;
                 } else if (tIntent.type === 'defense') {
+                    // knockback軽減 (現在のスタミナ依存で先に計算)
+                    const rawKnockback = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
+                    finalDist = Math.max(1, rawKnockback - 2);
+
+                    // その後スタミナを消費
                     const defPower = target.currentDefensePower || 0;
                     const staminaDmg = Math.max(1, attackPushPower - defPower);
                     target.stamina = Math.max(0, target.stamina - staminaDmg);
-                    
-                    // knockback軽減
-                    const rawKnockback = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
-                    finalDist = Math.max(1, rawKnockback - 2);
                 } else {
-                    // 通常push
+                    // 通常push (現在のスタミナ依存で先に押し出し距離を計算)
+                    finalDist = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
+
+                    // その後スタミナを消費
                     const staminaDmg = attackPushPower;
                     target.stamina = Math.max(0, target.stamina - staminaDmg);
-                    
-                    finalDist = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
                 }
 
                 // 債務者の次回突進強化とhigh_risk(攻撃側/被弾側)のボーナスを適用
