@@ -80,5 +80,6 @@ namespace GamblingAction.Domain
 		event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
 		// サドンデス開始通知。ファイナルレイズとは別のフェーズ。
 		event Action OnSuddenDeathStarted;
+		event Action<CharaDataMessage> OnSelectedCharaStatusLoaded;
 	}
 }
