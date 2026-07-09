@@ -173,28 +173,25 @@ const Engine = {
             const pf2 = getPF(p2, i2);
 
             if (pf1 > 0 && pf2 > 0) {
-                if (pf1 === pf2 && Math.abs(p1.priority - p2.priority) <= 1) {
-                    p1.x = p1.prevX; p1.y = p1.prevY;
-                    p2.x = p2.prevX; p2.y = p2.prevY;
-                    const midX = (p1.prevX + p2.prevX) / 2, midY = (p1.prevY + p2.prevY) / 2;
-                    events.push({ type: 'clash_explosion', x: midX, y: midY });
-                    generateExplosionItems(items, midX, midY);
-                    events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p1.id, dir: i1.dir, x: p1.x, y: p1.y });
-                    events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p2.id, dir: i2.dir, x: p2.x, y: p2.y });
-                } else {
-                    const winner = pf1 > pf2 ? p1 : (pf2 > pf1 ? p2 : (p1.priority > p2.priority ? p1 : p2));
-                    const loser = winner === p1 ? p2 : p1;
-                    const winIntent = winner === p1 ? i1 : i2;
-                    winner.x = winner.targetX; winner.y = winner.targetY;
-                    loser.x = loser.prevX; loser.y = loser.prevY;
-                    const diff = Math.abs(pf1 - pf2) || 1;
-                    if (winIntent.dir === 'up') loser.y -= diff;
-                    else if (winIntent.dir === 'down') loser.y += diff;
-                    else if (winIntent.dir === 'left') loser.x -= diff;
-                    else if (winIntent.dir === 'right') loser.x += diff;
-                    events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "KICKED!" });
-                    events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: winner.id, dir: winIntent.dir, x: winner.prevX, y: winner.prevY });
-                }
+                // お互いに相手の突進力 (PushPower + nextBonus) 分だけスタミナを減らす
+                const p1Bonus = p1.nextPushBonus || 0;
+                const p2Bonus = p2.nextPushBonus || 0;
+                if (p1Bonus > 0) p1.nextPushBonus = 0;
+                if (p2Bonus > 0) p2.nextPushBonus = 0;
+
+                const p1Dmg = (p2.currentPushPower || 0) + p2Bonus;
+                const p2Dmg = (p1.currentPushPower || 0) + p1Bonus;
+
+                p1.stamina = Math.max(0, p1.stamina - p1Dmg);
+                p2.stamina = Math.max(0, p2.stamina - p2Dmg);
+
+                p1.x = p1.prevX; p1.y = p1.prevY;
+                p2.x = p2.prevX; p2.y = p2.prevY;
+                const midX = (p1.prevX + p2.prevX) / 2, midY = (p1.prevY + p2.prevY) / 2;
+                events.push({ type: 'clash_explosion', x: midX, y: midY });
+                generateExplosionItems(items, midX, midY);
+                events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p1.id, dir: i1.dir, x: p1.x, y: p1.y });
+                events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p2.id, dir: i2.dir, x: p2.x, y: p2.y });
             } else if (Math.abs(p1.priority - p2.priority) <= 1) {
                 events.push({ type: 'clash_moment', players: [p1Id, p2Id], x: p1.targetX, y: p1.targetY });
                 p1.x = p1.prevX; p1.y = p1.prevY;
@@ -237,24 +234,44 @@ const Engine = {
             // 严格邻位判定：只有起始相邻，动作才生效
             if (intent.type === 'push' && startDist === 1) {
                 events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p.id, dir: intent.dir, power: intent.power, x: p.prevX, y: p.prevY });
-                const basePush = p.basePushPower || 0;
-                const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+                
                 const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
-                let finalDist = power + basePush + pushBonus + nextBonus;
                 if (nextBonus > 0) p.nextPushBonus = 0; // 使用後リセット
-                // 高风险攻击方：power=3 时推距 +1
-                if (p.selectedBuff === 'high_risk' && power === 3) finalDist += 1;
+
+                // 攻撃側の最終プッシュ力を算出 (キャラ固有のPushPower + modifiers.pushPowerBonus + nextBonus)
+                const attackPushPower = (p.currentPushPower || 0) + nextBonus;
+
+                let finalDist = 0;
                 const tIntent = intents[target.id] || { type: 'none' };
-                if (tIntent.type === 'push' && tIntent.dir !== intent.dir) {
-                    const tPower = getPF(target, tIntent);
-                    finalDist = Math.max(0, finalDist - tPower);
+
+                if (isGuardianBlocking(target, intents)) {
+                    finalDist = 0;
+                } else if (tIntent.type === 'defense') {
+                    const defPower = target.currentDefensePower || 0;
+                    const staminaDmg = Math.max(1, attackPushPower - defPower);
+                    target.stamina = Math.max(0, target.stamina - staminaDmg);
+                    
+                    // knockback軽減
+                    const rawKnockback = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
+                    finalDist = Math.max(1, rawKnockback - 2);
+                } else {
+                    // 通常push
+                    const staminaDmg = attackPushPower;
+                    target.stamina = Math.max(0, target.stamina - staminaDmg);
+                    
+                    finalDist = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
                 }
-                // 防御の場合はkbしない
-                if (tIntent.type === 'defense') finalDist = 0;
-                // ハイリスクを選んでいる場合30%で距離+1(この効果は処理順的に防御を貫通する)
-                if (finalDist > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) finalDist += 1;
-                // ガーディアン: スキル中はノックバック無効(high_riskの効果を受けない)
-                if (isGuardianBlocking(target, intents)) finalDist = 0;
+
+                // 債務者の次回突進強化とhigh_risk(攻撃側/被弾側)のボーナスを適用
+                if (finalDist > 0) {
+                    finalDist += nextBonus;
+                    if (p.selectedBuff === 'high_risk' && power === 3) {
+                        finalDist += 1;
+                    }
+                    if (target.selectedBuff === 'high_risk' && Math.random() < 0.3) {
+                        finalDist += 1;
+                    }
+                }
 
                 if (intent.dir === 'up') target.y -= finalDist;
                 else if (intent.dir === 'down') target.y += finalDist;
@@ -263,15 +280,15 @@ const Engine = {
 
                 // 突進したプレイヤーの座標を、実際に相手を押し出した距離（finalDist）に合わせて制限する
                 if (movedSelf[p.id]) {
-                    const finalPushDist = Math.max(1, power + basePush + pushBonus + nextBonus);
+                    const finalPushDist = power;
                     let dx = 0, dy = 0;
                     if (intent.dir === 'up') dy = -1;
                     else if (intent.dir === 'down') dy = 1;
                     else if (intent.dir === 'left') dx = -1;
                     else if (intent.dir === 'right') dx = 1;
 
-                    p.x -= dx * (finalPushDist - finalDist);
-                    p.y -= dy * (finalPushDist - finalDist);
+                    p.x -= dx * Math.max(0, finalPushDist - finalDist);
+                    p.y -= dy * Math.max(0, finalPushDist - finalDist);
                 }
 
                 if (finalDist > 0) events.push({ type: 'pushed', targetId: target.id, dir: intent.dir, dist: finalDist });
