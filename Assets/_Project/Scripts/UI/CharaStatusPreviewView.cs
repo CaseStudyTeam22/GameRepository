@@ -1,4 +1,4 @@
-using GamblingAction.Core.Dto;
+ï»¿using GamblingAction.Core.Dto;
 using TMPro;
 using UnityEngine;
 
@@ -35,7 +35,7 @@ namespace GamblingAction.UI
 
         public void SetStatus(CharaDataMessage data)
         {
-            Debug.Log("šš SetStatusŒÄ‚Î‚ê‚½ šš");
+            Debug.Log("â˜…â˜… SetStatuså‘¼ã°ã‚ŒãŸ â˜…â˜…");
             if (data == null)
             {
                 Clear();
@@ -46,13 +46,13 @@ namespace GamblingAction.UI
                 m_NameText.text = data.Name;
 
             if (m_StaminaText != null)
-                m_StaminaText.text = $"ƒXƒ^ƒ~ƒi {data.MaxStamina}";
+                m_StaminaText.text = $"ã‚¹ã‚¿ãƒŸãƒŠ {data.MaxStamina}";
 
             if (m_PushText != null)
-                m_PushText.text = $"“Ëi {data.PushPower}";
+                m_PushText.text = $"çªé€² {data.PushPower}";
 
             if (m_DefenseText != null)
-                m_DefenseText.text = $"–hŒä {data.DefensePower}";
+                m_DefenseText.text = $"é˜²å¾¡ {data.DefensePower}";
 
             if (m_StaminaGauge != null)
                 m_StaminaGauge.SetValue(data.MaxStamina, m_MaxStaminaView);
@@ -70,13 +70,13 @@ namespace GamblingAction.UI
                 m_NameText.text = "";
 
             if (m_StaminaText != null)
-                m_StaminaText.text = "ƒXƒ^ƒ~ƒi";
+                m_StaminaText.text = "ã‚¹ã‚¿ãƒŸãƒŠ";
 
             if (m_PushText != null)
-                m_PushText.text = "“Ëi";
+                m_PushText.text = "çªé€²";
 
             if (m_DefenseText != null)
-                m_DefenseText.text = "–hŒä";
+                m_DefenseText.text = "é˜²å¾¡";
 
             if (m_StaminaGauge != null)
                 m_StaminaGauge.SetValue(0, 1);

@@ -64,6 +64,9 @@ module.exports = {
         SKILL_CHIP_COST_LIMIT: 1000
     },
 
+    // 【企画調整用】所持チップの上限。入手経路を問わず、これを超えた分は切り捨てる。
+    MAX_CHIPS: 350,
+
     INITIAL_MONEY: 10000,
     INITIAL_CHIPS: 0,
     INITIAL_STAMINA: 5,

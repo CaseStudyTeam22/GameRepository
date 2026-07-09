@@ -11,7 +11,7 @@
     "GUID": "{41121AD7-38B7-401C-874C-5C2FAF544D70}",
     "Color": "1",
     "Language": "SFX",
-    "Hash": "{87D660B2-A6D8-2FBA-4288-EC80C21B74BF}",
+    "Hash": "{69ECE2A4-71F6-8D37-E253-F88F9893BDE9}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\BGM\\Boot_BGM",
     "ShortName": "Boot_BGM",
     "Path": "Boot_BGM.bnk",
@@ -26,44 +26,6 @@
      }
     ],
     "Events": [
-     {
-      "Id": "1967054745",
-      "Name": "Play_BGM_Swtich_Cue",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_BGM_Swtich_Cue",
-      "GUID": "{6A7310ED-DF0C-4989-B030-88FADFA93DFB}",
-      "Color": "1",
-      "DurationType": "OneShot",
-      "DurationMin": "0",
-      "DurationMax": "0",
-      "ActionSetState": [
-       {
-        "GroupId": "762757699",
-        "Id": "2937832959",
-        "Name": "Battle",
-        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
-        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
-       }
-      ]
-     },
-     {
-      "Id": "2188851721",
-      "Name": "Play_BGM_Swtich_Offset",
-      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Play_BGM_Swtich_Offset",
-      "GUID": "{98D336B6-3990-456B-8FB7-369671D458D1}",
-      "Color": "1",
-      "DurationType": "OneShot",
-      "DurationMin": "0",
-      "DurationMax": "0",
-      "ActionSetState": [
-       {
-        "GroupId": "762757699",
-        "Id": "2937832959",
-        "Name": "Battle",
-        "ObjectPath": "\\States\\Default Work Unit\\Gameplay_State\\Battle",
-        "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
-       }
-      ]
-     },
      {
       "Id": "1193902085",
       "Name": "Play_Main",
@@ -95,6 +57,25 @@
         "GUID": "{670E6716-8B91-4556-908C-D3818EDECAE2}"
        }
       ]
+     },
+     {
+      "Id": "1393704115",
+      "Name": "Seek_Main",
+      "ObjectPath": "\\Events\\Default Work Unit\\BGM\\Boot\\Seek_Main",
+      "GUID": "{9D7D29C1-741C-4217-AA60-AAACBADE11F0}",
+      "Color": "1",
+      "MaxAttenuation": "0",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     }
+    ],
+    "GameParameters": [
+     {
+      "Id": "1897326479",
+      "Name": "playbackspeed",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\playbackspeed",
+      "GUID": "{28329C79-9CD4-4075-8E6A-D148A97B5B64}"
      }
     ],
     "StateGroups": [
@@ -127,6 +108,6 @@
     ]
    }
   ],
-  "FileHash": "{E5C7E172-1135-508A-1197-5411BA68E16E}"
+  "FileHash": "{8AC98475-B87A-8638-0660-914B682CC5B4}"
  }
 }

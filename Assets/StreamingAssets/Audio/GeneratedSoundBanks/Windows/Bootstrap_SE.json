@@ -11,7 +11,7 @@
     "GUID": "{60A31E10-5905-4CE2-A205-B395B76523C5}",
     "Color": "19",
     "Language": "SFX",
-    "Hash": "{841431B0-570A-D48B-D627-F7B7A9F32DAF}",
+    "Hash": "{8A18378C-ADE6-6AB2-C0B0-8A0A6962C1F8}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Bootstrap_SE",
     "ShortName": "Bootstrap_SE",
     "Path": "Bootstrap_SE.bnk",
@@ -44,6 +44,6 @@
     ]
    }
   ],
-  "FileHash": "{30BAA034-F43D-522C-E517-925BD5B8EFC1}"
+  "FileHash": "{BC5135B3-A280-D0DE-67A2-7881E562B04D}"
  }
 }
