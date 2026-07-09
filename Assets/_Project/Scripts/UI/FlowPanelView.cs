@@ -1,3 +1,4 @@
+using Codice.CM.SEIDInfo;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -83,6 +84,8 @@ namespace GamblingAction.UI
 		// 前回のインテントタイプと強度（Power）を保存するキャッシュ変数（強度変更時の演出判定用）
 		private string m_PrevIntentType;
 		private int m_PrevPower = 1;
+		// 所持金の色
+		private Color m_pointColor = new Color(0.32f, 0.54f, 1.0f, 1.0f);
 
 		[Header("Player slot colors")]
 		[SerializeField, Tooltip("P1 の文字色（role 固定。ワールドの P1 と同じ色）")]
@@ -707,7 +710,7 @@ namespace GamblingAction.UI
 				{
 					int amount = GetExchangeAmount(v);
 					if (m_ExchangeAmountText != null)
-						m_ExchangeAmountText.text = $"{amount} chips (¥{amount})";
+						m_ExchangeAmountText.text = $"{amount} chips ({amount}pt)";
 				});
 
 			// マウスは 1 クリックで確定、コントローラーは B で確定（どちらも同じ本処理を呼ぶ）。
@@ -1024,8 +1027,8 @@ namespace GamblingAction.UI
 			}
 			if (moneyText != null)
 			{
-				moneyText.text = $"¥{dto.Money:N0}";
-				moneyText.color = slotColor;
+				moneyText.text = $"{dto.Money:N0}pt";
+				moneyText.color = m_pointColor;
 			}
 			if (chipsText != null)
 			{
@@ -1398,7 +1401,7 @@ namespace GamblingAction.UI
 
 			int currentAmount = GetExchangeAmount(m_ExchangeSlider.value);
 			if (m_ExchangeAmountText != null)
-				m_ExchangeAmountText.text = $"{currentAmount} chips (¥{currentAmount})";
+				m_ExchangeAmountText.text = $"{currentAmount} chips ({currentAmount}pt)";
 		}
 
 		/// <summary>
