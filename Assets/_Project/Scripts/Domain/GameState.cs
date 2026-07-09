@@ -27,10 +27,11 @@ namespace GamblingAction.Domain
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
 		private int m_SelectedCharaIndex = 0;
+        private CharaDataMessage m_SelectedCharaData;
 
-		// この端末を一意に識別するトークン。アプリ起動中は変わらない。
-		// 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
-		private readonly string m_Token = System.Guid.NewGuid().ToString("N");
+        // この端末を一意に識別するトークン。アプリ起動中は変わらない。
+        // 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
+        private readonly string m_Token = System.Guid.NewGuid().ToString("N");
 
 		public string MyId { get; private set; }
 		public int GridSize { get; private set; } = GamblingAction.Core.GameConfig.GridSize;
@@ -55,6 +56,7 @@ namespace GamblingAction.Domain
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
 		public bool SuddenDeathAlreadyStarted { get; private set; }
+		public bool IsReady { get; private set; }
 
 		public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
@@ -81,9 +83,10 @@ namespace GamblingAction.Domain
 		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
 		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		public event Action OnFinalRaiseStarted;
-		/// イカサマスキル発動中に相手の intent が更新された際、イカサマプレイヤーのみに通知されるイベント。
-		/// UI表示は未実装（骨格のみ）。
-		public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
+        public event Action<CharaDataMessage> OnSelectedCharaStatusLoaded;
+        /// イカサマスキル発動中に相手の intent が更新された際、イカサマプレイヤーのみに通知されるイベント。
+        /// UI表示は未実装（骨格のみ）。
+        public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
 
 		public event Action OnSuddenDeathStarted;
 
@@ -110,182 +113,20 @@ namespace GamblingAction.Domain
 
 		public async void SubmitReady(bool isAI)
 		{
-			var charaData = new CharaDataMessage
-			{
-				Name = "Normal",
-				MaxStamina = 5,
-				InitMoney = 10000,
-				InitChips = 0,
-				PushPower = 0,
-				MoveSpeed = 0,
-				MoveCost = new[] { 1, 3, 5 },
-				PushCost = new[] { 3, 5, 9 },
-				AttackCost = new[] { 3, 3, 3 }, // attack廃止につき固定値
-				DefenseCost = new[] { 2, 2, 2 },
-				SkillCost = new[] { 0, 0, 0 },  // Normalはスキルを持たないため0固定
-				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
-			};
+			IsReady = true;
 
-			// デフォルト値の設定
-			if (m_SelectedCharaIndex == 1)
+			if (m_SelectedCharaData == null)
 			{
-				charaData.Name = "Doctor";
-				charaData.MaxStamina = 5;
-				charaData.InitMoney = 10000;
-				charaData.InitChips = 0;
-				charaData.PushPower = 0;
-				charaData.MoveSpeed = 0;
-				// キャラ別に発動コストを変更したい場合はこれをいじってね
-				// クライアント側の挙動はちゃんと確認できたけど、サーバー側でちゃんと動いてるかはわからんね。多分大丈夫だけど。
-				//charaData.MoveCost = new[] { 3, 6, 9 }; // 全キャラ共通にするため無効化
-				//charaData.PushCost = new[] { 3, 5, 9 },
-				//charaData.AttackCost = new[] { 3, 5, 9 },
-				//charaData.DefenseCost = new[] { 2, 2, 2 },
-				charaData.SkillCost = new[] { 3, 3, 3 }; // スキルコスト3固定
-				charaData.Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 3 };
-			}
-			else if (m_SelectedCharaIndex == 2)
-			{
-				charaData.Name = "NouveauRiche";
-				charaData.MaxStamina = 5;
-				charaData.InitMoney = 8000;
-				charaData.InitChips = 0;
-				charaData.PushPower = 0;
-				charaData.MoveSpeed = 0;
-				charaData.SkillCost = new[] { 0, 0, 0 };
-				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
-			}
-			else if (m_SelectedCharaIndex == 3)
-			{
-				charaData.Name = "Fighter";
-				charaData.MaxStamina = 5;
-				charaData.InitMoney = 10000;
-				charaData.InitChips = 0;
-				charaData.PushPower = 0;
-				charaData.MoveSpeed = 0;
-				charaData.SkillCost = new[] { 3, 3, 3 };
-				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
-			}
-			else if (m_SelectedCharaIndex == 4)
-			{
-				// ガーディアン: スキル発動中はノックバックとダメージを完全無効化する無敵防御キャラ。
-				// 最大定力が高いが定力回復手段がないため、防御タイミングが鍵になる。
-				charaData.Name = "Guardian";
-				charaData.MaxStamina = 7;
-				charaData.InitMoney = 10000;
-				charaData.InitChips = 3;
-				charaData.PushPower = 0;
-				charaData.MoveSpeed = 0;
-				charaData.SkillCost = new[] { 4, 4, 4 };
-				charaData.Skills = new CharaSkillDataMessage { Id = "guardian_skill", StaminaRec = 0, ChipCost = 4 };
-			}
-			else if (m_SelectedCharaIndex == 5)
-			{
-				// イカサマ: 初回スキル発動のコストが高いが、以降相手のインテントをリアルタイムで碟き見ることができる。
-				// 初期資金少し多め。
-				charaData.Name = "Scammer";
-				charaData.MaxStamina = 5;
-				charaData.InitMoney = 12000;
-				charaData.InitChips = 0;
-				charaData.PushPower = 0;
-				charaData.MoveSpeed = 0;
-				charaData.SkillCost = new[] { 15, 15, 15 }; // 初回発動コストが重い
-				charaData.Skills = new CharaSkillDataMessage { Id = "scammer_skill", StaminaRec = 0, ChipCost = 15 };
-			}
-			else if (m_SelectedCharaIndex == 6)
-			{
-				// 債務者: チップが少ないときのみスキル発動可能。
-				// フィールド上のアイテムを一括回収し、次の突進を強化する。
-				// 初期資金が少ないので経済管理が重要になる。
-				charaData.Name = "Debtor";
-				charaData.MaxStamina = 5;
-				charaData.InitMoney = 6000;
-				charaData.InitChips = 0;
-				charaData.PushPower = 1; // 突進力が少し高め
-				charaData.MoveSpeed = 0;
-				charaData.SkillCost = new[] { 2, 2, 2 }; // スキルコストは低い
-				charaData.Skills = new CharaSkillDataMessage { Id = "debtor_skill", StaminaRec = 0, ChipCost = 2 };
+				m_SelectedCharaData =
+					await BuildCharaDataAsync(m_SelectedCharaIndex);
 			}
 
-			// CSV読み込みによる上書き
-			// コストのスケーリングはとりあえず読み取ったものから1x,2x,3xする
-			// 足りない項目はたす
-			// 英字はなにかと、読み取る順番はcsvのカンマ区切りでないとだめかどうか？
-			if (m_SelectedCharaIndex >= 0 && m_SelectedCharaIndex < CharacterSheetUrls.Length)
-			{
-				string url = CharacterSheetUrls[m_SelectedCharaIndex];
-				var csvData = await LoadCSVFromUrlAsync(url);
-				if (csvData != null)
+			m_Net.Emit(ClientEvents.PlayerReady,
+				new PlayerReadyMessage
 				{
-					int maxStamina;
-					int initMoney;
-					int initChips;
-					int pushPower;
-					int defPower;
-
-					// キャラクター名
-					if (csvData.TryGetValue("キャラクター名", out var nameVals) && nameVals.Length > 0)
-						charaData.Name = nameVals[0];
-					else if (csvData.TryGetValue("Name", out nameVals) && nameVals.Length > 0)
-						charaData.Name = nameVals[0];
-
-					// スタミナ（体幹）
-					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaVals) && maxStaminaVals.Length > 0)
-						if (int.TryParse(maxStaminaVals[0], out maxStamina)) charaData.MaxStamina = maxStamina;
-						else if (csvData.TryGetValue("MaxStamina", out maxStaminaVals) && maxStaminaVals.Length > 0)
-							if (int.TryParse(maxStaminaVals[0], out maxStamina)) charaData.MaxStamina = maxStamina;
-
-					// 資金
-					if (csvData.TryGetValue("資金", out var initMoneyVals) && initMoneyVals.Length > 0)
-						if (int.TryParse(initMoneyVals[0], out initMoney)) charaData.InitMoney = initMoney;
-						else if (csvData.TryGetValue("InitMoney", out initMoneyVals) && initMoneyVals.Length > 0)
-							if (int.TryParse(initMoneyVals[0], out initMoney)) charaData.InitMoney = initMoney;
-
-					// チップ
-					if (csvData.TryGetValue("チップ", out var initChipsVals) && initChipsVals.Length > 0)
-						if (int.TryParse(initChipsVals[0], out initChips)) charaData.InitChips = initChips;
-						else if (csvData.TryGetValue("InitChips", out initChipsVals) && initChipsVals.Length > 0)
-							if (int.TryParse(initChipsVals[0], out initChips)) charaData.InitChips = initChips;
-
-					// 突进 (power, chip)
-					if (csvData.TryGetValue("突進", out var pushVals))
-					{
-						if (pushVals.Length > 0 && int.TryParse(pushVals[0], out pushPower))
-							charaData.PushPower = pushPower;
-						if (pushVals.Length > 1)
-							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost, isScale: true);
-					}
-
-					// 防御 (power, chip)
-					if (csvData.TryGetValue("防御", out var defenseVals))
-					{
-						if (defenseVals.Length > 0 && int.TryParse(defenseVals[0], out defPower))
-							charaData.DefensePower = defPower;
-						if (defenseVals.Length > 1)
-							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost, isScale: false);
-					}
-
-					// スキル (power(不要), chip)
-					if (csvData.TryGetValue("スキル", out var skillVals))
-					{
-						if (skillVals.Length > 1)
-						{
-							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost, isScale: false);
-							charaData.Skills.ChipCost = charaData.SkillCost[0];
-						}
-					}
-
-					// スキルIDの個別指定がもしCSV側にあれば読み込む (A列: SkillId など)
-					if (csvData.TryGetValue("SkillId", out var skillIdVals) && skillIdVals.Length > 0)
-						charaData.Skills.Id = skillIdVals[0];
-				}
-			}
-
-			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage
-			{
-				IsAI = isAI,
-				CharaData = charaData
-			});
+					IsAI = isAI,
+					CharaData = m_SelectedCharaData
+				});
 		}
 
 		private async Task<Dictionary<string, string[]>> LoadCSVFromUrlAsync(string url)
@@ -376,12 +217,13 @@ namespace GamblingAction.Domain
 			return result.Count > 0 ? result.ToArray() : defaultValue;
 		}
 
-		public void SubmitUnready()
-		{
-			m_Net.Emit(ClientEvents.PlayerUnready, new { });
-		}
+        public void SubmitUnready()
+        {
+            IsReady = false;
 
-		public void SubmitEnterLobby()
+            m_Net.Emit(ClientEvents.PlayerUnready, new { });
+        }
+        public void SubmitEnterLobby()
 		{
 			m_Net.Emit(ClientEvents.EnterLobby, new { });
 		}
@@ -406,13 +248,33 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.RoundReady, new { });
 		}
 
-		public void SubmitSelectChara(int index)
-		{
-			m_SelectedCharaIndex = index;
-			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
-		}
+        public async void SubmitSelectChara(int index)
+        {
+            if (IsReady)
+            {
+                Debug.Log("Ready中はキャラ変更不可");
+                return;
+            }
 
-		public void SubmitFinalRaisePropose(bool accept)
+            m_SelectedCharaIndex = index;
+
+            m_Net.Emit(ClientEvents.SelectChara,
+                new SelectCharaMessage
+                {
+                    Index = index
+                });
+
+            m_SelectedCharaData =
+                await BuildCharaDataAsync(index);
+            Debug.Log(
+    $"名前={m_SelectedCharaData.Name} " +
+    $"体力={m_SelectedCharaData.MaxStamina} " +
+    $"突進={m_SelectedCharaData.PushPower} " +
+    $"防御={m_SelectedCharaData.DefensePower}");
+            OnSelectedCharaStatusLoaded?.Invoke(
+                m_SelectedCharaData);
+        }
+        public void SubmitFinalRaisePropose(bool accept)
 		{
 			m_Net.Emit(ClientEvents.FinalRaisePropose, new FinalRaiseProposeMessage { Accept = accept });
 		}
@@ -684,6 +546,184 @@ namespace GamblingAction.Domain
 		{
 			SuddenDeathAlreadyStarted = true;
 			OnSuddenDeathStarted?.Invoke();
+		}
+
+		private async Task<CharaDataMessage> BuildCharaDataAsync(int charaIndex)
+		{
+			var charaData = new CharaDataMessage
+			{
+				Name = "Normal",
+				MaxStamina = 5,
+				InitMoney = 10000,
+				InitChips = 0,
+				PushPower = 0,
+				DefensePower = 0,
+				MoveSpeed = 0,
+				MoveCost = new[] { 1, 3, 5 },
+				PushCost = new[] { 3, 5, 9 },
+				AttackCost = new[] { 3, 3, 3 }, // attack廃止につき固定値
+				DefenseCost = new[] { 2, 2, 2 },
+				SkillCost = new[] { 0, 0, 0 },  // Normalはスキルを持たないため0固定
+				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
+			};
+
+			if (charaIndex == 1)
+			{
+				charaData.Name = "Doctor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 3, 3, 3 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 3 };
+			}
+			else if (charaIndex == 2)
+			{
+				charaData.Name = "NouveauRiche";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 8000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 0, 0, 0 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
+			}
+			else if (charaIndex == 3)
+			{
+				charaData.Name = "Fighter";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 3, 3, 3 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
+			}
+			else if (charaIndex == 4)
+			{
+				charaData.Name = "Guardian";
+				charaData.MaxStamina = 7;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 3;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 4, 4, 4 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "guardian_skill", StaminaRec = 0, ChipCost = 4 };
+			}
+			else if (charaIndex == 5)
+			{
+				charaData.Name = "Scammer";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 12000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 15, 15, 15 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "scammer_skill", StaminaRec = 0, ChipCost = 15 };
+			}
+			else if (charaIndex == 6)
+			{
+				charaData.Name = "Debtor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 6000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 1;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 2, 2, 2 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "debtor_skill", StaminaRec = 0, ChipCost = 2 };
+			}
+
+			if (charaIndex >= 0 && charaIndex < CharacterSheetUrls.Length)
+			{
+				string url = CharacterSheetUrls[charaIndex];
+				var csvData = await LoadCSVFromUrlAsync(url);
+
+				if (csvData != null)
+				{
+					int maxStamina;
+					int initMoney;
+					int initChips;
+					int pushPower;
+					int defPower;
+
+					if (csvData.TryGetValue("キャラクター名", out var nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+					else if (csvData.TryGetValue("Name", out nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+
+					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaVals) && maxStaminaVals.Length > 0)
+					{
+						if (int.TryParse(maxStaminaVals[0], out maxStamina))
+							charaData.MaxStamina = maxStamina;
+					}
+					else if (csvData.TryGetValue("MaxStamina", out maxStaminaVals) && maxStaminaVals.Length > 0)
+					{
+						if (int.TryParse(maxStaminaVals[0], out maxStamina))
+							charaData.MaxStamina = maxStamina;
+					}
+
+					if (csvData.TryGetValue("資金", out var initMoneyVals) && initMoneyVals.Length > 0)
+					{
+						if (int.TryParse(initMoneyVals[0], out initMoney))
+							charaData.InitMoney = initMoney;
+					}
+					else if (csvData.TryGetValue("InitMoney", out initMoneyVals) && initMoneyVals.Length > 0)
+					{
+						if (int.TryParse(initMoneyVals[0], out initMoney))
+							charaData.InitMoney = initMoney;
+					}
+
+					if (csvData.TryGetValue("チップ", out var initChipsVals) && initChipsVals.Length > 0)
+					{
+						if (int.TryParse(initChipsVals[0], out initChips))
+							charaData.InitChips = initChips;
+					}
+					else if (csvData.TryGetValue("InitChips", out initChipsVals) && initChipsVals.Length > 0)
+					{
+						if (int.TryParse(initChipsVals[0], out initChips))
+							charaData.InitChips = initChips;
+					}
+
+					if (csvData.TryGetValue("突進", out var pushVals))
+					{
+						if (pushVals.Length > 0 && int.TryParse(pushVals[0], out pushPower))
+							charaData.PushPower = pushPower;
+
+						if (pushVals.Length > 1)
+							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost, isScale: true);
+					}
+
+					if (csvData.TryGetValue("防御", out var defenseVals))
+					{
+						if (defenseVals.Length > 0 && int.TryParse(defenseVals[0], out defPower))
+							charaData.DefensePower = defPower;
+
+						if (defenseVals.Length > 1)
+							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost, isScale: false);
+					}
+
+					if (csvData.TryGetValue("スキル", out var skillVals))
+					{
+						if (skillVals.Length > 1)
+						{
+							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost, isScale: false);
+							charaData.Skills.ChipCost = charaData.SkillCost[0];
+						}
+					}
+
+					if (csvData.TryGetValue("SkillId", out var skillIdVals) && skillIdVals.Length > 0)
+						charaData.Skills.Id = skillIdVals[0];
+				}
+			}
+
+			return charaData;
 		}
 	}
 }
