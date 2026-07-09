@@ -7344,13 +7344,29 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8239918233703120120}
     m_Modifications:
+    - target: {fileID: 2205732014929120193, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
+      propertyPath: m_text
+      value: "\u3069\u308C\u304B\uFF11\u3064\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044"
+      objectReference: {fileID: 0}
+    - target: {fileID: 2205732014929120193, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
+      propertyPath: m_HorizontalAlignment
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 6266714406817718678, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
       propertyPath: m_Name
       value: MissionSelectionPanel
       objectReference: {fileID: 0}
     - target: {fileID: 6266714406817718678, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7171918501775127188, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 520
+      objectReference: {fileID: 0}
+    - target: {fileID: 7171918501775127188, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 540
       objectReference: {fileID: 0}
     - target: {fileID: 7545105994632802393, guid: 4d4d5cd0486ff9f4a9f85b9e98825d55, type: 3}
       propertyPath: m_Pivot.x
