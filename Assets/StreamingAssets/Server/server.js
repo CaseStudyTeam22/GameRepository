@@ -1575,7 +1575,7 @@ function generateMissions(selectedBuff) {
             // High Risk: ステータス報酬確定
             const statusRewards = ['MaxStaminaBonus', 'PushPowerBonus', 'DefenseBonus'];
             rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
-            rewardValue = 1; // 補正値は基本1
+            rewardValue = rewardType === 'MaxStaminaBonus' ? 2 : 1; // スタミナ最大値補正のみ2、それ以外は1
         } else if (selectedBuff === 'low_risk') {
             // Low Risk: チップ報酬確定
             rewardType = 'Chips';

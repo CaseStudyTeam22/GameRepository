@@ -1114,6 +1114,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1037111767}
   - component: {fileID: 1037111766}
+  - component: {fileID: 1037111768}
   m_Layer: 0
   m_Name: SkillPreview
   m_TagString: Untagged
@@ -1157,6 +1158,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1037111768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1037111765}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e63bc14c0b5bc1a48bd65d1e0d610f7d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_CellPrefab: {fileID: 8003279555942131541, guid: 3ce84721fc6915e4eb2329f7cabd6062, type: 3}
+  m_YOffset: 0.1
+  m_OpacityNormal: 0.2
+  m_OpacityHover: 0.7
+  m_OpacityConfirmed: 1
+  m_CellTileFraction: 0.95
+  m_WarningColor: {r: 0.9, g: 0.1, b: 0.1, a: 1}
+  m_PushCosts: 030000000500000009000000
 --- !u!1 &1109167457 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6034784904024675640, guid: 7fa2cf700273af742991ea83815db014, type: 3}

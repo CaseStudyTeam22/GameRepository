@@ -111,15 +111,15 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
 		}
 
-        public async void SubmitReady(bool isAI)
-        {
-            IsReady = true;
+		public async void SubmitReady(bool isAI)
+		{
+			IsReady = true;
 
-            if (m_SelectedCharaData == null)
-            {
-                m_SelectedCharaData =
-                    await BuildCharaDataAsync(m_SelectedCharaIndex);
-            }
+			if (m_SelectedCharaData == null)
+			{
+				m_SelectedCharaData =
+					await BuildCharaDataAsync(m_SelectedCharaIndex);
+			}
 
 			m_Net.Emit(ClientEvents.PlayerReady,
 				new PlayerReadyMessage
@@ -184,7 +184,7 @@ namespace GamblingAction.Domain
 			}
 		}
 
-		private int[] ParseIntArray(string val, int[] defaultValue)
+		private int[] ParseIntArray(string val, int[] defaultValue, bool isScale = false)
 		{
 			if (string.IsNullOrEmpty(val)) return defaultValue;
 			var parts = val.Split(new[] { '/', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -198,11 +198,20 @@ namespace GamblingAction.Domain
 				}
 			}
 
-			// 1つしか数値がない場合、2、3段階目はそれぞれ2倍、3倍にする
+			// 1つしか数値がない場合
 			if (result.Count == 1)
 			{
 				int baseVal = result[0];
-				return new[] { baseVal, baseVal * 2, baseVal * 3 };
+				if (isScale)
+				{
+					// move, push などの場合は 2倍、3倍にする
+					return new[] { baseVal, baseVal * 2, baseVal * 3 };
+				}
+				else
+				{
+					// defense, skill などの場合は同じ値をコピーする
+					return new[] { baseVal, baseVal, baseVal };
+				}
 			}
 
 			return result.Count > 0 ? result.ToArray() : defaultValue;
@@ -552,9 +561,9 @@ namespace GamblingAction.Domain
 				MoveSpeed = 0,
 				MoveCost = new[] { 1, 3, 5 },
 				PushCost = new[] { 3, 5, 9 },
-				AttackCost = new[] { 3, 5, 9 },
+				AttackCost = new[] { 3, 3, 3 }, // attack廃止につき固定値
 				DefenseCost = new[] { 2, 2, 2 },
-				SkillCost = new[] { 3, 5, 9 },
+				SkillCost = new[] { 0, 0, 0 },  // Normalはスキルを持たないため0固定
 				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
 			};
 
@@ -688,7 +697,7 @@ namespace GamblingAction.Domain
 							charaData.PushPower = pushPower;
 
 						if (pushVals.Length > 1)
-							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost);
+							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost, isScale: true);
 					}
 
 					if (csvData.TryGetValue("防御", out var defenseVals))
@@ -697,14 +706,14 @@ namespace GamblingAction.Domain
 							charaData.DefensePower = defPower;
 
 						if (defenseVals.Length > 1)
-							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost);
+							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost, isScale: false);
 					}
 
 					if (csvData.TryGetValue("スキル", out var skillVals))
 					{
 						if (skillVals.Length > 1)
 						{
-							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost);
+							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost, isScale: false);
 							charaData.Skills.ChipCost = charaData.SkillCost[0];
 						}
 					}
