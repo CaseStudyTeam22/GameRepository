@@ -296,6 +296,34 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
       value: LobbyScene
       objectReference: {fileID: 0}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 1306948764}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: QuitGame
+      objectReference: {fileID: 0}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: ExitButton, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 3157813780121384704, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 5009594115769138176, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
       propertyPath: m_text
       value: "\u30B9\u30BF\u30FC\u30C8"
@@ -398,6 +426,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3dc5777e6b067254596daa8d7534e498, type: 3}
+--- !u!114 &1306948764 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4165954463419624992, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+  m_PrefabInstance: {fileID: 856591426}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ae8badee098f64d92ea9103f5baf3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1428510951
 GameObject:
   m_ObjectHideFlags: 0
