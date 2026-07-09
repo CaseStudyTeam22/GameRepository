@@ -68,8 +68,12 @@ namespace GamblingAction.UI
 
 		private IGameState m_State;
 
-		// ブロック内から名前で取得した要素。
-		private TMP_Text m_SelfNameText, m_SelfStateText;
+        [Header("Status Preview")]
+        [SerializeField]
+        private CharaStatusPreviewView m_StatusPreview;
+
+        // ブロック内から名前で取得した要素。
+        private TMP_Text m_SelfNameText, m_SelfStateText;
 		private Image m_SelfStateBg, m_SelfNameBg;
 		private TMP_Text m_OpponentNameText, m_OpponentStateText;
 		private Image m_OpponentStateBg, m_OpponentNameBg;
@@ -115,10 +119,11 @@ namespace GamblingAction.UI
 			m_State.OnPlayersChanged   += Refresh;
 			m_State.OnCountdownStart   += HandleCountdownStart;
 			m_State.OnCountdownCancel  += HandleCountdownCancel;
-			m_State.OnCharaSelected    += HandleCharaSelected;
+			m_State.OnCharaSelected += HandleCharaSelected;
+            m_State.OnSelectedCharaStatusLoaded += HandleSelectedCharaStatusLoaded;
 
-			// Lobby に入ったことをサーバへ通知する（相手側の滑り込み起点）。
-			m_State.SubmitEnterLobby();
+            // Lobby に入ったことをサーバへ通知する（相手側の滑り込み起点）。
+            m_State.SubmitEnterLobby();
 
 			Refresh();
 		}
@@ -135,7 +140,8 @@ namespace GamblingAction.UI
 			m_State.OnCountdownStart   -= HandleCountdownStart;
 			m_State.OnCountdownCancel  -= HandleCountdownCancel;
 			m_State.OnCharaSelected    -= HandleCharaSelected;
-		}
+            m_State.OnSelectedCharaStatusLoaded -= HandleSelectedCharaStatusLoaded;
+        }
 
 		// 各ブロック内の要素を名前で取得する。
 		private void FindElements()
@@ -563,6 +569,21 @@ namespace GamblingAction.UI
                         button.interactable = interactable;
                 }
             }
+        }
+
+        private void HandleSelectedCharaStatusLoaded(CharaDataMessage data)
+        {
+            Debug.Log(
+                $"[LobbyController] ステータス受信 Name={data.Name}, " +
+                $"Stamina={data.MaxStamina}, Push={data.PushPower}, Defense={data.DefensePower}");
+
+            if (m_StatusPreview == null)
+            {
+                Debug.LogError("[LobbyController] m_StatusPreview が未設定です");
+                return;
+            }
+
+            m_StatusPreview.SetStatus(data);
         }
 
     }
