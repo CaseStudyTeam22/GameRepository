@@ -26,7 +26,7 @@ namespace GamblingAction.Domain
 		private readonly INetClient m_Net;
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
-		private int m_SelectedCharaIndex = 0;
+		private int m_SelectedCharaIndex = 1;
 		private CharaDataMessage m_SelectedCharaData;
 		private readonly Dictionary<int, CharaDataMessage> m_CharaDataCache = new();
 
@@ -113,14 +113,13 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
 		}
 
-		public async void SubmitReady(bool isAI)
+		public void SubmitReady(bool isAI)
 		{
 			IsReady = true;
 
 			if (m_SelectedCharaData == null)
 			{
-				m_SelectedCharaData =
-					await BuildCharaDataAsync(m_SelectedCharaIndex);
+				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
 			}
 
 			m_Net.Emit(ClientEvents.PlayerReady,
