@@ -425,9 +425,9 @@ namespace GamblingAction.UI
 						m_CharaButtons[i].onClick.AddListener(() => SelectChara(spriteIndex));
 				}
 			}
-			// ランダムボタンは立ち絵 index 0。
+			// ランダムボタンは 1〜6 (Doctor, NouveauRiche, Fighter, Guardian, Scammer, Debtor) からランダムに選択
 			if (m_RandomButton != null)
-				m_RandomButton.onClick.AddListener(() => SelectChara(0));
+				m_RandomButton.onClick.AddListener(() => SelectChara(UnityEngine.Random.Range(1, 7)));
 		}
 
 		// 自分のキャラ選択（ボタン押下）。選択中ボタンを拡大し、自分側 Portrait を切り替え、
