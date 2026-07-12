@@ -32,6 +32,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("scammerActive")] public bool ScammerActive;
 		[JsonProperty("stamina")]     public int Stamina;
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
+		[JsonProperty("charaIndex")]  public int CharaIndex;
 
 		// --- サーバー側でバフや補正値を適用した後の最終的な現在能力値 ---
 		[JsonProperty("currentMaxStamina")]   public int CurrentMaxStamina;   // バフ・ボーナス適用後の最大スタミナ。UI等でメモリ数を決める際はこちらを直接参照してください。

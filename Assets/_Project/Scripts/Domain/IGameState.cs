@@ -44,6 +44,7 @@ namespace GamblingAction.Domain
 		void SubmitMission(string missionId);
 		void SubmitRoundReady();
 		void SubmitSelectChara(int index);
+		CharaDataMessage GetCharaData(int index);
 		// 敗者がファイナルレイズを発起するか（accept=true）諦めるかを送信。
 		void SubmitFinalRaisePropose(bool accept);
 		// 勝者がファイナルレイズを受諾するか（accept=true）拒否するかを送信。
