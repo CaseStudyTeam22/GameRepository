@@ -1,4 +1,4 @@
-using Codice.CM.SEIDInfo;
+﻿using Codice.CM.SEIDInfo;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -40,7 +40,10 @@ namespace GamblingAction.UI
 		[Tooltip("チップ交換 / カード選択の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
 		[SerializeField] private float m_PrepareSeconds = 20f;
 
-		[Header("Tuning")]
+        [Header("相手待ちの表示切替")]
+        [SerializeField] private GameObject m_WaitingPanel;
+
+        [Header("Tuning")]
 		[Tooltip("決着パネル（RoundOver）を表示しておく秒数。経過後に自動で隠す。サーバの次ラウンド開始待ち（3 秒）に合わせる")]
 		[SerializeField] private float m_RoundOverDisplaySeconds = 3f;
 		[FormerlySerializedAs("executeFlashSeconds")]
@@ -746,7 +749,7 @@ namespace GamblingAction.UI
 			m_State.SubmitExchange(amount);
 			m_ExchangeConfirmButton.interactable = false;
 			m_ExchangeSlider.interactable = false;
-
+            ShowWaitingPanel();
         }
 
 		/// <summary>ミッション選択の本処理。</summary>
@@ -757,7 +760,8 @@ namespace GamblingAction.UI
 			{
 				m_State.SubmitMission(me.AvailableMissions[index].Id);
 				SetActive(m_MissionSelectionPanel, false);
-			}
+                ShowWaitingPanel();
+            }
 		}
 
 		private void SubmitBuff(string id)
@@ -770,6 +774,8 @@ namespace GamblingAction.UI
 
 		private void HandlePhase(EGamePhase phase)
 		{
+            HideWaitingPanel();
+            
 			var me = m_State.Me;
 			bool showExchange = (phase == EGamePhase.Exchange) && (me == null || !me.Exchanged);
 			SetActive(m_ExchangePanel,  showExchange);
@@ -1747,21 +1753,32 @@ namespace GamblingAction.UI
 			SetActive(m_PreparingCountdownPanel, false);
 			SetActive(m_MissionPanel, false);
 			SetActive(m_MissionSelectionPanel, false);
-		}
+            SetActive(m_WaitingPanel, false);
+        }
 
 		private static void SetActive(GameObject go, bool active)
 		{
 			if (go != null && go.activeSelf != active) go.SetActive(active);
 		}
 
+        private void ShowWaitingPanel()
+        {
+            SetActive(m_WaitingPanel, true);
+        }
+
+        private void HideWaitingPanel()
+        {
+            SetActive(m_WaitingPanel, false);
+        }
+        
 		/// <summary>
-		/// 指定した親オブジェクトの配下から、非アクティブオブジェクトも含めて名前で子コンポーネントを再帰的に検索します。
-		/// </summary>
-		/// <typeparam name="T">検索するコンポーネントの型</typeparam>
-		/// <param name="root">検索の起点となるTransform</param>
-		/// <param name="name">検索対象のゲームオブジェクト名</param>
-		/// <returns>見つかったコンポーネント。見つからない場合は null</returns>
-		private static T FindChild<T>(Transform root, string name) where T : Component
+        /// 指定した親オブジェクトの配下から、非アクティブオブジェクトも含めて名前で子コンポーネントを再帰的に検索します。
+        /// </summary>
+        /// <typeparam name="T">検索するコンポーネントの型</typeparam>
+        /// <param name="root">検索の起点となるTransform</param>
+        /// <param name="name">検索対象のゲームオブジェクト名</param>
+        /// <returns>見つかったコンポーネント。見つからない場合は null</returns>
+        private static T FindChild<T>(Transform root, string name) where T : Component
 		{
 			if (root == null)
 			{

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using TMPro;
@@ -64,12 +64,15 @@ namespace GamblingAction.UI
 		private bool m_IsActive;
 		private bool m_Submitted;
 
-		// ─────────────────────────────────────────────────────────────
-		// コントローラー UI 用フィールド（追加）
-		// ─────────────────────────────────────────────────────────────
+        private GameObject m_WaitingPanel;
+        private TMP_Text m_WaitingText;
 
-		/// <summary>左スティック + 十字キーを統合した Vector2 アクション</summary>
-		private InputAction m_NavigateAction;
+        // ─────────────────────────────────────────────────────────────
+        // コントローラー UI 用フィールド（追加）
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>左スティック + 十字キーを統合した Vector2 アクション</summary>
+        private InputAction m_NavigateAction;
 
 		/// <summary>B ボタン（buttonEast）による決定アクション</summary>
 		private InputAction m_ConfirmUiAction;
@@ -107,8 +110,14 @@ namespace GamblingAction.UI
 			m_You = ResolveSide("YouPanel");
 			m_Opp = ResolveSide("OpponentPanel");
 			m_StatusText = FindChild<TMP_Text>(m_Root.transform, "Status");
+			var waitingTr = FindChild<Transform>(m_Root.transform, "WaitinPanel");
+			m_WaitingPanel = waitingTr != null ? waitingTr.gameObject : null;
+			m_WaitingText = m_WaitingPanel != null
+				? FindChild<TMP_Text>(m_WaitingPanel.transform, "WaitingMessageText")
+				: null;
 
-			SetActiveSafe(m_Root, false);
+            HideWaiting();
+            SetActiveSafe(m_Root, false);
 
 			BindClick(m_You.ChallengeButton, () => SubmitProposeIfAllowed(true));
 			BindClick(m_You.FoldButton,      () => SubmitProposeIfAllowed(false));
@@ -377,9 +386,18 @@ namespace GamblingAction.UI
 			// 提案フェーズの操作側は敗者、応答フェーズの操作側は勝者。
 			m_IsActive = stage == EStage.Offer ? meIsProposer : meIsResponder;
 
+			if (m_IsActive)
+			{
+				HideWaiting();
+			}
+			else
+			{
+				ShowWaiting("対戦相手を待っています...");
+			}
+
 			// 自分が操作側のときだけ自分側にボタンを出す。相手側のボタンは常に非表示。
-			// （相手の選択肢は知る必要がない。「相手が選択中」というのは CountdownPanel の存在で伝える）
-			bool youShowLoser  = m_IsActive && stage == EStage.Offer;
+            // （相手の選択肢は知る必要がない。「相手が選択中」というのは CountdownPanel の存在で伝える）
+            bool youShowLoser  = m_IsActive && stage == EStage.Offer;
 			bool youShowWinner = m_IsActive && stage == EStage.Pending;
 
 			SetActiveSafe(m_You.LoserGroup,  youShowLoser);
@@ -514,8 +532,21 @@ namespace GamblingAction.UI
 			if (go != null && go.activeSelf != active) go.SetActive(active);
 		}
 
+        private void ShowWaiting(string text)
+        {
+            if (m_WaitingText != null)
+                m_WaitingText.text = text;
+
+            SetActiveSafe(m_WaitingPanel, true);
+        }
+
+        private void HideWaiting()
+        {
+            SetActiveSafe(m_WaitingPanel, false);
+        }
+        
 		// 直下の子から名前一致を探し、見つからなければ非アクティブも含めて再帰検索する。
-		private static T FindChild<T>(Transform root, string name) where T : Component
+        private static T FindChild<T>(Transform root, string name) where T : Component
 		{
 			if (root == null) return null;
 			var direct = root.Find(name);
