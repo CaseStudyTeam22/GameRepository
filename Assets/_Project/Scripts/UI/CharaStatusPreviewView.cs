@@ -18,9 +18,9 @@ namespace GamblingAction.UI
         [SerializeField] private StatusGauge m_DefenseGauge;
 
         [Header("Gauge Max Values")]
-        [SerializeField] private float m_MaxStaminaView = 7f;
-        [SerializeField] private float m_MaxPushView = 5f;
-        [SerializeField] private float m_MaxDefenseView = 5f;
+        [SerializeField] private float m_MaxStaminaView = 10f;
+        [SerializeField] private float m_MaxPushView = 7f;
+        [SerializeField] private float m_MaxDefenseView = 3f;
         [ContextMenu("Test Status")]
         private void TestStatus()
         {

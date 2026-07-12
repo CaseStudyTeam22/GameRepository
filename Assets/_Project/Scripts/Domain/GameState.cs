@@ -26,12 +26,13 @@ namespace GamblingAction.Domain
 		private readonly INetClient m_Net;
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
-		private int m_SelectedCharaIndex = 0;
-        private CharaDataMessage m_SelectedCharaData;
+		private int m_SelectedCharaIndex = 1;
+		private CharaDataMessage m_SelectedCharaData;
+		private readonly Dictionary<int, CharaDataMessage> m_CharaDataCache = new();
 
-        // この端末を一意に識別するトークン。アプリ起動中は変わらない。
-        // 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
-        private readonly string m_Token = System.Guid.NewGuid().ToString("N");
+		// この端末を一意に識別するトークン。アプリ起動中は変わらない。
+		// 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
+		private readonly string m_Token = System.Guid.NewGuid().ToString("N");
 
 		public string MyId { get; private set; }
 		public int GridSize { get; private set; } = GamblingAction.Core.GameConfig.GridSize;
@@ -95,6 +96,7 @@ namespace GamblingAction.Domain
 			Debug.Log("[GameState] Created instance: " + this.GetHashCode());
 			m_Net = net;
 			Subscribe();
+			_ = PreloadAllCharaDataAsync();
 		}
 
 		public void SubmitIntent(string type, string dir, int power)
@@ -111,14 +113,13 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
 		}
 
-		public async void SubmitReady(bool isAI)
+		public void SubmitReady(bool isAI)
 		{
 			IsReady = true;
 
 			if (m_SelectedCharaData == null)
 			{
-				m_SelectedCharaData =
-					await BuildCharaDataAsync(m_SelectedCharaIndex);
+				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
 			}
 
 			m_Net.Emit(ClientEvents.PlayerReady,
@@ -248,32 +249,31 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.RoundReady, new { });
 		}
 
-        public async void SubmitSelectChara(int index)
-        {
-            if (IsReady)
-            {
-                Debug.Log("Ready中はキャラ変更不可");
-                return;
-            }
+		public void SubmitSelectChara(int index)
+		{
+			if (IsReady)
+			{
+				Debug.Log("Ready中はキャラ変更不可");
+				return;
+			}
 
-            m_SelectedCharaIndex = index;
+			m_SelectedCharaIndex = index;
 
-            m_Net.Emit(ClientEvents.SelectChara,
-                new SelectCharaMessage
-                {
-                    Index = index
-                });
+			m_Net.Emit(ClientEvents.SelectChara,
+				new SelectCharaMessage
+				{
+					Index = index
+				});
 
-            m_SelectedCharaData =
-                await BuildCharaDataAsync(index);
-            Debug.Log(
-    $"名前={m_SelectedCharaData.Name} " +
-    $"体力={m_SelectedCharaData.MaxStamina} " +
-    $"突進={m_SelectedCharaData.PushPower} " +
-    $"防御={m_SelectedCharaData.DefensePower}");
-            OnSelectedCharaStatusLoaded?.Invoke(
-                m_SelectedCharaData);
-        }
+			m_SelectedCharaData = GetCharaData(index);
+			Debug.Log(
+				$"名前={m_SelectedCharaData.Name} " +
+				$"体力={m_SelectedCharaData.MaxStamina} " +
+				$"突進={m_SelectedCharaData.PushPower} " +
+				$"防御={m_SelectedCharaData.DefensePower}");
+			OnSelectedCharaStatusLoaded?.Invoke(
+				m_SelectedCharaData);
+		}
         public void SubmitFinalRaisePropose(bool accept)
 		{
 			m_Net.Emit(ClientEvents.FinalRaisePropose, new FinalRaiseProposeMessage { Accept = accept });
@@ -548,7 +548,33 @@ namespace GamblingAction.Domain
 			OnSuddenDeathStarted?.Invoke();
 		}
 
-		private async Task<CharaDataMessage> BuildCharaDataAsync(int charaIndex)
+		private async Task PreloadAllCharaDataAsync()
+		{
+			var tasks = new List<Task<CharaDataMessage>>();
+			for (int i = 0; i < CharacterSheetUrls.Length; i++)
+			{
+				int index = i;
+				tasks.Add(BuildCharaDataAsync(index));
+			}
+
+			var results = await Task.WhenAll(tasks);
+			for (int i = 0; i < results.Length; i++)
+			{
+				m_CharaDataCache[i] = results[i];
+			}
+			Debug.Log("[GameState] All character data preloaded successfully.");
+		}
+
+		public CharaDataMessage GetCharaData(int index)
+		{
+			if (m_CharaDataCache.TryGetValue(index, out var data))
+			{
+				return data;
+			}
+			return BuildDefaultCharaData(index);
+		}
+
+		private CharaDataMessage BuildDefaultCharaData(int charaIndex)
 		{
 			var charaData = new CharaDataMessage
 			{
@@ -639,6 +665,13 @@ namespace GamblingAction.Domain
 				charaData.SkillCost = new[] { 2, 2, 2 };
 				charaData.Skills = new CharaSkillDataMessage { Id = "debtor_skill", StaminaRec = 0, ChipCost = 2 };
 			}
+
+			return charaData;
+		}
+
+		private async Task<CharaDataMessage> BuildCharaDataAsync(int charaIndex)
+		{
+			var charaData = BuildDefaultCharaData(charaIndex);
 
 			if (charaIndex >= 0 && charaIndex < CharacterSheetUrls.Length)
 			{

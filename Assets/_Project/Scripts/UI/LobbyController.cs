@@ -70,7 +70,9 @@ namespace GamblingAction.UI
 
         [Header("Status Preview")]
         [SerializeField]
-        private CharaStatusPreviewView m_StatusPreview;
+        private CharaStatusPreviewView m_SelfStatusPreview;
+        [SerializeField]
+        private CharaStatusPreviewView m_OpponentStatusPreview;
 
         // ブロック内から名前で取得した要素。
         private TMP_Text m_SelfNameText, m_SelfStateText;
@@ -291,6 +293,36 @@ namespace GamblingAction.UI
 
 			ApplyLabels(me, opponent);
 			ApplyGlobalState(me, opponent);
+			UpdateStatusPreviews(me, opponent);
+		}
+
+		private void UpdateStatusPreviews(PlayerDto me, PlayerDto opponent)
+		{
+			if (m_SelfStatusPreview != null)
+			{
+				if (me != null)
+				{
+					var data = m_State.GetCharaData(me.CharaIndex);
+					m_SelfStatusPreview.SetStatus(data);
+				}
+				else
+				{
+					m_SelfStatusPreview.Clear();
+				}
+			}
+
+			if (m_OpponentStatusPreview != null)
+			{
+				if (opponent != null && opponent.InLobby)
+				{
+					var data = m_State.GetCharaData(opponent.CharaIndex);
+					m_OpponentStatusPreview.SetStatus(data);
+				}
+				else
+				{
+					m_OpponentStatusPreview.Clear();
+				}
+			}
 		}
 
 		// 名札 → BG → 準備状態 の順に、間隔を空けて滑り込ませる。
@@ -416,6 +448,12 @@ namespace GamblingAction.UI
 		{
 			if (playerId == m_State.MyId) return;
 			m_OpponentSwapper?.Swap(index);
+
+			if (m_OpponentStatusPreview != null)
+			{
+				var data = m_State.GetCharaData(index);
+				m_OpponentStatusPreview.SetStatus(data);
+			}
 		}
 
 		private void SetButtonScale(Button button, bool selected)
@@ -447,6 +485,13 @@ namespace GamblingAction.UI
 			SetButtonScale(m_RandomButton, true);
 			for (int i = 0; i < m_CharaButtons.Length; i++)
 				SetButtonScale(m_CharaButtons[i], false);
+
+			// 相手が既に在室していてキャラ選択済みであれば Portrait も初期同期する
+			var opponent = m_State.Opponent;
+			if (opponent != null && opponent.InLobby && opponent.CharaIndex != 0)
+			{
+				m_OpponentSwapper?.Swap(opponent.CharaIndex);
+			}
 		}
 
 		// 片側の Portrait（2 枚スロット）のキャラ切替を担う。旧絵を外側へ退場させつつ、
@@ -571,20 +616,20 @@ namespace GamblingAction.UI
             }
         }
 
-        private void HandleSelectedCharaStatusLoaded(CharaDataMessage data)
-        {
-            Debug.Log(
-                $"[LobbyController] ステータス受信 Name={data.Name}, " +
-                $"Stamina={data.MaxStamina}, Push={data.PushPower}, Defense={data.DefensePower}");
+		private void HandleSelectedCharaStatusLoaded(CharaDataMessage data)
+		{
+			Debug.Log(
+				$"[LobbyController] ステータス受信 Name={data.Name}, " +
+				$"Stamina={data.MaxStamina}, Push={data.PushPower}, Defense={data.DefensePower}");
 
-            if (m_StatusPreview == null)
-            {
-                Debug.LogError("[LobbyController] m_StatusPreview が未設定です");
-                return;
-            }
+			if (m_SelfStatusPreview == null)
+			{
+				Debug.LogError("[LobbyController] m_SelfStatusPreview が未設定です");
+				return;
+			}
 
-            m_StatusPreview.SetStatus(data);
-        }
+			m_SelfStatusPreview.SetStatus(data);
+		}
 
     }
 }
