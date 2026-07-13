@@ -11,16 +11,32 @@ namespace GamblingAction.UI
         [SerializeField] private TMP_Text m_StaminaText;
         [SerializeField] private TMP_Text m_PushText;
         [SerializeField] private TMP_Text m_DefenseText;
+        [SerializeField] private TMP_Text m_MoneyText;       // 初期所持金
+        [SerializeField] private TMP_Text m_PushCostText;    // 突進消費チップ
+        [SerializeField] private TMP_Text m_DefenseCostText; // 防御消費チップ
+        [SerializeField] private TMP_Text m_SkillCostText;   // スキル消費チップ
 
         [Header("Gauges")]
         [SerializeField] private StatusGauge m_StaminaGauge;
         [SerializeField] private StatusGauge m_PushGauge;
         [SerializeField] private StatusGauge m_DefenseGauge;
+        [SerializeField] private StatusGauge m_MoneyGauge;       // 初期所持金
+        [SerializeField] private StatusGauge m_PushCostGauge;    // 突進消費チップ
+        [SerializeField] private StatusGauge m_DefenseCostGauge; // 防御消費チップ
+        [SerializeField] private StatusGauge m_SkillCostGauge;   // スキル消費チップ
 
         [Header("Gauge Max Values")]
         [SerializeField] private float m_MaxStaminaView = 10f;
         [SerializeField] private float m_MaxPushView = 7f;
         [SerializeField] private float m_MaxDefenseView = 3f;
+        [SerializeField] private float m_MaxMoneyView = 20000f;
+        [SerializeField] private float m_MaxPushCostView = 180f;
+        [SerializeField] private float m_MaxDefenseCostView = 150f;
+        [SerializeField] private float m_MaxSkillCostView = 150f;
+
+        [Header("Animation")]
+        [SerializeField] private float m_AnimationDuration = 0.3f;
+
         [ContextMenu("Test Status")]
         private void TestStatus()
         {
@@ -29,19 +45,28 @@ namespace GamblingAction.UI
                 Name = "Doctor",
                 MaxStamina = 5,
                 PushPower = 2,
-                DefensePower = 3
-            });
+                DefensePower = 1,
+                InitMoney = 10000,
+                PushCost = new[] { 60 },
+                DefenseCost = new[] { 90 },
+                Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 150 }
+            }, animate: true);
         }
 
-        public void SetStatus(CharaDataMessage data)
+        /// <summary>
+        /// キャラクターのステータスを表示する。
+        /// </summary>
+        /// <param name="data">表示するキャラクターデータ</param>
+        /// <param name="animate">true のとき、ゲージをアニメーションして更新する</param>
+        public void SetStatus(CharaDataMessage data, bool animate = false)
         {
-            Debug.Log("★★ SetStatus呼ばれた ★★");
             if (data == null)
             {
                 Clear();
                 return;
             }
 
+            // テキスト更新（即時）
             if (m_NameText != null)
                 m_NameText.text = data.Name;
 
@@ -54,38 +79,63 @@ namespace GamblingAction.UI
             if (m_DefenseText != null)
                 m_DefenseText.text = $"防御 {data.DefensePower}";
 
-            if (m_StaminaGauge != null)
-                m_StaminaGauge.SetValue(data.MaxStamina, m_MaxStaminaView);
+            if (m_MoneyText != null)
+                m_MoneyText.text = $"資金 {data.InitMoney:N0}";
 
-            if (m_PushGauge != null)
-                m_PushGauge.SetValue(data.PushPower, m_MaxPushView);
+            int pushCost    = data.PushCost    != null && data.PushCost.Length    > 0 ? data.PushCost[0]    : 0;
+            int defenseCost = data.DefenseCost != null && data.DefenseCost.Length > 0 ? data.DefenseCost[0] : 0;
+            int skillCost   = data.Skills != null ? data.Skills.ChipCost : 0;
 
-            if (m_DefenseGauge != null)
-                m_DefenseGauge.SetValue(data.DefensePower, m_MaxDefenseView);
+            if (m_PushCostText != null)
+                m_PushCostText.text = $"突進コスト {pushCost}";
+
+            if (m_DefenseCostText != null)
+                m_DefenseCostText.text = $"防御コスト {defenseCost}";
+
+            if (m_SkillCostText != null)
+                m_SkillCostText.text = $"スキルコスト {skillCost}";
+
+            // ゲージ更新（アニメーションあり / なし）
+            if (animate)
+            {
+                m_StaminaGauge?.SetValueAnimated(data.MaxStamina, m_MaxStaminaView, m_AnimationDuration);
+                m_PushGauge?.SetValueAnimated(data.PushPower, m_MaxPushView, m_AnimationDuration);
+                m_DefenseGauge?.SetValueAnimated(data.DefensePower, m_MaxDefenseView, m_AnimationDuration);
+                m_MoneyGauge?.SetValueAnimated(data.InitMoney, m_MaxMoneyView, m_AnimationDuration);
+                m_PushCostGauge?.SetValueAnimated(pushCost, m_MaxPushCostView, m_AnimationDuration);
+                m_DefenseCostGauge?.SetValueAnimated(defenseCost, m_MaxDefenseCostView, m_AnimationDuration);
+                m_SkillCostGauge?.SetValueAnimated(skillCost, m_MaxSkillCostView, m_AnimationDuration);
+            }
+            else
+            {
+                m_StaminaGauge?.SetValue(data.MaxStamina, m_MaxStaminaView);
+                m_PushGauge?.SetValue(data.PushPower, m_MaxPushView);
+                m_DefenseGauge?.SetValue(data.DefensePower, m_MaxDefenseView);
+                m_MoneyGauge?.SetValue(data.InitMoney, m_MaxMoneyView);
+                m_PushCostGauge?.SetValue(pushCost, m_MaxPushCostView);
+                m_DefenseCostGauge?.SetValue(defenseCost, m_MaxDefenseCostView);
+                m_SkillCostGauge?.SetValue(skillCost, m_MaxSkillCostView);
+            }
         }
 
         public void Clear()
         {
-            if (m_NameText != null)
-                m_NameText.text = "";
+            if (m_NameText != null)       m_NameText.text       = "";
+            if (m_StaminaText != null)    m_StaminaText.text    = "スタミナ";
+            if (m_PushText != null)       m_PushText.text       = "突進";
+            if (m_DefenseText != null)    m_DefenseText.text    = "防御";
+            if (m_MoneyText != null)      m_MoneyText.text      = "資金";
+            if (m_PushCostText != null)   m_PushCostText.text   = "突進コスト";
+            if (m_DefenseCostText != null)m_DefenseCostText.text = "防御コスト";
+            if (m_SkillCostText != null)  m_SkillCostText.text  = "スキルコスト";
 
-            if (m_StaminaText != null)
-                m_StaminaText.text = "スタミナ";
-
-            if (m_PushText != null)
-                m_PushText.text = "突進";
-
-            if (m_DefenseText != null)
-                m_DefenseText.text = "防御";
-
-            if (m_StaminaGauge != null)
-                m_StaminaGauge.SetValue(0, 1);
-
-            if (m_PushGauge != null)
-                m_PushGauge.SetValue(0, 1);
-
-            if (m_DefenseGauge != null)
-                m_DefenseGauge.SetValue(0, 1);
+            m_StaminaGauge?.SetValue(0, 1);
+            m_PushGauge?.SetValue(0, 1);
+            m_DefenseGauge?.SetValue(0, 1);
+            m_MoneyGauge?.SetValue(0, 1);
+            m_PushCostGauge?.SetValue(0, 1);
+            m_DefenseCostGauge?.SetValue(0, 1);
+            m_SkillCostGauge?.SetValue(0, 1);
         }
     }
 }

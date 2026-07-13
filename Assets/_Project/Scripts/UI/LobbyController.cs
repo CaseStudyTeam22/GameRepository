@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -444,7 +444,7 @@ namespace GamblingAction.UI
 			if (m_SelfStatusPreview != null)
 			{
 				var data = m_State.GetCharaData(spriteIndex);
-				m_SelfStatusPreview.SetStatus(data);
+				m_SelfStatusPreview.SetStatus(data, animate: true);
 			}
 		}
 
@@ -457,7 +457,7 @@ namespace GamblingAction.UI
 			if (m_OpponentStatusPreview != null)
 			{
 				var data = m_State.GetCharaData(index);
-				m_OpponentStatusPreview.SetStatus(data);
+				m_OpponentStatusPreview.SetStatus(data, animate: true);
 			}
 		}
 
