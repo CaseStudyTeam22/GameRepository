@@ -5,7 +5,8 @@
         "GamblingAction.Core",
         "GamblingAction.Domain",
         "Unity.TextMeshPro",
-        "Unity.Cinemachine"
+        "Unity.Cinemachine",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

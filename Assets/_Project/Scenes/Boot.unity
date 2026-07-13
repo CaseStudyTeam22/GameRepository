@@ -829,6 +829,8 @@ GameObject:
   m_Component:
   - component: {fileID: 743388355}
   - component: {fileID: 743388354}
+  - component: {fileID: 743388356}
+  - component: {fileID: 743388357}
   m_Layer: 0
   m_Name: InputModule
   m_TagString: Untagged
@@ -849,6 +851,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_WorldCamera: {fileID: 0}
+  m_PlayerInput: {fileID: 0}
 --- !u!4 &743388355
 Transform:
   m_ObjectHideFlags: 0
@@ -864,6 +867,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &743388356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 743388353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3335b24ff544b564fa9b6f7778600dbc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_HapticsEnabled: 1
+  m_MasterScale: 1
+  m_BeatHapticsEnabled: 1
+  m_NormalBeatLow: 0.15
+  m_NormalBeatHigh: 0.1
+  m_NormalBeatDuration: 0.06
+  m_BigBeatLow: 0.7
+  m_BigBeatHigh: 0.55
+  m_BigBeatDuration: 0.18
+  m_PushLow: 0.85
+  m_PushHigh: 0.6
+  m_PushDuration: 0.22
+  m_PushedLow: 1
+  m_PushedHigh: 0.8
+  m_PushedDuration: 0.3
+  m_Move1Low: 0.2
+  m_Move2Low: 0.45
+  m_Move3Low: 0.7
+  m_MoveHigh: 0.15
+  m_MoveDuration: 0.12
+--- !u!114 &743388357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 743388353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_NotificationBehavior: 3
+  m_UIInputModule: {fileID: 0}
+  m_DeviceLostEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_DeviceRegainedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_ControlsChangedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_ActionEvents: []
+  m_NeverAutoSwitchControlSchemes: 0
+  m_DefaultControlScheme: 
+  m_DefaultActionMap: df70fa95-8a34-4494-b137-73ab6b9c7d37
+  m_SplitScreenIndex: -1
+  m_Camera: {fileID: 0}
 --- !u!114 &813513616 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6200406811927784564, guid: 7fa2cf700273af742991ea83815db014, type: 3}
@@ -1214,6 +1279,50 @@ MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 5749358884275346562, guid: b8d3d11a992641148970b7acd5203151, type: 3}
   m_PrefabInstance: {fileID: 1432181988}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1584840828
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1584840830}
+  - component: {fileID: 1584840829}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1584840829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1584840828}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d11afc7a468502240940af79a5de8573, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1584840830
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1584840828}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 339.07153, y: 252.92468, z: -265.1869}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1695368600 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2459239399177001719, guid: 7fa2cf700273af742991ea83815db014, type: 3}
@@ -2148,3 +2257,4 @@ SceneRoots:
   - {fileID: 1718130174}
   - {fileID: 1432181988}
   - {fileID: 244478023}
+  - {fileID: 1584840830}
