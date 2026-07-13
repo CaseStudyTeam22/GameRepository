@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -84,7 +84,6 @@ namespace GamblingAction.Domain
 		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
 		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		public event Action OnFinalRaiseStarted;
-        public event Action<CharaDataMessage> OnSelectedCharaStatusLoaded;
         /// イカサマスキル発動中に相手の intent が更新された際、イカサマプレイヤーのみに通知されるイベント。
         /// UI表示は未実装（骨格のみ）。
         public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
@@ -271,8 +270,6 @@ namespace GamblingAction.Domain
 				$"体力={m_SelectedCharaData.MaxStamina} " +
 				$"突進={m_SelectedCharaData.PushPower} " +
 				$"防御={m_SelectedCharaData.DefensePower}");
-			OnSelectedCharaStatusLoaded?.Invoke(
-				m_SelectedCharaData);
 		}
         public void SubmitFinalRaisePropose(bool accept)
 		{

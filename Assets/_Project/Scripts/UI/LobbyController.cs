@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -122,7 +122,6 @@ namespace GamblingAction.UI
 			m_State.OnCountdownStart   += HandleCountdownStart;
 			m_State.OnCountdownCancel  += HandleCountdownCancel;
 			m_State.OnCharaSelected += HandleCharaSelected;
-            m_State.OnSelectedCharaStatusLoaded += HandleSelectedCharaStatusLoaded;
 
             // Lobby に入ったことをサーバへ通知する（相手側の滑り込み起点）。
             m_State.SubmitEnterLobby();
@@ -142,7 +141,6 @@ namespace GamblingAction.UI
 			m_State.OnCountdownStart   -= HandleCountdownStart;
 			m_State.OnCountdownCancel  -= HandleCountdownCancel;
 			m_State.OnCharaSelected    -= HandleCharaSelected;
-            m_State.OnSelectedCharaStatusLoaded -= HandleSelectedCharaStatusLoaded;
         }
 
 		// 各ブロック内の要素を名前で取得する。
@@ -441,6 +439,13 @@ namespace GamblingAction.UI
 
 			m_SelfSwapper?.Swap(spriteIndex);
 			m_State.SubmitSelectChara(spriteIndex);
+
+			// 自分のステータスプレビューを即時更新（サーバー応答待ちなしで立即反映）
+			if (m_SelfStatusPreview != null)
+			{
+				var data = m_State.GetCharaData(spriteIndex);
+				m_SelfStatusPreview.SetStatus(data);
+			}
 		}
 
 		// サーバからの選択同期。自分の分はローカルで再生済みなので無視し、相手の分だけ反映する。
@@ -615,21 +620,6 @@ namespace GamblingAction.UI
                 }
             }
         }
-
-		private void HandleSelectedCharaStatusLoaded(CharaDataMessage data)
-		{
-			Debug.Log(
-				$"[LobbyController] ステータス受信 Name={data.Name}, " +
-				$"Stamina={data.MaxStamina}, Push={data.PushPower}, Defense={data.DefensePower}");
-
-			if (m_SelfStatusPreview == null)
-			{
-				Debug.LogError("[LobbyController] m_SelfStatusPreview が未設定です");
-				return;
-			}
-
-			m_SelfStatusPreview.SetStatus(data);
-		}
 
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using GamblingAction.Core.Dto;
 
@@ -81,6 +81,5 @@ namespace GamblingAction.Domain
 		event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
 		// サドンデス開始通知。ファイナルレイズとは別のフェーズ。
 		event Action OnSuddenDeathStarted;
-		event Action<CharaDataMessage> OnSelectedCharaStatusLoaded;
 	}
 }

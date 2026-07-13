@@ -1,20 +1,20 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 namespace GamblingAction.Audio
 {
-    // IBeatClock‚ğw“Ç‚µ‚Ä”‚Ìó‘Ô‚ğUI‚Å•\¦‚·‚éƒXƒNƒŠƒvƒg
-    // Œ»İ‚Ì”‚ğƒnƒCƒ‰ƒCƒg•\¦‚·‚é
+    // IBeatClockã‚’è³¼èª­ã—ã¦æ‹ã®çŠ¶æ…‹ã‚’UIã§è¡¨ç¤ºã™ã‚‹ã‚¹ã‚¯ãƒªãƒ—ãƒˆ
+    // ç¾åœ¨ã®æ‹ã‚’ãƒã‚¤ãƒ©ã‚¤ãƒˆè¡¨ç¤ºã™ã‚‹
     public class BeatIndicatorUI : MonoBehaviour
     {
         [Header("UI")]
-        [Tooltip("‰~‚ğ•À‚×‚éeƒIƒuƒWƒFƒNƒgiHorizontalLayoutGroup‚ğ„§j")]
+        [Tooltip("å††ã‚’ä¸¦ã¹ã‚‹è¦ªã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆï¼ˆHorizontalLayoutGroupã‚’æ¨å¥¨ï¼‰")]
         [SerializeField] private RectTransform m_BeatContainer;
-        [Tooltip("BPME””EBeatDurationEBarDuration‚ğ•\¦‚·‚éƒeƒLƒXƒg")]
+        [Tooltip("BPMãƒ»æ‹æ•°ãƒ»BeatDurationãƒ»BarDurationã‚’è¡¨ç¤ºã™ã‚‹ãƒ†ã‚­ã‚¹ãƒˆ")]
         [SerializeField] private TextMeshProUGUI m_InfoText;
 
-        [Header("‰~‚Ìİ’è")]
+        [Header("å††ã®è¨­å®š")]
         [SerializeField] private float m_CircleSize = 60f;
         [SerializeField] private Color m_ActiveColor = Color.cyan;
         [SerializeField] private Color m_InactiveColor = Color.gray;
@@ -29,7 +29,7 @@ namespace GamblingAction.Audio
 
             if (beatClock == null)
             {
-                Debug.LogError("[BeatIndicatorUI] BeatClock‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñBƒV[ƒ“‚ÉBeatManager‚ª‘¶İ‚·‚é‚©Šm”F‚µ‚Ä‚­‚¾‚³‚¢B");
+                Debug.LogError("[BeatIndicatorUI] BeatClockãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“ã€‚ã‚·ãƒ¼ãƒ³ã«BeatManagerãŒå­˜åœ¨ã™ã‚‹ã‹ç¢ºèªã—ã¦ãã ã•ã„ã€‚");
                 return;
             }
 
@@ -54,15 +54,15 @@ namespace GamblingAction.Audio
                 return;
             }
 
-            // BeatsPerBar‚ª•Ï‚í‚Á‚½‚ç‰~‚ğÄ¶¬‚·‚é
-            // BGM‚ª•Ï‚í‚Á‚Ä”q‚ª•Ï‚í‚Á‚½ê‡‚É©“®’Ç]‚·‚é
+            // BeatsPerBarãŒå¤‰ã‚ã£ãŸã‚‰å††ã‚’å†ç”Ÿæˆã™ã‚‹
+            // BGMãŒå¤‰ã‚ã£ã¦æ‹å­ãŒå¤‰ã‚ã£ãŸå ´åˆã«è‡ªå‹•è¿½å¾“ã™ã‚‹
             if (m_BeatClock.BeatsPerBar != m_LastBeatsPerBar)
             {
                 RebuildCircles(m_BeatClock.BeatsPerBar);
                 m_LastBeatsPerBar = m_BeatClock.BeatsPerBar;
             }
 
-            // î•ñƒeƒLƒXƒg‚ğXV‚·‚é
+            // æƒ…å ±ãƒ†ã‚­ã‚¹ãƒˆã‚’æ›´æ–°ã™ã‚‹
             if (m_InfoText != null)
             {
                 float bpm = m_BeatClock.BeatDuration > 0f
@@ -77,7 +77,7 @@ namespace GamblingAction.Audio
             }
         }
 
-        // Œ»İ‚Ì”‚Ì‰~‚ğƒnƒCƒ‰ƒCƒg‚·‚é
+        // ç¾åœ¨ã®æ‹ã®å††ã‚’ãƒã‚¤ãƒ©ã‚¤ãƒˆã™ã‚‹
         private void HandleBeat(int beat)
         {
             if (m_BeatCircles == null)
@@ -91,10 +91,10 @@ namespace GamblingAction.Audio
             }
         }
 
-        // BeatsPerBar‚Ì”‚¾‚¯‰~‚ğ¶¬‚·‚é
+        // BeatsPerBarã®æ•°ã ã‘å††ã‚’ç”Ÿæˆã™ã‚‹
         private void RebuildCircles(int count)
         {
-            // Šù‘¶‚Ì‰~‚ğ‘S‚Äíœ‚·‚é
+            // æ—¢å­˜ã®å††ã‚’å…¨ã¦å‰Šé™¤ã™ã‚‹
             foreach (Transform child in m_BeatContainer)
             {
                 Destroy(child.gameObject);

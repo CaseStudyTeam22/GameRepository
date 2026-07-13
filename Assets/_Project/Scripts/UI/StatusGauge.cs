@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 namespace GamblingAction.UI
@@ -7,17 +7,23 @@ namespace GamblingAction.UI
 	{
 		[SerializeField] private Image m_FillImage;
 
+		private float m_CurrentRatio = -1f;
+
+		/// <summary>
+		/// ゲージ値を設定する。値が変わっていない場合は Canvas Rebuild をスキップする。
+		/// NOTE: m_FillImage の Image Type を Filled / Fill Method: Horizontal に設定してください。
+		/// </summary>
 		public void SetValue(float value, float maxValue)
 		{
 			if (m_FillImage == null) return;
 
 			float ratio = maxValue <= 0f ? 0f : Mathf.Clamp01(value / maxValue);
 
-			// Sliced 画像の伸縮をアンカーのみで制御（マージンは親のAreaオブジェクトが担保するため、オフセットはゼロ）
-			m_FillImage.rectTransform.anchorMin = new Vector2(0f, 0f);
-			m_FillImage.rectTransform.anchorMax = new Vector2(ratio, 1f);
-			m_FillImage.rectTransform.offsetMin = Vector2.zero;
-			m_FillImage.rectTransform.offsetMax = Vector2.zero;
+			// 値が変わっていなければ Canvas Rebuild をスキップ
+			if (Mathf.Approximately(m_CurrentRatio, ratio)) return;
+			m_CurrentRatio = ratio;
+
+			m_FillImage.fillAmount = ratio;
 		}
 	}
 }
