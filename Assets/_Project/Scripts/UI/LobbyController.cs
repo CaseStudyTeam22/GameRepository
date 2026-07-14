@@ -127,6 +127,11 @@ namespace GamblingAction.UI
             m_State.SubmitEnterLobby();
 
 			Refresh();
+
+			// 初期選択を Doctor（index 1）に設定する。
+			// スプレッドシートのキャッシュが揃っていればその値を、
+			// まだ読み込み中なら「読み込み中...」を表示する。
+			SelectChara(1);
 		}
 
 		private void OnDestroy()
