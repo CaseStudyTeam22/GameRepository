@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace GamblingAction.Core.Dto
 {
 	public class InitMessage
 	{
-		[JsonProperty("id")]       public string Id;
-		[JsonProperty("players")]  public Dictionary<string, PlayerDto> Players;
+		[JsonProperty("id")] public string Id;
+		[JsonProperty("players")] public Dictionary<string, PlayerDto> Players;
 		[JsonProperty("gridSize")] public int GridSize;
 	}
 
@@ -17,9 +17,17 @@ namespace GamblingAction.Core.Dto
 
 	public class BeatMessage
 	{
-		[JsonProperty("beat")]       public int Beat;
-		[JsonProperty("timeLeft")]   public int TimeLeft;
-		[JsonProperty("gameActive")] public bool GameActive;
+		[JsonProperty("beat")]                 public int Beat;
+		[JsonProperty("timeLeft")]             public int TimeLeft;
+		[JsonProperty("gameActive")]           public bool GameActive;
+		[JsonProperty("cycleCount")]           public int CycleCount;
+		[JsonProperty("barIndex")]             public int BarIndex;
+		[JsonProperty("beatSequence")]         public long BeatSequence;
+		[JsonProperty("roundId")]              public long RoundId;
+		[JsonProperty("beatStartServerMs")]    public long BeatStartServerMs;
+		[JsonProperty("nextBoundaryServerMs")] public long NextBoundaryServerMs;
+		[JsonProperty("beatIntervalMs")]       public int BeatIntervalMs;
+		[JsonProperty("beatsPerBar")]          public int BeatsPerBar;
 	}
 
 	public class RoundOverMessage
@@ -40,29 +48,35 @@ namespace GamblingAction.Core.Dto
 	public class CharaSelectedMessage
 	{
 		[JsonProperty("playerId")] public string PlayerId;
-		[JsonProperty("index")]    public int Index;
+		[JsonProperty("index")] public int Index;
 	}
 
 	// ファイナルレイズの提案フェーズ開始。敗者（proposerRole）が発起するかを決める。
 	public class FinalRaiseOfferMessage
 	{
-		[JsonProperty("proposerRole")]  public string ProposerRole;
+		[JsonProperty("proposerRole")] public string ProposerRole;
 		[JsonProperty("responderRole")] public string ResponderRole;
-		[JsonProperty("timeoutMs")]     public int TimeoutMs;
+		[JsonProperty("timeoutMs")] public int TimeoutMs;
 	}
 
 	// 敗者が発起した後の、勝者の応答待ちフェーズ。
 	public class FinalRaisePendingMessage
 	{
-		[JsonProperty("proposerRole")]  public string ProposerRole;
+		[JsonProperty("proposerRole")] public string ProposerRole;
 		[JsonProperty("responderRole")] public string ResponderRole;
-		[JsonProperty("timeoutMs")]     public int TimeoutMs;
+		[JsonProperty("timeoutMs")] public int TimeoutMs;
 	}
 
 	// ファイナルレイズが中断された理由（拒否 / タイムアウト / 切断）。
 	public class FinalRaiseCanceledMessage
 	{
 		[JsonProperty("reason")] public string Reason;
+	}
+
+	// イカサマスキル発動中、相手が intent を送信した際にイカサマのみに届く通知。
+	public class OpponentIntentRevealedMessage
+	{
+		[JsonProperty("intent")] public IntentDto Intent;
 	}
 
 	public static class ServerEvents
@@ -96,6 +110,9 @@ namespace GamblingAction.Core.Dto
 		public const string FinalRaiseCanceled   = "final_raise_canceled";
 		// 勝者が受諾し、ファイナルレイズ本番ラウンドへ入る通知。
 		public const string FinalRaiseStarted    = "final_raise_started";
+		// イカサマスキル発動中、相手のintentが更新された際にイカサマプレイヤーのみに送信される通知。
+		public const string OpponentIntentRevealed = "opponent_intent_revealed";
+
 		// 既に 2 人ぶんの席が埋まっているため入室を断られた通知。直後にサーバから切断される。
 		public const string RoomFull             = "room_full";
 	}

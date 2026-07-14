@@ -3,6 +3,7 @@ using GamblingAction.Domain;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
+using UnityInput = UnityEngine.Input;
 
 namespace GamblingAction.Input
 {
@@ -53,6 +54,15 @@ namespace GamblingAction.Input
 		// 同じ GameObject に付いている PlayerInput。未設定なら自動取得する。
 		[SerializeField] private PlayerInput m_PlayerInput;
 
+#if UNITY_EDITOR
+		// デバッグ時のみデフォルト値はtrueとして、コードやエディタから設定可能にする
+		[Header("【debug】長押ししなくてもコマンドを受け付けるか")]
+		[SerializeField] private bool m_KeepActionOnRelease = true;
+#else
+		// ビルド後は強制的にfalse（長押し必須）
+		private const bool m_KeepActionOnRelease = false;
+#endif
+
 		// ─────────────────────────────────────────────────────────────
 		// InputAction 参照（PlayerInput のアセットから取得）
 		// ─────────────────────────────────────────────────────────────
@@ -85,6 +95,12 @@ namespace GamblingAction.Input
 		private string m_ActiveMode;
 		private string m_LastSentDir;
 		private int    m_Power = 1;
+
+		private float m_GamepadNavCooldown;
+		private const float k_GamepadNavCooldownTime = 0.2f;
+
+		private int m_GamepadHoverX = -1;
+		private int m_GamepadHoverY = -1;
 
 		// ─────────────────────────────────────────────────────────────
 		// ライフサイクル
@@ -214,6 +230,8 @@ namespace GamblingAction.Input
 			m_LastSentDir            = null;
 			m_Power                  = 1;
 			m_StickDirChangeCooldown = 0f;
+			m_GamepadHoverX          = -1;
+			m_GamepadHoverY          = -1;
 			LocalIntentBus.Clear();
 		}
 
@@ -232,8 +250,11 @@ namespace GamblingAction.Input
 
 			m_StickDirChangeCooldown -= Time.deltaTime;
 
-			// スキルモード中は左スティック or マウスで方向をリアルタイム更新する
+			// スキルモード中（Push以外）は左スティック or マウスで方向をリアルタイム更新する
 			HandleDirectionUpdate();
+
+			// Pushモード中のグリッドホバー選択処理
+			HandleHover();
 		}
 
 		private bool CanAcceptInput()
@@ -265,28 +286,38 @@ namespace GamblingAction.Input
 			m_ActiveMode        = mode;
 			m_Power             = 1;
 
-			if (mode == IntentTypes.Rest)
+			if (mode == IntentTypes.Skill)
 			{
 				m_LastSentDir = null;
-				m_State.SubmitIntent(IntentTypes.Rest, null, m_Power);
-				PublishLocal();
+				m_State.SubmitIntent(IntentTypes.Skill, null, m_Power);
+				LocalIntentBus.Set(IntentTypes.Skill, null, m_Power, -1, -1, -1, -1, true);
 				return;
 			}
 
-			string dir = ResolveDir();
-
-			if (mode == IntentTypes.Defense && dir == null)
+			if (mode == IntentTypes.Defense)
 			{
 				// 防御は方向なしでも有効
 				m_LastSentDir = null;
-				m_State.SubmitIntent(mode, null, m_Power);
-				PublishLocal();
+				m_State.SubmitIntent(IntentTypes.Defense, null, m_Power);
+				LocalIntentBus.Set(IntentTypes.Defense, null, m_Power, -1, -1, -1, -1, true);
 				return;
 			}
 
+			if (mode == IntentTypes.Push)
+			{
+				// Pushはグリッド選択モードに入るため、方向はここでは送信しない
+				m_LastSentDir = null;
+				m_GamepadHoverX = -1;
+				m_GamepadHoverY = -1;
+				LocalIntentBus.Set(IntentTypes.Push, null, m_Power, -1, -1, -1, -1, false);
+				return;
+			}
+
+			// それ以外のモードでは方向が必要
+			string dir = ResolveDir();
 			if (dir == null)
 			{
-				PublishLocal();
+				m_LastSentDir = null;
 				return;
 			}
 
@@ -301,6 +332,9 @@ namespace GamblingAction.Input
 		{
 			if (m_ActiveSkillAction == null) return;
 			if (ctx.action != m_ActiveSkillAction) return;
+
+			if (m_KeepActionOnRelease) return;
+
 			CancelAll();
 		}
 
@@ -313,15 +347,75 @@ namespace GamblingAction.Input
 		{
 			if (!CanAcceptInput()) return;
 
-			string dir = ResolveDir();
-			if (dir == null) return;
+			// Pushモードのときはグリッド選択ベースの決定処理を行う
+			if (!string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode == IntentTypes.Push)
+			{
+				if (LocalIntentBus.Current.IsConfirmed) return;
+
+				var me = m_State.Me;
+				if (me == null) return;
+
+				int targetX = -1;
+				int targetY = -1;
+
+				if (ctx.control.device is Mouse)
+				{
+					if (ResolveMouseGrid(out int gx, out int gy))
+					{
+						targetX = gx;
+						targetY = gy;
+					}
+				}
+				else
+				{
+					if (m_GamepadHoverX >= 0 && m_GamepadHoverY >= 0)
+					{
+						targetX = m_GamepadHoverX;
+						targetY = m_GamepadHoverY;
+					}
+				}
+
+				if (targetX >= 0 && targetY >= 0)
+				{
+					ClampToReachable(me.X, me.Y, targetX, targetY, out int clampedX, out int clampedY);
+
+					int dx = clampedX - me.X;
+					int dy = clampedY - me.Y;
+					string dir = null;
+					int power = 1;
+
+					if (dx != 0)
+					{
+						dir = dx > 0 ? Directions.Right : Directions.Left;
+						power = Mathf.Abs(dx);
+					}
+					else if (dy != 0)
+					{
+						dir = dy > 0 ? Directions.Down : Directions.Up;
+						power = Mathf.Abs(dy);
+					}
+
+					if (dir != null)
+					{
+						m_LastSentDir = dir;
+						m_Power = power;
+						m_State.SubmitIntent(m_ActiveMode, dir, power);
+						LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
+					}
+				}
+				return;
+			}
+
+			// それ以外のモード（Moveなど）は従来の方向ベースの決定処理
+			string dirNormal = ResolveDir();
+			if (dirNormal == null) return;
 
 			string type = string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode == IntentTypes.None
 				? IntentTypes.Move
 				: m_ActiveMode;
-			m_LastSentDir = dir;
-			m_State.SubmitIntent(type, dir, m_Power);
-			LocalIntentBus.Set(type, dir, m_Power);
+			m_LastSentDir = dirNormal;
+			m_State.SubmitIntent(type, dirNormal, m_Power);
+			LocalIntentBus.Set(type, dirNormal, m_Power);
 		}
 
 		private void OnCancelPerformed(InputAction.CallbackContext ctx)
@@ -369,6 +463,7 @@ namespace GamblingAction.Input
 		{
 			if (string.IsNullOrEmpty(m_ActiveMode)) return;
 			if (m_ActiveMode == IntentTypes.Rest) return;
+			if (m_ActiveMode == IntentTypes.Push) return; // Push時はグリッド選択を行うため除外
 
 			string stickDir = ResolveStickDir();
 
@@ -412,7 +507,7 @@ namespace GamblingAction.Input
 			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
 			{
 				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
-				LocalIntentBus.Set(type, m_LastSentDir, m_Power);
+				PublishLocal();
 			}
 		}
 
@@ -463,21 +558,155 @@ namespace GamblingAction.Input
 		{
 			if (m_WorldCamera == null || m_Board == null) return null;
 			if (m_PointAction == null) return null;
+
 			var me = m_State.Me;
 			if (me == null) return null;
 
 			Vector2 mousePos = m_PointAction.ReadValue<Vector2>();
 			var ray = m_WorldCamera.ScreenPointToRay(mousePos);
 			if (!m_GroundPlane.Raycast(ray, out float enter)) return null;
+
+			Vector3 hit   = ray.GetPoint(enter);
+			Vector3 toHit = hit - me.transform.position;
+			toHit.y = 0f;
+
+			if (toHit.magnitude < 0.1f) return null;
+
+			// X-Z 平面での角度から 4 方向を割り出す。
+			// Unity の座標系において：
+			//   Z+ (前/Up) : (0, 0, 1)
+			//   Z- (後/Down) : (0, 0, -1)
+			//   X+ (右/Right) : (1, 0, 0)
+			//   X- (左/Left) : (-1, 0, 0)
+			// ※ BoardCoords の方向定義（Directions）に合わせる。
+			if (Mathf.Abs(toHit.x) > Mathf.Abs(toHit.z))
+			{
+				return toHit.x > 0 ? Directions.Right : Directions.Left;
+			}
+			else
+			{
+				return toHit.z > 0 ? Directions.Up : Directions.Down;
+			}
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// グリッド選択・ホバー処理（Push用）
+		// ─────────────────────────────────────────────────────────────
+
+		private void HandleHover()
+		{
+			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
+			if (LocalIntentBus.Current.IsConfirmed) return;
+
+			var me = m_State.Me;
+			if (me == null) return;
+
+			// ゲームパッド入力を処理（m_MoveActionを使用）
+			Vector2 nav = m_MoveAction != null ? m_MoveAction.ReadValue<Vector2>() : Vector2.zero;
+			bool hasGamepadInput = nav.magnitude > 0.5f;
+
+			if (m_GamepadNavCooldown > 0f)
+			{
+				m_GamepadNavCooldown -= Time.deltaTime;
+			}
+
+			if (hasGamepadInput && m_GamepadNavCooldown <= 0f)
+			{
+				if (m_GamepadHoverX < 0 || m_GamepadHoverY < 0)
+				{
+					m_GamepadHoverX = me.X;
+					m_GamepadHoverY = me.Y;
+				}
+
+				if (Mathf.Abs(nav.x) > Mathf.Abs(nav.y))
+				{
+					m_GamepadHoverX = Mathf.Clamp(m_GamepadHoverX + (nav.x > 0 ? 1 : -1), 0, m_Board.GridSize - 1);
+				}
+				else
+				{
+					m_GamepadHoverY = Mathf.Clamp(m_GamepadHoverY + (nav.y > 0 ? 1 : -1), 0, m_Board.GridSize - 1);
+				}
+
+				m_GamepadNavCooldown = k_GamepadNavCooldownTime;
+			}
+
+			// マウス移動があればホバーをマウスに切り替え、なければゲームパッドのホバーを使用
+			bool isMouseActive = UnityInput.mousePresent && (Mathf.Abs(UnityInput.GetAxis("Mouse X")) > 0.01f || Mathf.Abs(UnityInput.GetAxis("Mouse Y")) > 0.01f);
+
+			int hoverX = -1;
+			int hoverY = -1;
+
+			if (isMouseActive || (!hasGamepadInput && m_GamepadHoverX < 0))
+			{
+				if (ResolveMouseGrid(out int gx, out int gy))
+				{
+					hoverX = gx;
+					hoverY = gy;
+					m_GamepadHoverX = gx;
+					m_GamepadHoverY = gy;
+				}
+			}
+			else
+			{
+				hoverX = m_GamepadHoverX;
+				hoverY = m_GamepadHoverY;
+			}
+
+			if (hoverX >= 0 && hoverY >= 0)
+			{
+				ClampToReachable(me.X, me.Y, hoverX, hoverY, out int clampedX, out int clampedY);
+
+				int dx = clampedX - me.X;
+				int dy = clampedY - me.Y;
+				string dir = null;
+				int power = 1;
+
+				if (dx != 0)
+				{
+					dir = dx > 0 ? Directions.Right : Directions.Left;
+					power = Mathf.Abs(dx);
+				}
+				else if (dy != 0)
+				{
+					dir = dy > 0 ? Directions.Down : Directions.Up;
+					power = Mathf.Abs(dy);
+				}
+
+				LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, false);
+			}
+		}
+
+		private bool ResolveMouseGrid(out int gx, out int gy)
+		{
+			gx = -1;
+			gy = -1;
+			if (m_WorldCamera == null || m_Board == null) return false;
+			var ray = m_WorldCamera.ScreenPointToRay(UnityInput.mousePosition);
+			if (!m_GroundPlane.Raycast(ray, out float enter)) return false;
 			Vector3 hit = ray.GetPoint(enter);
+			return m_Board.TryWorldToGrid(hit, out gx, out gy);
+		}
 
-			Vector3 mePos = m_Board.GridToWorld(me.X, me.Y);
-			float dx = hit.x - mePos.x;
-			float dz = hit.z - mePos.z;
+		private void ClampToReachable(int myX, int myY, int targetX, int targetY, out int clampedX, out int clampedY)
+		{
+			clampedX = myX;
+			clampedY = myY;
 
-			if (Mathf.Abs(dx) > Mathf.Abs(dz))
-				return dx > 0 ? Directions.Right : Directions.Left;
-			return dz > 0 ? Directions.Up : Directions.Down;
+			int dx = targetX - myX;
+			int dy = targetY - myY;
+
+			if (Mathf.Abs(dx) >= Mathf.Abs(dy))
+			{
+				int sign = dx > 0 ? 1 : -1;
+				int dist = Mathf.Min(3, Mathf.Abs(dx));
+				clampedX = myX + sign * dist;
+			}
+			else
+			{
+				int sign = dy > 0 ? 1 : -1;
+				int dist = Mathf.Min(3, Mathf.Abs(dy));
+				clampedY = myY + sign * dist;
+			}
 		}
 	}
 }

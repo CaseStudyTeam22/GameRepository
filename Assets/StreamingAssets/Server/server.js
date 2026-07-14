@@ -7,6 +7,7 @@ const os = require('os');
 
 const Config = require('./config');
 const Engine = require('./engine');
+const Skills = require('./skills');
 
 const app = express();
 const server = http.createServer(app);
@@ -28,6 +29,9 @@ let currentBeat = 0;
 let cycleCount = 0;
 let timeLeft = Config.GAME_DURATION;
 let gameActive = false;
+let beatSequence = 0;
+let roundId = 0;
+let beatStartServerMs = 0;
 
 // 双方準備完了後のカウントダウン中の setTimeout 句柄。取り消し時に clear する。
 let lobbyCountdownTimer = null;
@@ -48,6 +52,9 @@ const ROUND_INTRO_MS = 1500;
 
 // ファイナルレイズ進行中フラグ。true の間は次の round_over で勝者が直接全勝（game_over）。
 let isFinalDuel = false;
+// サドンデス進行中フラグ。ファイナルレイズと同じ決勝局だが、
+// こちらは両替・カード選択・ミッション選択を飛ばして即開戦する点が異なる。
+let isSuddenDeath = false;
 // 提案者（直前ラウンドの敗者）・応答者（直前ラウンドの勝者）の socket id を保持する。
 // 切断や resetMatch でクリアする。
 let finalRaiseProposerId = null;
@@ -60,24 +67,62 @@ let finalRaiseFavoredRole = null;
 // ファイナルレイズ時のターンカウント
 let finalRaiseTurnCount = 0;
 
+function updatePlayerCurrentStats(p) {
+    if (!p) return;
+    const baseMax = p.maxStamina || Config.MAX_STAMINA;
+    const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
+    const bonus = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
+    p.currentMaxStamina = maxStamina + bonus;
+
+    const basePush = p.basePushPower || 0;
+    const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
+    p.currentPushPower = basePush + pushBonus;
+
+    const baseDef = p.baseDefensePower || 0;
+    const defBonus = (p.modifiers && p.modifiers.defenseReductionBonus) ? Math.round(p.modifiers.defenseReductionBonus * 10) : 0;
+    p.currentDefensePower = baseDef + defBonus;
+}
+
+// sync_state 送信時に自動的にステータスを更新するラッパー
+const originalEmit = io.emit;
+io.emit = function (event, ...args) {
+    if (event === 'sync_state') {
+        for (let id in players) {
+            updatePlayerCurrentStats(players[id]);
+            // 配信直前に所持チップを上限まで丸める（入手経路を問わない収束点）
+            const pl = players[id];
+            if (pl.chips > Config.MAX_CHIPS) pl.chips = Config.MAX_CHIPS;
+        }
+    }
+    return originalEmit.apply(io, [event, ...args]);
+};
+
 function resetPlayerPos(id) {
     const p = players[id];
     if (!p) return;
     const startPos = p.role === 'P1' ? { x: 1, y: 6 } : { x: 6, y: 1 };
     p.x = startPos.x; p.y = startPos.y;
     p.color = p.role === 'P1' ? '#00f2fe' : '#ff4444';
-    p.stamina = Config.INITIAL_STAMINA;
+    // クランプ・バリデーションされた maxStamina と modifiers のボーナスを加味して定力をリセット
+    updatePlayerCurrentStats(p);
+    p.stamina = p.currentMaxStamina;
     p.falling = false; p.intent = null;
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
+    // 債務者の次回突進強化はラウンド間で持ち越さない
+    p.nextPushBonus = 0;
+    // scammerActive はゲーム内で持続するためここではリセットしない
 
     if (!isFinalDuel) {
-        p.chips = Config.INITIAL_CHIPS;
+        p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
     }
 }
 
 // ラウンドの開始要求。クライアントの盤面・キャラ生成が終わるのを待ってからチップ交換へ進む。
 // resetMatch / round_over の直後にここを通し、双方の round_ready を待つ。
 function beginRound() {
+    roundId++;
+    beatSequence = 0;
+    beatStartServerMs = 0
     for (let id in players) players[id].roundReady = false;
     if (roundIntroTimer) { clearTimeout(roundIntroTimer); roundIntroTimer = null; }
     // 位置を先に初期化して配る。クライアントは再生成時に新しい位置のキャラを出せる。
@@ -87,24 +132,143 @@ function beginRound() {
 }
 
 // 双方のクライアントが盤面・キャラ生成を終えたら、少し間を置いてチップ交換フェーズへ進む。
+// サドンデス中は両替・カード選択・ミッション選択を飛ばして即開戦する。
 function checkAllRoundReady() {
     const pList = Object.values(players);
     if (pList.length >= 2 && pList.every(pl => pl.roundReady)) {
         if (roundIntroTimer) clearTimeout(roundIntroTimer);
         roundIntroTimer = setTimeout(() => {
             roundIntroTimer = null;
-            prepareExchangePhase();
+            if (isSuddenDeath) prepareSuddenDeathBattle();
+            else prepareExchangePhase();
         }, ROUND_INTRO_MS);
     }
 }
 
+// サドンデス用の開戦準備。両替・カード選択・ミッション選択のフェーズを飛ばし、
+// 対戦に必要な初期化だけ行って即カウントダウンへ進む。所持金のチップ変換は
+// startSuddenDeath で済ませてあるため、ここでは行わない。
+function prepareSuddenDeathBattle() {
+    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION; cycleCount = 0;
+    // resetPlayerPos は isFinalDuel が立っている間チップを保持するため、変換済みのチップは消えない。
+    for (let id in players) resetPlayerPos(id);
+    io.emit('sync_state', { players });
+    io.emit('sync_items', items);
+    startBattleCountdown();
+}
+
+function isNouveauRiche(player) {
+    if (!player) return false;
+    return player.charaIndex === 2 || player.charaName === 'NouveauRiche' || (player.skillData && player.skillData.id === 'double_cost_power');
+}
+
+function checkNouveauRicheAutoExchange() {
+    const pList = Object.values(players);
+    if (pList.length < 2) return;
+
+    const p1 = pList[0];
+    const p2 = pList[1];
+
+    const isN1 = isNouveauRiche(p1);
+    const isN2 = isNouveauRiche(p2);
+
+    if (isN1 && isN2) {
+        // 両者が成金の場合は現在所持金額の50%をそれぞれがかけてチップとする
+        if (p1.pendingExchange === 0) {
+            p1.pendingExchange = Math.floor(p1.money * 0.5);
+            p1.exchanged = true;
+            console.log(`[Server] NouveauRiche vs NouveauRiche: ${p1.role} auto-exchanged ${p1.pendingExchange}`);
+        }
+        if (p2.pendingExchange === 0) {
+            p2.pendingExchange = Math.floor(p2.money * 0.5);
+            p2.exchanged = true;
+            console.log(`[Server] NouveauRiche vs NouveauRiche: ${p2.role} auto-exchanged ${p2.pendingExchange}`);
+        }
+
+    } else if (isN1 && !isN2) {
+        // P1が成金、P2が通常キャラ
+        if (p2.exchanged) {
+            const A_opp = p2.pendingExchange || 0;
+            const M_nr = p1.money;
+            if (M_nr >= A_opp) {
+                // 相手キャラがかけた量の倍の金額になる(倍額が無理な場合は同額)
+                const targetAmount = M_nr >= 2 * A_opp ? 2 * A_opp : A_opp;
+                p1.pendingExchange = targetAmount;
+                p1.exchanged = true;
+                console.log(`[Server] NouveauRiche auto-exchange applied to ${p1.role}: ${p1.pendingExchange} (based on ${p2.role}'s ${A_opp})`);
+            } else {
+                // それでも相手と同じ金額が変換できない場合は自身で換金できる金額を選べる
+                if (p1.exchanged && p1.pendingExchange === 0) {
+                    p1.exchanged = false;
+                    console.log(`[Server] NouveauRiche ${p1.role} cannot afford ${A_opp}. Unlocking manual exchange.`);
+                    io.emit('sync_state', { players });
+
+                    if (p1.isAI) {
+                        setTimeout(() => {
+                            if (!players[p1.id] || players[p1.id].exchanged) return;
+                            const amount = Math.floor(p1.money * 0.5);
+                            p1.pendingExchange = amount;
+                            p1.exchanged = true;
+                            console.log(`[Server] NouveauRiche AI ${p1.role} selected manual exchange: ${p1.pendingExchange}`);
+                            checkAllExchanged();
+                        }, 1000);
+                    }
+                }
+            }
+        }
+    } else if (!isN1 && isN2) {
+        // P2が成金、P1が通常キャラ
+        if (p1.exchanged) {
+            const A_opp = p1.pendingExchange || 0;
+            const M_nr = p2.money;
+            if (M_nr >= A_opp) {
+                const targetAmount = M_nr >= 2 * A_opp ? 2 * A_opp : A_opp;
+                p2.pendingExchange = targetAmount;
+                p2.exchanged = true;
+                console.log(`[Server] NouveauRiche auto-exchange applied to ${p2.role}: ${p2.pendingExchange} (based on ${p1.role}'s ${A_opp})`);
+            } else {
+                if (p2.exchanged && p2.pendingExchange === 0) {
+                    p2.exchanged = false;
+                    console.log(`[Server] NouveauRiche ${p2.role} cannot afford ${A_opp}. Unlocking manual exchange.`);
+                    io.emit('sync_state', { players });
+
+                    if (p2.isAI) {
+                        setTimeout(() => {
+                            if (!players[p2.id] || players[p2.id].exchanged) return;
+                            const amount = Math.floor(p2.money * 0.5);
+                            p2.pendingExchange = amount;
+                            p2.exchanged = true;
+                            console.log(`[Server] NouveauRiche AI ${p2.role} selected manual exchange: ${p2.pendingExchange}`);
+                            checkAllExchanged();
+                        }, 1000);
+                    }
+                }
+            }
+        }
+    }
+}
+
 function prepareExchangePhase() {
-    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION;
+    items = []; currentBeat = 0; timeLeft = Config.GAME_DURATION; cycleCount = 0; beatSequence = 0; beatStartServerMs = 0;
     for (let id in players) {
         resetPlayerPos(id);
         players[id].exchanged = false;
-        if (players[id].isAI) handleAIExchange(id);
+
+        // 成金の場合、最初は相手の出方を待つため exchanged = true にしておく
+        if (isNouveauRiche(players[id])) {
+            players[id].exchanged = true;
+            players[id].pendingExchange = 0;
+        }
+
+        // 通常AIキャラのみ即座に両替を開始する
+        if (players[id].isAI && !isNouveauRiche(players[id])) {
+            handleAIExchange(id);
+        }
     }
+
+    // 両者が成金の場合などの即時両替をチェックする
+    checkNouveauRicheAutoExchange();
+
     io.emit('sync_state', { players });
     io.emit('sync_items', items);
     io.emit('start_exchange');
@@ -112,6 +276,9 @@ function prepareExchangePhase() {
     // 制限時間：超過したら未交換のプレイヤーを自動でチップ交換する。
     if (exchangeTimer) clearTimeout(exchangeTimer);
     exchangeTimer = setTimeout(autoExchangeTimedOut, PREPARE_PHASE_MS);
+
+    // 両者成金など、この時点で全員の両替が確定している場合は即座に移行フェーズをトリガーする
+    checkAllExchanged();
 }
 
 // チップ交換の制限時間超過。未交換のプレイヤーは所持金の 1/3 をチップに替える。
@@ -121,8 +288,8 @@ function autoExchangeTimedOut() {
     for (let id in players) {
         const p = players[id];
         if (p.exchanged || p.isAI) continue;
-        const amount = Math.floor(p.money / 3 / 100);
-        const cost = amount * 100;
+        const amount = Math.floor(p.money / 3);
+        const cost = amount;
         p.money -= cost; p.chips += amount; p.exchanged = true;
         changed = true;
     }
@@ -133,7 +300,7 @@ function autoExchangeTimedOut() {
 function handleAIExchange(id) {
     const p = players[id];
     let ratio = 0.5 + (Math.random() * 0.1 - 0.05);
-    const amount = Math.floor((p.money * ratio) / 100);
+    const amount = Math.floor(p.money * ratio);
     setTimeout(() => {
         // AI も精算は後でまとめて行うため、選択内容だけ記録する。
         p.pendingExchange = amount;
@@ -145,13 +312,20 @@ function handleAIExchange(id) {
 setInterval(() => {
     if (!gameActive) return;
     currentBeat = (currentBeat % 4) + 1;
+    beatSequence++;
+    beatStartServerMs = getCurrentServerTimeMs();
 
-    // 时间到，判定平局或结束
-    if (timeLeft <= 0) {
+    // ターンの上限数に達したら、引き分け処理
+    if (cycleCount >= Config.TURN_MAX) {
         gameActive = false;
+
+        // カウントのリセット
+        cycleCount = 0;
+
         io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
         // 次ラウンドもゲートを通す：盤面・キャラ生成を待ってからチップ交換へ。
         setTimeout(beginRound, 3000);
+
         return;
     }
 
@@ -170,18 +344,27 @@ setInterval(() => {
         if (isFinalDuel) {
             finalRaiseTurnCount++;
 
-            // 20ターン経過しても決着がつかなかった場合、優勢側を勝者とする。
-            if (finalRaiseTurnCount >= 20) {
-                const winner =
-                    Object.values(players)
-                        .find(p => p.role === finalRaiseFavoredRole);
+            // 20ターン経過しても決着がつかなかった場合の処理。
+            if (finalRaiseTurnCount >= Config.TURN_MAX) {
+                // サドンデスは 2-2 の互角から始まり優勢側が存在しないため、時間切れは引き分けにする。
+                const winner = finalRaiseFavoredRole
+                    ? Object.values(players).find(p => p.role === finalRaiseFavoredRole)
+                    : null;
 
-                winner.score = Config.MAX_WINS;
-
-                handleRoundConcluded(
-                    winner.id,
-                    Object.keys(players).find(id => id !== winner.id)
-                );
+                if (winner) {
+                    // ファイナルレイズ：優勢側を勝者とする。
+                    winner.score = Config.MAX_WINS;
+                    handleRoundConcluded(
+                        winner.id,
+                        Object.keys(players).find(id => id !== winner.id)
+                    );
+                } else {
+                    // サドンデス：勝敗つかず時間切れ。引き分けで次ラウンドへ。
+                    gameActive = false;
+                    finalRaiseTurnCount = 0;
+                    io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
+                    setTimeout(beginRound, 3000);
+                }
 
                 return;
             }
@@ -227,8 +410,25 @@ setInterval(() => {
                             if (p.mission.currentCount >= p.mission.targetCount) {
                                 p.mission.currentCount = p.mission.targetCount;
                                 p.mission.isCleared = true;
-                                p.chips += (p.mission.rewardValue || 0);
-                                console.log(`[Mission CLEARED] ${p.role} completed mission.`);
+
+                                const rType = p.mission.rewardType || 'Chips';
+                                const rVal = p.mission.rewardValue || 0;
+
+                                if (rType === 'Chips') {
+                                    p.chips += rVal;
+                                } else if (rType === 'MaxStaminaBonus') {
+                                    p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + rVal;
+                                    p.stamina += rVal; // Also increase current stamina
+                                } else if (rType === 'PushPowerBonus') {
+                                    p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
+                                } else if (rType === 'DefenseBonus') {
+                                    p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
+                                }
+
+                                console.log(`[Mission CLEARED] ${p.role} completed mission. Reward: ${rType} x${rVal}`);
+                                if (rType !== 'Chips') {
+                                    console.log(`[Server] [Buff Acquired] Player ${p.role} acquired buff: ${rType} (value: ${rVal}). Modifiers - MaxStaminaBonus: ${p.modifiers.maxStaminaBonus}, PushPowerBonus: ${p.modifiers.pushPowerBonus}, DefenseReductionBonus: ${p.modifiers.defenseReductionBonus}`);
+                                }
                                 // 演出イベントはここでは配列に追加して後で結合する
                                 appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                             }
@@ -280,7 +480,10 @@ setInterval(() => {
 
         io.emit('sync_items', items);
     }
-    io.emit('beat', { beat: currentBeat, timeLeft, gameActive });
+    const beatsPerBar = 4;
+    const barIndex = getBarIndexFromSequence(beatSequence - 1, beatsPerBar);
+    const nextBoundaryServerMs = beatStartServerMs + Config.BEAT_INTERVAL;
+    io.emit('beat', { beat: currentBeat, timeLeft, gameActive, cycleCount, barIndex, beatSequence, roundId, beatStartServerMs, nextBoundaryServerMs, beatIntervalMs: Config.BEAT_INTERVAL, beatsPerBar });
 }, Config.BEAT_INTERVAL);
 
 // --- AI Brain: 普通难度，目标是推对手下平台 ---
@@ -359,7 +562,7 @@ function handleAIDecision(id) {
                 decision.type = 'push'; decision.dir = pushDir;
                 decision.power = canAllIn ? 3 : (canRaise ? 2 : 1);
             } else if (rand < 0.55 + jitter()) {
-                decision.type = 'rest';
+                decision.type = 'skill'; // 仮でrest->skillへ
             } else {
                 decision.type = 'defense';
             }
@@ -394,9 +597,9 @@ function handleAIDecision(id) {
             if (nearestItem && canMove) {
                 const d = itemDirFor(nearestItem);
                 if (d) { decision.type = 'move'; decision.dir = d; decision.power = 1; }
-                else decision.type = rand < 0.5 + jitter() ? 'defense' : 'rest';
+                else decision.type = rand < 0.5 + jitter() ? 'defense' : 'skill'; // 仮でrest->skillへ
             } else {
-                decision.type = rand < 0.5 + jitter() ? 'defense' : 'rest';
+                decision.type = rand < 0.5 + jitter() ? 'defense' : 'skill';
             }
         }
     }
@@ -558,7 +761,30 @@ io.on('connection', (socket) => {
             money: Config.INITIAL_MONEY, chips: Config.INITIAL_CHIPS, stamina: Config.INITIAL_STAMINA,
             isAI: false, personality: 'Balanced', color: isP1 ? '#00f2fe' : '#ff4444',
             selectedBuff: null, buffReady: false, pendingExchange: 0, inLobby: false, roundReady: false,
-            charaIndex: 0
+            charaIndex: 0,
+            charaName: 'Normal',
+            maxStamina: Config.MAX_STAMINA,
+            currentMaxStamina: Config.MAX_STAMINA,
+            currentPushPower: 0,
+            currentDefensePower: 0,
+            initMoney: Config.INITIAL_MONEY,
+            initChips: Config.INITIAL_CHIPS,
+            basePushPower: 0,
+            baseMoveSpeed: 0,
+            baseDefensePower: 0,
+            chipCosts: JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER)),
+            skillData: null,
+            modifiers: {
+                maxStaminaBonus: 0,
+                pushPowerBonus: 0,
+                moveSpeedBonus: 0,
+                chipCostMultiplier: 1.0,
+                defenseReductionBonus: 0.0
+            },
+            // イカサマのスキル発動フラグ（trueの間、相手のintentをSocket個別に送信する）
+            scammerActive: false,
+            // 債務者の次回突進強化（onResolveでセットされ、push実行時にengine.jsが読んでリセットする）
+            nextPushBonus: 0
         };
         if (token) tokenToSocketId[token] = socket.id;
 
@@ -575,7 +801,55 @@ io.on('connection', (socket) => {
             p.isAI = !!(data && data.isAI);
             if (p.isAI) p.personality = ['Aggressive', 'Balanced', 'Conservative'][Math.floor(Math.random() * 3)];
 
-            console.log(`[Server] Player ${p.role} is ready (AI: ${p.isAI})`);
+            // --- クライアントからアップロードされたキャラクターデータをクランプして保持する ---
+            if (data && data.charaData) {
+                const chara = data.charaData;
+
+                // 定力上限のクランプ
+                const maxStaminaLimit = (Config.LIMITS && Config.LIMITS.MAX_STAMINA_LIMIT) || 8;
+                p.maxStamina = Math.min(maxStaminaLimit, Math.max(3, parseInt(chara.maxStamina) || 5));
+
+                // 初期資金・初期チップ・プッシュ力・移動速度のバリデーションとクランプ
+                const moneyLimit = 20000;
+                const chipsLimit = 1000;
+                p.initMoney = Math.min(moneyLimit, Math.max(100, parseInt(chara.initMoney) || Config.INITIAL_MONEY));
+                p.initChips = Math.min(chipsLimit, Math.max(0, parseInt(chara.initChips) || Config.INITIAL_CHIPS));
+
+                const pushLimit = 3;
+                const speedLimit = 3;
+                p.basePushPower = Math.min(pushLimit, Math.max(-2, parseInt(chara.pushPower) || 0));
+                p.baseMoveSpeed = Math.min(speedLimit, Math.max(-2, parseInt(chara.moveSpeed) || 0));
+                p.baseDefensePower = Math.min(pushLimit, Math.max(-2, parseInt(chara.defensePower) || 0));
+
+                // 各アクションごとのチップ消費コストテーブルのクランプ
+                const costLimit = (Config.LIMITS && Config.LIMITS.SKILL_CHIP_COST_LIMIT) || 15;
+                const parseCosts = (costArr, defaultCosts) => {
+                    if (Array.isArray(costArr) && costArr.length === 3) {
+                        return costArr.map(c => Math.min(costLimit, Math.max(0, parseInt(c) || 0)));
+                    }
+                    return JSON.parse(JSON.stringify(defaultCosts));
+                };
+
+                p.chipCosts = {
+                    move: parseCosts(chara.moveCost, Config.CHIP_COST_BY_POWER.move),
+                    push: parseCosts(chara.pushCost, Config.CHIP_COST_BY_POWER.push),
+                    attack: parseCosts(chara.attackCost, Config.CHIP_COST_BY_POWER.attack),
+                    defense: parseCosts(chara.defenseCost, Config.CHIP_COST_BY_POWER.defense),
+                    skill: parseCosts(chara.skillCost, Config.CHIP_COST_BY_POWER.skill),
+                    rest: parseCosts(chara.restCost, Config.CHIP_COST_BY_POWER.rest)
+                };
+
+                // スキルパラメータのクランプ
+                const recLimit = (Config.LIMITS && Config.LIMITS.SKILL_STAMINA_REC_LIMIT) || 3;
+                p.skillData = {
+                    id: chara.skills?.id || null,
+                    staminaRec: Math.min(recLimit, parseInt(chara.skills?.staminaRec) || 0),
+                    chipCost: Math.min(costLimit, parseInt(chara.skills?.chipCost) || 0)
+                };
+                p.charaName = chara.name || 'Unknown';
+            }
+
+            console.log(`[Server] Player ${p.role} is ready (AI: ${p.isAI}, Chara: ${p.charaName}, Stamina: ${p.maxStamina})`);
 
             const pList = Object.values(players);
             if (pList.length >= 2 && pList.every(pl => pl.ready)) {
@@ -643,8 +917,15 @@ io.on('connection', (socket) => {
     socket.on('exchange_chips', (data) => {
         const p = players[socket.id];
         if (p && !gameActive && !p.isAI) {
+            // 成金かつ相手が未決定の場合、早期の手動申請は無視する
+            if (isNouveauRiche(p)) {
+                const opponent = Object.values(players).find(pl => pl.id !== socket.id);
+                if (opponent && !opponent.exchanged) {
+                    return;
+                }
+            }
             const amount = parseInt(data.amount) || 0;
-            const cost = amount * 100;
+            const cost = amount;
             // この時点では所持金・チップを動かさず、選択内容だけ記録する。
             // 実際の精算は両替・カード選択が全員終わってからまとめて行う。
             if (p.money >= cost) {
@@ -665,6 +946,8 @@ io.on('connection', (socket) => {
         if (expectedChips < cost) return;
         p.selectedBuff = data.buffId;
         p.buffReady = true;
+        // リスク決定時にミッションを生成する
+        p.availableMissions = generateMissions(p.selectedBuff);
         io.emit('sync_state', { players });
         checkAllBuffsSelected();
     });
@@ -683,7 +966,20 @@ io.on('connection', (socket) => {
 
     socket.on('set_intent', (data) => {
         const p = players[socket.id];
-        if (gameActive && currentBeat < 4 && p && !p.isAI) p.intent = { type: data.type || 'move', dir: data.dir, power: data.power || 1 };
+        if (gameActive && currentBeat < 4 && p && !p.isAI) {
+            p.intent = { type: data.type || 'move', dir: data.dir, power: data.power || 1 };
+
+            // イカサマ（scammer_skill）が有効な対戦相手がいれば、このプレイヤーの intent を
+            // その対戦相手の Socket にのみ個別送信する（全体 broadcast は行わない）。
+            for (const otherId in players) {
+                if (otherId !== socket.id && players[otherId].scammerActive) {
+                    const scammerSocket = io.sockets.sockets.get(otherId);
+                    if (scammerSocket) {
+                        scammerSocket.emit('opponent_intent_revealed', { intent: p.intent });
+                    }
+                }
+            }
+        }
     });
 
     // 敗者がファイナルレイズを発起するか決定する。accept=true で勝者の応答待ちへ。
@@ -707,7 +1003,10 @@ io.on('connection', (socket) => {
         if (accept) startFinalDuel();
         else cancelFinalRaise('declined');
     });
-
+    socket.on('request_sudden_death', () => {
+        console.log("[Server] Sudden Death Requested");
+        startSuddenDeath();
+    });
     socket.on('shutdown', () => { io.emit('close_all'); setTimeout(() => process.exit(0), 1000); });
     socket.on('disconnect', () => {
         const p = players[socket.id];
@@ -731,6 +1030,9 @@ io.on('connection', (socket) => {
 });
 
 function checkAllExchanged() {
+    // 成金の自動両替判定を行う
+    checkNouveauRicheAutoExchange();
+
     const pList = Object.values(players);
     if (pList.length >= 2 && pList.every(pl => pl.exchanged)) {
         // チップ交換フェーズを抜けるので制限時間タイマーを止める。
@@ -739,9 +1041,9 @@ function checkAllExchanged() {
         // チップ交換分反映
         settleAllChoices();
 
-        // 各プレイヤーにミッションの選択肢を生成
+        // 各プレイヤーのミッション状態を初期化（生成はリスク選択確定時に行う）
         pList.forEach(p => {
-            p.availableMissions = generateMissions();
+            p.availableMissions = [];
             p.mission = null;
         });
 
@@ -769,6 +1071,8 @@ function autoBuffTimedOut() {
         else if (expectedChips >= 5) pick = 'low_risk';
         if (pick) p.selectedBuff = pick;
         p.buffReady = true;
+        // リスク決定時にミッションを生成する
+        p.availableMissions = generateMissions(p.selectedBuff);
         changed = true;
     }
     if (changed) io.emit('sync_state', { players });
@@ -791,6 +1095,8 @@ function checkAllBuffsSelected() {
                 else if (expectedChips >= 5) pick = 'low_risk';
                 if (pick) pl.selectedBuff = pick;
                 pl.buffReady = true;
+                // リスク決定時にミッションを生成する
+                pl.availableMissions = generateMissions(pl.selectedBuff);
                 changed = true;
             }
         });
@@ -846,9 +1152,14 @@ function checkAllMissionsSelected() {
 
         // カード選択フェーズを抜けるので制限時間タイマーを止める。
         if (buffTimer) { clearTimeout(buffTimer); buffTimer = null; }
-        io.emit('start_match_countdown');
-        setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
+        startBattleCountdown();
     }
+}
+
+// 開戦カウントダウンを流し、一定時間後に対戦を開始する。
+function startBattleCountdown() {
+    io.emit('start_match_countdown');
+    setTimeout(() => { gameActive = true; io.emit('round_start'); }, 3500);
 }
 
 // ミッション選択の制限時間超過
@@ -877,9 +1188,11 @@ function settleAllChoices() {
     for (let id in players) {
         const p = players[id];
         const amount = p.pendingExchange || 0;
+        // チップ変換時のスキル効果フック
+        const finalAmount = Skills.onExchange(p, amount);
         if (amount > 0) {
-            p.money -= amount * 100;
-            p.chips += amount;
+            p.money -= amount;
+            p.chips += finalAmount;
         }
         const buffCost = p.selectedBuff === 'high_risk' ? 15 : (p.selectedBuff === 'low_risk' ? 5 : 0);
         if (buffCost > 0) p.chips -= buffCost;
@@ -990,6 +1303,13 @@ function handleRoundConcluded(winnerId, loserId) {
 
     const playerList = Object.values(players);
 
+    // ラウンド終了時、チップを持ち金に戻す
+    for (let id in players) {
+        const p = players[id];
+        p.money += p.chips;  // チップをお金にキャッシュバック
+        p.chips = 0;
+    }
+
     // 通常戦の途中で 2-1 または 1-2 になったら、ファイナルレイズの提案フェーズへ
     if (playerList.length === 2) {
         const player1 = playerList[0];
@@ -1015,25 +1335,7 @@ function handleRoundConcluded(winnerId, loserId) {
 
     if (p1 && p2 && p1.score === 2 && p2.score === 2) {
         console.log("[Server] Sudden Death triggered!");
-
-        //  全員を強制 All-in
-        for (let id in players) {
-            const p = players[id];
-            p.chips = Math.floor(p.money / 100); // 全額チップ化
-            p.money = 0;
-        }
-
-        io.emit('sync_state', { players });
-
-        //  クライアントへサドンデス開始イベント
-        io.emit('sudden_death_started');
-
-        //  サドンデス専用のラウンド開始
-        isFinalDuel = true;
-        finalRaiseTurnCount = 0;
-
-        // 盤面リセットして次ラウンドへ
-        setTimeout(beginRound, 2000);
+        startSuddenDeath();
         return;
     }
     io.emit('round_over', { winnerRole: winner.role });
@@ -1095,6 +1397,28 @@ function cancelFinalRaise(reason) {
     setTimeout(beginRound, 3000);
 }
 
+// サドンデスを開始する。両替・カード選択・ミッション選択は行わず、
+// 所持金をすべてチップへ変換したうえで即開戦する決勝局。
+function startSuddenDeath() {
+    // 決勝局として扱うため、勝敗確定時に勝者を全勝にする isFinalDuel も立てる。
+    isFinalDuel = true;
+    isSuddenDeath = true;
+    finalRaiseTurnCount = 0;
+
+    // 所持金をすべてチップへ変換する（100 = チップ1枚）。
+    for (let id in players) {
+        const p = players[id];
+        p.chips += Math.floor(p.money / 100);
+        p.money = 0;
+    }
+
+    io.emit('sync_state', { players });
+    io.emit('sudden_death_started');
+
+    // 盤面・キャラ生成を待ってから開戦へ進む。準備フェーズは beginRound 側で飛ばす。
+    setTimeout(beginRound, 2000);
+}
+
 // 勝者が受諾した。ファイナルレイズ本番ラウンドを開始する。
 function startFinalDuel() {
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
@@ -1135,8 +1459,8 @@ function startFinalDuel() {
 // 試合中の数値・進行状態を初期化する（プレイヤー数値、ファイナルレイズ、対局フラグ）。
 // Lobby 関連フラグ（ready / inLobby / isAI / roundReady / buffReady）もここで初期化する。
 // 試合終了直後（game_over）と、新しい対局を始める前（resetMatch）から共通で呼ぶ。
-function resetMatchState() {
-    gameActive = false; items = []; currentBeat = 0;
+function resetMatchState(isMatchStart = false) {
+    gameActive = false; items = []; currentBeat = 0; beatSequence = 0; beatStartServerMs = 0;
 
     // 全ての進行管理タイマーをリセット
     if (finalRaiseOfferTimer) { clearTimeout(finalRaiseOfferTimer); finalRaiseOfferTimer = null; }
@@ -1151,6 +1475,7 @@ function resetMatchState() {
     timeLeft = Config.GAME_DURATION;
 
     isFinalDuel = false;
+    isSuddenDeath = false;
     finalRaiseProposerId = null;
     finalRaiseResponderId = null;
     finalRaiseFavoredRole = null;
@@ -1159,24 +1484,54 @@ function resetMatchState() {
 
     for (let id in players) {
         const p = players[id];
-        p.score = 0; p.money = Config.INITIAL_MONEY; p.chips = Config.INITIAL_CHIPS;
+        p.score = 0;
+
+        if (isMatchStart) {
+            p.money = p.initMoney !== undefined ? p.initMoney : Config.INITIAL_MONEY;
+            p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
+        } else {
+            p.money = Config.INITIAL_MONEY;
+            p.chips = Config.INITIAL_CHIPS;
+            p.charaIndex = 0;
+            p.charaName = 'Normal';
+            p.maxStamina = Config.MAX_STAMINA;
+            p.basePushPower = 0;
+            p.baseMoveSpeed = 0;
+            p.chipCosts = JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER));
+            p.skillData = null;
+            p.initMoney = Config.INITIAL_MONEY;
+            p.initChips = Config.INITIAL_CHIPS;
+        }
+
         p.mission = null;
         p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
         p.roundReady = false; p.intent = null;
         // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
         // 前回の ready / 入室状態が残らないようにする。
         p.ready = false; p.isAI = false; p.inLobby = false;
+        // スキル関連とステータス補正（Modifiers）の初期化
+        p.modifiers = {
+            maxStaminaBonus: 0,
+            pushPowerBonus: 0,
+            moveSpeedBonus: 0,
+            chipCostMultiplier: 1.0,
+            defenseReductionBonus: 0.0
+        };
+
+        // キャラクター固有の一時フラグ初期化
+        p.scammerActive = false;
+        p.nextPushBonus = 0;
         resetPlayerPos(id);
     }
 }
 
 function resetMatch() {
-    resetMatchState();
+    resetMatchState(true);
     // 直接チップ交換へ進めず、クライアントの盤面・キャラ生成を待ってから進む。
     beginRound();
 }
 
-function generateMissions() {
+function generateMissions(selectedBuff) {
     const types = [0, 1, 2, 4]; // Move:0, Push:1, Defense:2, GainChip:4
     const missions = [];
 
@@ -1186,30 +1541,49 @@ function generateMissions() {
     for (let i = 0; i < 3; i++) {
         const type = shuffled[i];
         let targetCount = 0;
-        let rewardValue = 0;
+        let baseChipsReward = 0;
         let description = "";
 
         switch (type) {
             case 0: // Move
                 targetCount = 5 + Math.floor(Math.random() * 6); // 5-10 cells
-                rewardValue = targetCount * 2; // チップ報酬
+                baseChipsReward = targetCount * 2 * 10; // チップ報酬 (インフレ対応で10倍)
                 description = `フィールドを ${targetCount} マス移動しよう`;
                 break;
             case 1: // Push
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 pushes
-                rewardValue = targetCount * 5;
+                baseChipsReward = targetCount * 5 * 10;
                 description = `相手を計 ${targetCount} 回プッシュしよう`;
                 break;
             case 2: // Defense
                 targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 defenses
-                rewardValue = targetCount * 4;
+                baseChipsReward = targetCount * 4 * 10;
                 description = `防御を計 ${targetCount} 回使用しよう`;
                 break;
             case 4: // GainChip
                 targetCount = 2 + Math.floor(Math.random() * 4); // 2-5 chips
-                rewardValue = Math.floor(targetCount * 3);
+                baseChipsReward = Math.floor(targetCount * 3) * 10;
                 description = `チップを計 ${targetCount} 回獲得しよう`;
                 break;
+        }
+
+        let rewardType = 'Chips';
+        let rewardValue = baseChipsReward;
+
+        // 選択されたリスク（バフ）に応じて報酬を決定する
+        if (selectedBuff === 'high_risk') {
+            // High Risk: ステータス報酬確定
+            const statusRewards = ['MaxStaminaBonus', 'PushPowerBonus', 'DefenseBonus'];
+            rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
+            rewardValue = rewardType === 'MaxStaminaBonus' ? 2 : 1; // スタミナ最大値補正のみ2、それ以外は1
+        } else if (selectedBuff === 'low_risk') {
+            // Low Risk: チップ報酬確定
+            rewardType = 'Chips';
+            rewardValue = baseChipsReward;
+        } else {
+            // Skip または未設定（フォールバック）: チップ報酬とする
+            rewardType = 'Chips';
+            rewardValue = baseChipsReward;
         }
 
         missions.push({
@@ -1218,12 +1592,17 @@ function generateMissions() {
             description: description,
             targetCount: targetCount,
             currentCount: 0,
+            rewardType: rewardType,
             rewardValue: rewardValue,
             isCleared: false
         });
     }
     return missions;
 }
+
+function getCurrentServerTimeMs() { return Date.now(); }
+
+function getBarIndexFromSequence(sequence, beatsPerBar) { return Math.floor(sequence / beatsPerBar) + 1; }
 
 // --- グローバル・エラーハンドラ ---
 // 予期せぬクラッシュを防ぎ、エラー内容をコンソールに出力してサーバーを延命させる
@@ -1234,21 +1613,4 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('[Warning] 未処理の Promise 拒否:', reason);
-});
-
-socket.on("request_sudden_death", () => {
-    console.log("[Server] sudden death requested");
-
-    // ここで資金全消費 → チップ変換を行う
-    for (let id in players) {
-        const p = players[id];
-        const amount = Math.floor(p.money / 100);
-        p.money = 0;
-        p.chips += amount;
-    }
-
-    io.emit("sync_state", { players });
-
-    // Unity にサドンデス開始を通知
-    io.emit("sudden_death_started");
 });

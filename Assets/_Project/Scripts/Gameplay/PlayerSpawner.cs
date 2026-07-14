@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using GamblingAction.Domain;
 using UnityEngine;
 using UnityEngine.Serialization;

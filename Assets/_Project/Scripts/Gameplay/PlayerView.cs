@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Core.Skills;
 using GamblingAction.Domain;
@@ -23,6 +23,8 @@ namespace GamblingAction.Gameplay
 		[FormerlySerializedAs("skillSet")]
 		[SerializeField, Tooltip("このキャラクターが使うスキル設定（ビジュアルルール含む）。null = SkillPreviewView の fallbackSkillSet を使用")]
 		private SkillDefinition m_SkillSet;
+		[SerializeField, Tooltip("相手のインテントを表示する吹き出し。")]
+		private OpponentIntentBubbleView m_IntentBubble;
 
 		public SkillDefinition SkillSet => m_SkillSet;
 
@@ -94,6 +96,11 @@ namespace GamblingAction.Gameplay
 			m_State.OnPhaseChanged   += HandlePhaseChanged;
 			m_State.OnGameEvents     += HandleGameEvents;
 
+			if (m_PlayerId != m_State.MyId)
+			{
+				m_State.OnOpponentIntentRevealed += HandleOpponentIntentRevealed;
+			}
+
 			// PopupDirector に自分を登録（popup の発生位置アンカーとして使われる）
 			if (PopupDirector.Instance != null)
 				PopupDirector.Instance.RegisterPlayer(m_PlayerId, transform);
@@ -110,6 +117,11 @@ namespace GamblingAction.Gameplay
 				m_State.OnPlayersChanged -= HandlePlayersChanged;
 				m_State.OnPhaseChanged   -= HandlePhaseChanged;
 				m_State.OnGameEvents     -= HandleGameEvents;
+
+				if (m_PlayerId != m_State.MyId)
+				{
+					m_State.OnOpponentIntentRevealed -= HandleOpponentIntentRevealed;
+				}
 			}
 			// 使い回していた土煙インスタンスを破棄する
 			if (m_DustInstance != null) Destroy(m_DustInstance.gameObject);
@@ -124,6 +136,14 @@ namespace GamblingAction.Gameplay
 			ApplyColor(dto);
 			ApplyMovement(dto);
 			if (m_Hud != null) m_Hud.Apply(dto);
+
+			if (m_PlayerId != m_State.MyId && m_IntentBubble != null)
+			{
+				if (dto.Intent == null || string.IsNullOrEmpty(dto.Intent.Type) || dto.Intent.Type == "none")
+				{
+					m_IntentBubble.Hide();
+				}
+			}
 		}
 
 		private void HandlePhaseChanged(EGamePhase phase)
@@ -132,6 +152,11 @@ namespace GamblingAction.Gameplay
 			{
 				if (m_State.Players.TryGetValue(m_PlayerId, out var dto))
 					SnapTo(dto);
+			}
+
+			if (m_PlayerId != m_State.MyId && m_IntentBubble != null)
+			{
+				m_IntentBubble.Hide();
 			}
 		}
 
@@ -286,6 +311,17 @@ namespace GamblingAction.Gameplay
 					m_Fx.PlayPushedPunch(ev.Dir);
 				else if (ev.Type == EventTypes.Vfx && ev.VfxType == VfxTypes.Bump)
 					m_Fx.PlayBumpPunch(ev.Dir);
+			}
+		}
+
+		private void HandleOpponentIntentRevealed(OpponentIntentRevealedMessage msg)
+		{
+			if (msg != null && msg.Intent != null)
+			{
+				if (m_IntentBubble != null)
+				{
+					m_IntentBubble.ShowIntent(msg.Intent.Type);
+				}
 			}
 		}
 	}

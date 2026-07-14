@@ -135,7 +135,7 @@ MonoBehaviour:
   m_Sprite: {fileID: 5445785835876287945}
   m_SpriteRoot: {fileID: 5419869110942172525}
   m_ChipsColor: {r: 1, g: 0.85, b: 0.1, a: 1}
-  m_MoneyColor: {r: 0.2, g: 0.9, b: 0.4, a: 1}
+  m_MoneyColor: {r: 0.3226415, g: 0.54951304, b: 1, a: 1}
   m_BillboardTarget: {fileID: 3952972901953295330}
   m_BobAmplitude: 0.1
   m_BobSpeed: 2

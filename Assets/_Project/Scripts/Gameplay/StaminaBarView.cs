@@ -1,5 +1,6 @@
-using GamblingAction.Core;
+﻿using GamblingAction.Core;
 using GamblingAction.Core.Dto;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
@@ -26,94 +27,125 @@ namespace GamblingAction.Gameplay
 		[FormerlySerializedAs("lowThreshold")]
 		[SerializeField] private int m_LowThreshold = 1;
 
-		private Image[] m_Cells;
+		private List<Image> m_Cells = new();
+		private List<GameObject> m_BgCells = new();
 		private int m_LastStamina = -1;
 		private int m_LastMaxStamina = -1;
 
 		private void Awake()
 		{
-			BuildCellsFromTemplate();
-		}
-
-		private void BuildCellsFromTemplate()
-		{
-			if (m_CellTemplate == null)
+			if (m_CellTemplate != null)
 			{
-				Debug.LogError("[StaminaBar] cellTemplate not assigned");
-				return;
+				m_CellTemplate.gameObject.SetActive(false);
 			}
-			Transform parent = m_CellsRoot != null ? m_CellsRoot : m_CellTemplate.transform.parent;
-
-			int n = GameConfig.MaxStamina;
-			m_Cells = new Image[n];
-
-			for (int i = 0; i < n; i++)
-			{
-				var clone = Instantiate(m_CellTemplate, parent);
-				clone.gameObject.name = $"Cell{i}";
-				clone.gameObject.SetActive(true);
-				m_Cells[i] = clone;
-			}
-
-			m_CellTemplate.gameObject.SetActive(false);
 		}
 
 		public void Apply(PlayerDto dto)
 		{
-			if (dto == null || m_Cells == null) return;
+			if (dto == null) return;
 
-			// 最大スタミナの確認
-			if(dto.MaxStamina != m_LastMaxStamina)
+			// 現在の最大スタミナ（サーバー側で計算されたバフ・補正適用後の値）
+			int currentMax = dto.CurrentMaxStamina;
+
+			// 最大スタミナの変動を確認
+			if (currentMax != m_LastMaxStamina)
 			{
-				UpdateMaxStamina(dto.MaxStamina);
+				UpdateMaxStamina(currentMax);
+				m_LastMaxStamina = currentMax;
 			}
 
-			if (dto.Stamina == m_LastStamina || dto.MaxStamina != m_LastMaxStamina)
-			{
-				UpdateStaminaVisuals(dto.Stamina, dto.MaxStamina);
-			}
-
+			// スタミナの更新、あるいは最大スタミナ更新時に再描画
+			UpdateStaminaVisuals(dto.Stamina, currentMax);
 
 			m_LastStamina = dto.Stamina;
-
-			var fillColor = dto.Stamina <= m_LowThreshold ? m_LowColor : m_HealthyColor;
-			for (int i = 0; i < m_Cells.Length; i++)
-			{
-				bool filled = i < dto.Stamina;
-				m_Cells[i].color = filled ? fillColor : m_EmptyColor;
-			}
 		}
 
 		// 最大スタミナに応じてセルの数を増減
 		private void UpdateMaxStamina(int newMax)
 		{
-			// m_LastMaxStamina = maxStamina;
-            // Transform parent = m_CellsRoot != null ? m_CellsRoot : m_CellTemplate.transform.parent;
+			if (m_CellTemplate == null) return;
 
-            // // 不足しているセルを生成
-            // while (m_Cells.Count < maxStamina)
-            // {
-            //     var clone = Instantiate(m_CellTemplate, parent);
-            //     clone.gameObject.name = $"Cell{m_Cells.Count}";
-            //     m_Cells.Add(clone);
-            // }
+			Transform parent = m_CellsRoot != null ? m_CellsRoot : m_CellTemplate.transform.parent;
 
-            // // 最大値に合わせて表示/非表示を切り替え
-            // for (int i = 0; i < m_Cells.Count; i++)
-            // {
-            //     m_Cells[i].gameObject.SetActive(i < maxStamina);
-            // }
+			// スタミナ2 = 1メモリなので、セル数は切り上げ
+			int targetCellCount = Mathf.CeilToInt(newMax / 2f);
+
+			// 不足しているセル（背景＋前面）を生成
+			while (m_Cells.Count < targetCellCount)
+			{
+				int index = m_Cells.Count;
+
+				// 背景セルをテンプレートから生成
+				var bgClone = Instantiate(m_CellTemplate, parent);
+				bgClone.gameObject.name = $"CellBg{index}";
+				bgClone.gameObject.SetActive(true);
+				bgClone.color = m_EmptyColor;
+
+				// 前面セルを背景セルの子として生成
+				var fgClone = Instantiate(m_CellTemplate, bgClone.transform);
+				fgClone.gameObject.name = $"CellFg{index}";
+				fgClone.gameObject.SetActive(true);
+
+				// 前面セルの RectTransform を Stretch Stretch に設定
+				var rectTrans = fgClone.GetComponent<RectTransform>();
+				if (rectTrans != null)
+				{
+					rectTrans.anchorMin = Vector2.zero;
+					rectTrans.anchorMax = Vector2.one;
+					rectTrans.offsetMin = Vector2.zero;
+					rectTrans.offsetMax = Vector2.zero;
+				}
+
+				// 前面セルの Image.Type を Filled に、FillMethod を Horizontal に設定
+				fgClone.type = Image.Type.Filled;
+				fgClone.fillMethod = Image.FillMethod.Horizontal;
+				fgClone.fillAmount = 0f;
+
+				m_BgCells.Add(bgClone.gameObject);
+				m_Cells.Add(fgClone);
+			}
+
+			// 最大値に合わせて表示/非表示を切り替え
+			for (int i = 0; i < m_BgCells.Count; i++)
+			{
+				bool isActive = i < targetCellCount;
+				m_BgCells[i].SetActive(isActive);
+			}
 		}
 
 		// 見た目の変更
 		private void UpdateStaminaVisuals(int stamina, int maxStamina)
 		{
-			// var fillColor = stamina <= m_LowThreshold ? m_LowColor : m_HealthyColor;
-			// for (int i = 0; i < m_Cells.Length; i++)
-			// {
-			// 	bool filled = i < stamina;
-			// 	m_Cells[i].color = filled ? fillColor : m_EmptyColor;
-			// }
+			var fillColor = stamina <= m_LowThreshold ? m_LowColor : m_HealthyColor;
+			int targetCellCount = Mathf.CeilToInt(maxStamina / 2f);
+
+			for (int i = 0; i < m_Cells.Count; i++)
+			{
+				if (i >= targetCellCount)
+				{
+					m_Cells[i].fillAmount = 0f;
+					continue;
+				}
+
+				// 各メモリはスタミナ 2 個分を表す
+				int requiredForHalf = i * 2 + 1;
+				int requiredForFull = i * 2 + 2;
+
+				if (stamina >= requiredForFull)
+				{
+					m_Cells[i].fillAmount = 1.0f;
+					m_Cells[i].color = fillColor;
+				}
+				else if (stamina == requiredForHalf)
+				{
+					m_Cells[i].fillAmount = 0.5f;
+					m_Cells[i].color = fillColor;
+				}
+				else
+				{
+					m_Cells[i].fillAmount = 0f;
+				}
+			}
 		}
 	}
 }

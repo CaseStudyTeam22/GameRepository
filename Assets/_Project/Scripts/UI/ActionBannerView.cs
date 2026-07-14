@@ -27,25 +27,25 @@ namespace GamblingAction.UI
         [Header("References")]
         [SerializeField, Tooltip("'ACTION!' テキスト")]
         private TMP_Text m_Label;
-        [SerializeField, Tooltip("背景フラッシュ用の半透明 Image（任意）")]
-        private Image m_BackgroundFlash;
+        //[SerializeField, Tooltip("背景フラッシュ用の半透明 Image（任意）")]
+        //private Image m_BackgroundFlash;
 
         [Header("Text")]
         [SerializeField] private string m_BannerText = "ACTION!";
-        [SerializeField, Tooltip("フォントサイズ（TMP Canvas ローカル単位）。Canvas のスケールに依存するため環境によって大きく異なる。\nWorld Space Canvas では数万単位になることがある")]
-        private float m_FontSize = 18000f;
+        [SerializeField, Tooltip("フォントサイズ")]
+        private float m_FontSize = 180f;
 
         [Header("Timing")]
         [SerializeField, Tooltip("スケールイン時間（秒）")]
-        private float m_ScaleInDuration = 0.12f;
+        private float m_ScaleInDuration = 0.05f;
         [SerializeField, Tooltip("表示保持時間（秒）")]
-        private float m_HoldDuration = 0.25f;
+        private float m_HoldDuration = 0.125f;
         [SerializeField, Tooltip("フェードアウト時間（秒）")]
-        private float m_FadeOutDuration = 0.22f;
+        private float m_FadeOutDuration = 0.15f;
 
         [Header("Scale")]
         [SerializeField, Tooltip("出現開始時のスケール（大きいほど迫力）")]
-        private float m_StartScale = 1.6f;
+        private float m_StartScale = 1.35f;
         [SerializeField, Tooltip("保持・フェードアウト中の最終スケール")]
         private float m_EndScale = 0.85f;
 
@@ -84,12 +84,6 @@ namespace GamblingAction.UI
             m_CanvasGroup.alpha = 0f;
             m_CanvasGroup.interactable = false;
             m_CanvasGroup.blocksRaycasts = false;
-            if (m_BackgroundFlash != null)
-            {
-                var fc = m_BackgroundFlash.color;
-                fc.a = 0f;
-                m_BackgroundFlash.color = fc;
-            }
         }
 
         private void Start()
@@ -123,8 +117,7 @@ namespace GamblingAction.UI
             {
                 StopCoroutine(m_PlayCo);
                 DOTween.Kill(this);
-                m_CanvasGroup.alpha = 0f;
-                if (m_BackgroundFlash != null) { var fc = m_BackgroundFlash.color; fc.a = 0f; m_BackgroundFlash.color = fc; }
+                m_CanvasGroup.alpha = 0f;               
             }
             m_PlayCo = StartCoroutine(PlaySequence());
         }
@@ -137,11 +130,7 @@ namespace GamblingAction.UI
             // ── フェーズ 1: スケールイン ──────────────────────────
             m_CanvasGroup.alpha = 0f;
             if (m_LabelRect != null) m_LabelRect.localScale = Vector3.one * m_StartScale;
-            if (m_BackgroundFlash != null)
-            {
-                var fc = m_BackgroundFlash.color; fc.a = 0f;
-                m_BackgroundFlash.color = fc;
-            }
+
 
             // スケール & アルファを同時アニメーション（DOTween）
             if (m_LabelRect != null)
@@ -150,12 +139,6 @@ namespace GamblingAction.UI
             DOTween.To(() => m_CanvasGroup.alpha, x => m_CanvasGroup.alpha = x, 1f, m_ScaleInDuration * 0.8f)
                 .SetEase(Ease.OutQuad).SetTarget(this);
 
-            if (m_BackgroundFlash != null)
-            {
-                var flash = m_BackgroundFlash;
-                DOTween.To(() => flash.color.a, x => { var c = flash.color; c.a = x; flash.color = c; },
-                    m_FlashMaxAlpha, m_ScaleInDuration).SetEase(Ease.OutQuad).SetTarget(this);
-            }
 
             yield return new WaitForSeconds(m_ScaleInDuration);
 
@@ -171,12 +154,7 @@ namespace GamblingAction.UI
                 .SetEase(Ease.InQuad).SetTarget(this);
             if (m_LabelRect != null)
                 m_LabelRect.DOScale(m_EndScale * 0.7f, m_FadeOutDuration).SetEase(Ease.InQuad);
-            if (m_BackgroundFlash != null)
-            {
-                var flash = m_BackgroundFlash;
-                DOTween.To(() => flash.color.a, x => { var c = flash.color; c.a = x; flash.color = c; },
-                    0f, m_FadeOutDuration * 0.6f).SetEase(Ease.InQuad).SetTarget(this);
-            }
+
 
             yield return new WaitForSeconds(m_FadeOutDuration);
 

@@ -1,3 +1,5 @@
+﻿using Codice.CM.SEIDInfo;
+using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
 using System.Collections;
@@ -38,7 +40,10 @@ namespace GamblingAction.UI
 		[Tooltip("チップ交換 / カード選択の制限時間（秒）。サーバの PREPARE_PHASE_MS に合わせる")]
 		[SerializeField] private float m_PrepareSeconds = 20f;
 
-		[Header("Tuning")]
+        [Header("相手待ちの表示切替")]
+        [SerializeField] private GameObject m_WaitingPanel;
+
+        [Header("Tuning")]
 		[Tooltip("決着パネル（RoundOver）を表示しておく秒数。経過後に自動で隠す。サーバの次ラウンド開始待ち（3 秒）に合わせる")]
 		[SerializeField] private float m_RoundOverDisplaySeconds = 3f;
 		[FormerlySerializedAs("executeFlashSeconds")]
@@ -49,6 +54,41 @@ namespace GamblingAction.UI
 		[SerializeField] private Color m_FinalBeatOnColor = new Color(0.89f, 0.29f, 0.29f);
 		[FormerlySerializedAs("beatOffColor")]
 		[SerializeField] private Color m_BeatOffColor = new Color(0.17f, 0.17f, 0.16f, 1f);
+
+		[Header("Command Buttons & Animation Settings")]
+		[SerializeField, Tooltip("押し込みコマンド選択ボタン")]
+		private Button m_PushButton;
+		//[SerializeField, Tooltip("攻撃コマンド選択ボタン")]
+		//private Button m_AttackButton;
+		[SerializeField, Tooltip("防御コマンド選択ボタン")]
+		private Button m_DefenseButton;
+		[SerializeField, Tooltip("スキルコマンド選択ボタン")]
+		private Button m_SkillButton;
+
+		[SerializeField, Tooltip("コマンド選択時の背景ハイライト色 (Power 1: 黄)")]
+		private Color m_SelectedColorPower1 = new Color(0.9f, 0.9f, 0.1f);
+		[SerializeField, Tooltip("コマンド選択時の背景ハイライト色 (Power 2: 橙)")]
+		private Color m_SelectedColorPower2 = new Color(0.94f, 0.5f, 0.15f);
+		[SerializeField, Tooltip("コマンド選択時の背景ハイライト色 (Power 3: 赤)")]
+		private Color m_SelectedColorPower3 = new Color(0.89f, 0.2f, 0.2f);
+
+		// 各コマンドボタンのキャッシュ用配列
+		private Button[] m_CommandButtons;
+		// 各コマンドボタンの初期位置を保存する変数
+		private Vector2[] m_CommandButtonsDefaultPositions;
+		// 各コマンドボタンの初期背景色を保存する変数
+		private Color[] m_CommandButtonsDefaultColors;
+		// 確定アニメーションが現在実行中かどうかを示すフラグ
+		private bool m_IsAnimatingCommandSelection;
+		// コマンドボタンの並びを制御するレイアウトグループ
+		private HorizontalLayoutGroup m_CommandLayoutGroup;
+		// 各コマンドボタンのフェードやスライドなど、実行中の DOTween アニメーションを追跡して確実に停止するためのリスト
+		private readonly System.Collections.Generic.List<Tween> m_ActiveTweens = new System.Collections.Generic.List<Tween>();
+		// 前回のインテントタイプと強度（Power）を保存するキャッシュ変数（強度変更時の演出判定用）
+		private string m_PrevIntentType;
+		private int m_PrevPower = 1;
+		// 所持金の色
+		private Color m_pointColor = new Color(0.32f, 0.54f, 1.0f, 1.0f);
 
 		[Header("Player slot colors")]
 		[SerializeField, Tooltip("P1 の文字色（role 固定。ワールドの P1 と同じ色）")]
@@ -94,13 +134,14 @@ namespace GamblingAction.UI
 		private TMP_Text[] m_MissionRewardTexts;
 
 		private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
-		private TMP_Text m_P2Name, m_P2Money;
+		private TMP_Text m_P2Name, m_P2Money, m_P2Chips;
 		private Image[] m_NormalBeats;
 		private Image m_FinalBeat;
 		private TMP_Text m_ExecuteText;
 		private TMP_Text m_ReadyText, m_CountdownText;
 		private RectTransform m_TimeBarFill;
 		private TMP_Text m_RoundText;
+		private TMP_Text m_TurnText;
 
 		private Image m_PrepareTimebar;
 		private TMP_Text m_PrepareTimeText;
@@ -180,6 +221,9 @@ namespace GamblingAction.UI
 			FindMissionControls();
 			WireButtons();
 
+			// コマンドボタンを配列にまとめ、それぞれの初期位置と背景色をキャッシュする
+			InitializeCommandButtonsCache();
+
 			// FindFlowControls でボタン参照が揃ってから配列を構築する
 			m_BuffButtons = new[] { m_HighRiskButton, m_LowRiskButton, m_SkipBuffButton };
 
@@ -187,6 +231,9 @@ namespace GamblingAction.UI
 			m_State.OnPlayersChanged += HandlePlayersChanged;
 			m_State.OnPlayersChanged += UpdateExchangeRange;
 			m_State.OnBeatChanged    += HandleBeatChanged;
+
+			// ローカルプレイヤーのインテント（コマンド）選択変更を監視
+			LocalIntentBus.OnChanged += HandleLocalIntentChanged;
 
 			// 起動時のシーン保存状態に依存せず、フェーズ判定の前に全フローパネルを一旦隠す。
 			// （シーンで誤ってアクティブ保存されていても、起動直後に重複表示されないようにする保険）
@@ -210,6 +257,10 @@ namespace GamblingAction.UI
 				m_State.OnPlayersChanged -= UpdateExchangeRange;
 				m_State.OnBeatChanged    -= HandleBeatChanged;
 			}
+
+			// ローカルプレイヤーのインテント選択の監視を解除
+			LocalIntentBus.OnChanged -= HandleLocalIntentChanged;
+
 			if (m_GameOverTransitionCo != null)
 			{
 				StopCoroutine(m_GameOverTransitionCo);
@@ -593,6 +644,7 @@ namespace GamblingAction.UI
 			m_P1Chips = FindByPath<TMP_Text>(m_MainGameStage, "PlayerStatus/P1/Chips");
 			m_P2Name  = FindByPath<TMP_Text>(m_MainGameStage, "PlayerStatus/P2/Name");
 			m_P2Money = FindByPath<TMP_Text>(m_MainGameStage, "PlayerStatus/P2/Money");
+			m_P2Chips = FindByPath<TMP_Text>(m_MainGameStage, "PlayerStatus/P2/Chips");
 
 			m_NormalBeats = new[]
 			{
@@ -603,7 +655,7 @@ namespace GamblingAction.UI
 			m_FinalBeat   = FindByPath<Image>(m_MainGameStage, "Metronome/Layout/FinalBeat");
 			m_ExecuteText = FindByPath<TMP_Text>(m_MainGameStage, "Metronome/ExecuteText");
 
-			m_ReadyText     = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Ready");
+			m_ReadyText = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Ready");
 			m_CountdownText = FindByPath<TMP_Text>(m_MainGameStage, "ReadyPanel/Countdown");
 
 			var fill = FindByPath<RectTransform>(m_MainGameStage, "TimeBar/Fill");
@@ -614,6 +666,14 @@ namespace GamblingAction.UI
 			}
 
 			m_RoundText = FindByPath<TMP_Text>(m_MainGameStage, "Round/RoundText");
+
+			m_TurnText = FindByPath<TMP_Text>(m_MainGameStage, "Turn/TurnText");
+
+			// バトル用の各コマンド選択ボタン（Push, Attack, Defense, Skill）を再帰検索して取得
+			m_PushButton    = FindChild<Button>(m_MainGameStage.transform, "Push");
+			//m_AttackButton  = FindChild<Button>(m_MainGameStage.transform, "Attack");
+			m_DefenseButton = FindChild<Button>(m_MainGameStage.transform, "Defense");
+			m_SkillButton   = FindChild<Button>(m_MainGameStage.transform, "Skill");
 
 			if (m_ExecuteText != null) m_ExecuteText.gameObject.SetActive(false);
 		}
@@ -651,8 +711,9 @@ namespace GamblingAction.UI
 			if (m_ExchangeSlider != null)
 				m_ExchangeSlider.onValueChanged.AddListener(v =>
 				{
+					int amount = GetExchangeAmount(v);
 					if (m_ExchangeAmountText != null)
-						m_ExchangeAmountText.text = $"{(int)v} chips (¥{(int)v * 100})";
+						m_ExchangeAmountText.text = $"{amount} chips ({amount}pt)";
 				});
 
 			// マウスは 1 クリックで確定、コントローラーは B で確定（どちらも同じ本処理を呼ぶ）。
@@ -683,11 +744,13 @@ namespace GamblingAction.UI
 		/// <summary>換金確定の本処理。</summary>
 		private void DoExchangeConfirm()
 		{
-			int amount = m_ExchangeSlider != null ? (int)m_ExchangeSlider.value : 0;
+			int amount = m_ExchangeSlider != null ? GetExchangeAmount(m_ExchangeSlider.value) : 0;
 			m_PendingExchange = amount;
 			m_State.SubmitExchange(amount);
 			m_ExchangeConfirmButton.interactable = false;
-		}
+			m_ExchangeSlider.interactable = false;
+            ShowWaitingPanel();
+        }
 
 		/// <summary>ミッション選択の本処理。</summary>
 		private void DoSubmitMission(int index)
@@ -697,7 +760,8 @@ namespace GamblingAction.UI
 			{
 				m_State.SubmitMission(me.AvailableMissions[index].Id);
 				SetActive(m_MissionSelectionPanel, false);
-			}
+                ShowWaitingPanel();
+            }
 		}
 
 		private void SubmitBuff(string id)
@@ -710,7 +774,11 @@ namespace GamblingAction.UI
 
 		private void HandlePhase(EGamePhase phase)
 		{
-			SetActive(m_ExchangePanel,  phase == EGamePhase.Exchange);
+            HideWaitingPanel();
+            
+			var me = m_State.Me;
+			bool showExchange = (phase == EGamePhase.Exchange) && (me == null || !me.Exchanged);
+			SetActive(m_ExchangePanel,  showExchange);
 			SetActive(m_GameOverPanel,  phase == EGamePhase.GameOver && m_IsStarted);
 
 			// BuffSelection 以外のフェーズ（Exchange に戻った場合を含む）では
@@ -754,12 +822,16 @@ namespace GamblingAction.UI
 			{
 				m_PendingExchange = 0;
 				if (m_ExchangeConfirmButton != null) m_ExchangeConfirmButton.interactable = true;
-				UpdateExchangeRange();
+				if (m_ExchangeSlider != null) m_ExchangeSlider.interactable = true;
+                {
+                    
+                }
+                UpdateExchangeRange();
 			}
 
 			if (phase == EGamePhase.BuffSelection)
 			{
-				int chips = (m_State.Me?.Chips ?? 0) + m_PendingExchange;
+				int chips = (m_State.Me?.Chips ?? 0) + (m_State.Me?.PendingExchange ?? 0);
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
 				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;
@@ -783,6 +855,8 @@ namespace GamblingAction.UI
 				UpdateRoundText();
 				StartCountdown();
 				UpdateMissionUI();
+				// カウントダウン開始時（ステージ表示時）に、前ラウンドのフェードアウト状態からコマンドボタンを初期状態に戻して表示する
+				ResetCommandButtons();
 			}
 			else
 			{
@@ -793,6 +867,8 @@ namespace GamblingAction.UI
 			{
 				UpdateBeatVisual();
 				UpdateMissionUI();
+				// バトル開始時にコマンドボタンの位置・色・アルファ値を初期状態に戻す
+				ResetCommandButtons();
 			}
 
 			if (phase == EGamePhase.GameOver)
@@ -826,11 +902,18 @@ namespace GamblingAction.UI
 			var opponent = m_State.Opponent;
 
 			ApplyPlayerSlot(me,       m_P1Name, m_P1Money, m_P1Chips, isSelf: true);
-			ApplyPlayerSlot(opponent, m_P2Name, m_P2Money, null,      isSelf: false);
+			ApplyPlayerSlot(opponent, m_P2Name, m_P2Money, m_P2Chips, isSelf: false);
 
 			UpdateMissionUI();
 			UpdateBuffPanelUI();
 			UpdateMissionSelectionUI();
+
+			// チップ交換フェーズ中、すでに両替済みの場合は両替パネルを非表示にする
+			if (m_State.Phase == EGamePhase.Exchange)
+			{
+				bool showExchange = me == null || !me.Exchanged;
+				SetActive(m_ExchangePanel, showExchange);
+			}
 		}
 
 		private void UpdateMissionUI()
@@ -935,28 +1018,66 @@ namespace GamblingAction.UI
 
 			if (nameText != null)
 			{
-				nameText.text = dto.IsAI ? $"{dto.Role} (AI)" : dto.Role;
+				string displayName = dto.Role;
+
+				if (displayName == "P1")
+					displayName = "1P";
+				else if (displayName == "P2")
+					displayName = "2P";
+
+				if (dto.IsAI)
+					displayName += " (AI)";
+
+				nameText.text = displayName;
 				nameText.color = slotColor;
 			}
 			if (moneyText != null)
 			{
-				moneyText.text = $"¥{dto.Money:N0}";
-				moneyText.color = slotColor;
+				moneyText.text = $"{dto.Money:N0}pt";
+				moneyText.color = m_pointColor;
 			}
 			if (chipsText != null)
 			{
-				chipsText.text = isSelf ? dto.Chips.ToString() : "??";
+				var me = m_State.Me;
+				bool canSeeChips = isSelf || (me != null && me.ScammerActive);
+				chipsText.text = canSeeChips ? dto.Chips.ToString() : "??";
 				chipsText.color = slotColor;
 			}
 		}
 
 		private void HandleBeatChanged()
 		{
+			if (m_State == null)
+			{
+				return;
+			}
+
 			UpdateBeatVisual();
 			UpdateTimeBar();
+			UpdateTurn();
 
+			// 4拍目（実行拍）での処理
 			if (m_State.CurrentBeat == 4)
+			{
 				FlashExecuteText();
+
+				// バトル中であれば選択されているコマンドの確定アニメーションを再生
+				if (m_State.Phase == EGamePhase.Battle)
+				{
+					var activeIntentType = LocalIntentBus.Current.Mode;
+					PlayCommandSelectionAnimation(activeIntentType);
+				}
+			}
+
+			// 1拍目（入力開始拍）での処理
+			if (m_State.CurrentBeat == 1)
+			{
+				// バトル中であればコマンドボタンの表示を初期状態にリセット
+				if (m_State.Phase == EGamePhase.Battle)
+				{
+					ResetCommandButtons();
+				}
+			}
 		}
 
 		private void UpdateBeatVisual()
@@ -974,7 +1095,10 @@ namespace GamblingAction.UI
 				}
 			}
 			if (m_FinalBeat != null)
-				m_FinalBeat.color = (battle && beat == 4) ? m_FinalBeatOnColor : m_BeatOffColor;
+			{
+				bool finalOn = battle && beat == 4;
+				m_FinalBeat.color = finalOn ? m_FinalBeatOnColor : m_BeatOffColor;
+			}
 		}
 
 		private void UpdateTimeBar()
@@ -1136,16 +1260,482 @@ namespace GamblingAction.UI
 			m_RoundText.text = $"Round {m_RoundCount}";
 		}
 
+		private void UpdateTurn()
+		{
+			m_TurnText.text = $"ターン{m_State.CycleCount}/20";
+		}
+
+		/// <summary>
+		/// ローカルプレイヤーのインテント変更イベントを受け取り、選択状態の背景色（倍率による3段階）およびボタンの位置を更新します。
+		/// </summary>
+		private void HandleLocalIntentChanged()
+		{
+			// 確定アニメーションが再生中の場合は背景色や位置の更新を行わない
+			if (m_IsAnimatingCommandSelection)
+			{
+				return;
+			}
+
+			// 現在選択されているインテントタイプ（Push, Defense など）と倍率（Power）を取得
+			var activeIntentType = LocalIntentBus.Current.Mode;
+			var power = LocalIntentBus.Current.Power;
+			UpdateCommandButtonStates(activeIntentType, power);
+		}
+
+		/// <summary>
+		/// 指定されたインテントタイプとパワー値に基づいて、コマンドボタンのハイライト色（黄/橙/赤の3段階）およびY座標の位置（選択中は少し上げる）を更新します。
+		/// </summary>
+		/// <param name="activeIntentType">現在アクティブなインテントの種類</param>
+		/// <param name="power">現在の入力倍率（1〜3）</param>
+		private void UpdateCommandButtonStates(string activeIntentType, int power)
+		{
+			if (m_CommandButtons == null)
+			{
+				return;
+			}
+
+			// 選択状態にかかわらず、位置の個別制御が必要になるため
+			// レイアウトグループを一時的に無効にします（ResetCommandButtons() 呼び出し時に再度有効化されます）
+			if (m_CommandLayoutGroup != null)
+			{
+				m_CommandLayoutGroup.enabled = false;
+			}
+
+			// パワー値に応じたハイライト色を決定
+			Color highlightColor = m_SelectedColorPower1;
+			if (power == 2)
+			{
+				highlightColor = m_SelectedColorPower2;
+			}
+			else if (power >= 3)
+			{
+				highlightColor = m_SelectedColorPower3;
+			}
+
+			for (int i = 0; i < m_CommandButtons.Length; i++)
+			{
+				var btn = m_CommandButtons[i];
+				if (btn == null)
+				{
+					continue;
+				}
+
+				var img = btn.GetComponent<Image>();
+				var rect = btn.GetComponent<RectTransform>();
+
+				// ボタンに対応するインテントタイプが選択されているか判定
+				bool isSelected = false;
+				if (btn == m_PushButton && activeIntentType == IntentTypes.Push)
+				{
+					isSelected = true;
+				}
+				// else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
+				// {
+				// 	isSelected = true;
+				// }
+				else if (btn == m_DefenseButton && activeIntentType == IntentTypes.Defense)
+				{
+					isSelected = true;
+				}
+				else if (btn == m_SkillButton && activeIntentType == IntentTypes.Skill)
+				{
+					isSelected = true;
+				}
+
+				// 色の適用
+				if (img != null)
+				{
+					img.color = isSelected ? highlightColor : m_CommandButtonsDefaultColors[i];
+				}
+
+				// 位置の適用（選択されているボタンは少し上にスライド、非選択は元の位置に戻す）
+				if (rect != null)
+				{
+					float targetY = isSelected
+						? m_CommandButtonsDefaultPositions[i].y + 20f
+						: m_CommandButtonsDefaultPositions[i].y;
+
+					if (isSelected)
+					{
+						// 同一のコマンド内で強度が変化した際のアニメーション演出
+						if (activeIntentType == m_PrevIntentType && power != m_PrevPower)
+						{
+							rect.DOKill();
+							// 強度が変化した場合：下から上がる演出（一度デフォルト位置にスナップさせてから浮かせる）
+							rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, m_CommandButtonsDefaultPositions[i].y);
+						}
+					}
+
+					SlideButtonY(rect, targetY, 0.2f);
+				}
+			}
+
+			// 前回のインテントと強度を保存
+			m_PrevIntentType = activeIntentType;
+			m_PrevPower = power;
+		}
+
+		private int GetExchangeAmount(float sliderValue)
+		{
+			var me = m_State.Me;
+			if (me == null) return 0;
+			int max = Mathf.Min(20000, me.Money);
+			if (max <= 0) return 0;
+
+			int maxSteps = Mathf.CeilToInt((float)max / 200f);
+			int step = Mathf.RoundToInt(sliderValue);
+
+			if (step >= maxSteps)
+			{
+				return max; // 最右端は所持金全て（オールイン）
+			}
+			return step * 200;
+		}
+
 		private void UpdateExchangeRange()
 		{
 			if (m_ExchangeSlider == null) return;
 			var me = m_State.Me;
-			int max = me != null ? Mathf.Min(100, me.Money / 100) : 0;
+			int max = me != null ? Mathf.Min(20000, me.Money) : 0;
+			int maxSteps = Mathf.CeilToInt((float)max / 200f);
+
 			m_ExchangeSlider.minValue = 0;
-			m_ExchangeSlider.maxValue = max;
-			if (m_ExchangeSlider.value > max) m_ExchangeSlider.value = max;
+			m_ExchangeSlider.maxValue = maxSteps;
+			m_ExchangeSlider.wholeNumbers = true; // 整数値にスナップさせる
+
+			if (m_ExchangeSlider.value > maxSteps) m_ExchangeSlider.value = maxSteps;
+
+			int currentAmount = GetExchangeAmount(m_ExchangeSlider.value);
 			if (m_ExchangeAmountText != null)
-				m_ExchangeAmountText.text = $"{(int)m_ExchangeSlider.value} chips (¥{(int)m_ExchangeSlider.value * 100})";
+				m_ExchangeAmountText.text = $"{currentAmount} chips ({currentAmount}pt)";
+		}
+
+		/// <summary>
+		/// バトルコマンドボタンの初期状態（ anchoredPosition および背景色）をキャッシュします。
+		/// </summary>
+		private void InitializeCommandButtonsCache()
+		{
+			// コマンドボタンの親オブジェクトにアタッチされているレイアウトグループを取得
+			if (m_PushButton != null && m_PushButton.transform.parent != null)
+			{
+				m_CommandLayoutGroup = m_PushButton.transform.parent.GetComponent<HorizontalLayoutGroup>();
+			}
+
+			// Startのフレームではレイアウトグループ（HorizontalLayoutGroup）による整列計算が完了していない場合があるため、
+			// レイアウトを強制的に即時再構築して、正しい整列状態の座標を確定させてキャッシュします
+			if (m_CommandLayoutGroup != null)
+			{
+				LayoutRebuilder.ForceRebuildLayoutImmediate(m_CommandLayoutGroup.GetComponent<RectTransform>());
+			}
+
+			m_CommandButtons = new Button[]
+			{
+				m_PushButton,
+				//m_AttackButton,
+				m_DefenseButton,
+				m_SkillButton
+			};
+
+			m_CommandButtonsDefaultPositions = new Vector2[m_CommandButtons.Length];
+			m_CommandButtonsDefaultColors = new Color[m_CommandButtons.Length];
+
+			for (int i = 0; i < m_CommandButtons.Length; i++)
+			{
+				var btn = m_CommandButtons[i];
+				if (btn == null)
+				{
+					continue;
+				}
+
+				var rect = btn.GetComponent<RectTransform>();
+				if (rect != null)
+				{
+					m_CommandButtonsDefaultPositions[i] = rect.anchoredPosition;
+				}
+
+				var img = btn.GetComponent<Image>();
+				if (img != null)
+				{
+					// シーン初期状態でボタンが透明化されている場合を考慮し、アルファ値を 1.0f (不透明) に補正してキャッシュ
+					var defaultColor = img.color;
+					defaultColor.a = 1f;
+					m_CommandButtonsDefaultColors[i] = defaultColor;
+				}
+			}
+		}
+		/// <summary>
+		/// 4拍目（実行拍）になった瞬間に呼び出され、決定したコマンドのボタンを上にスライドフェードアウトし、他をその場でフェードアウトさせます。
+		/// </summary>
+		/// <param name="activeIntentType">決定されたインテントの種類</param>
+		private void PlayCommandSelectionAnimation(string activeIntentType)
+		{
+			if (m_IsAnimatingCommandSelection || m_CommandButtons == null)
+			{
+				return;
+			}
+
+			m_IsAnimatingCommandSelection = true;
+
+			// アニメーションによる位置の移動を許可するため、レイアウトグループの自動整列を一時的に無効化
+			if (m_CommandLayoutGroup != null)
+			{
+				m_CommandLayoutGroup.enabled = false;
+			}
+
+			// 減衰速度を調整（選択されたボタン: 0.8秒、非選択のボタン: 0.5秒）
+			float selectedDuration = 0.8f;
+			float unselectedDuration = 0.5f;
+
+			for (int i = 0; i < m_CommandButtons.Length; i++)
+			{
+				var btn = m_CommandButtons[i];
+				if (btn == null)
+				{
+					continue;
+				}
+
+				// アニメーション中はクリックを無効化
+				btn.interactable = false;
+
+				var rectTransform = btn.GetComponent<RectTransform>();
+				// 配下にあるすべての Image (アイコン含む) と TMP_Text (操作案内等含む) を取得
+				var images = btn.GetComponentsInChildren<Image>(true);
+				var texts = btn.GetComponentsInChildren<TMP_Text>(true);
+
+				// ボタンに対応するインテントタイプが選択されているか判定
+				bool isSelected = false;
+				if (btn == m_PushButton && activeIntentType == IntentTypes.Push)
+				{
+					isSelected = true;
+				}
+				// else if (btn == m_AttackButton && activeIntentType == IntentTypes.Attack)
+				// {
+				// 	isSelected = true;
+				// }
+				else if (btn == m_DefenseButton && activeIntentType == IntentTypes.Defense)
+				{
+					isSelected = true;
+				}
+				else if (btn == m_SkillButton && activeIntentType == IntentTypes.Skill)
+				{
+					isSelected = true;
+				}
+
+				if (isSelected)
+				{
+					// 選択されたボタン：上に移動しながらフェードアウト
+					if (images != null)
+					{
+						for (int j = 0; j < images.Length; j++)
+						{
+							FadeImage(images[j], 0f, selectedDuration);
+						}
+					}
+					if (texts != null)
+					{
+						for (int j = 0; j < texts.Length; j++)
+						{
+							FadeText(texts[j], 0f, selectedDuration);
+						}
+					}
+					if (rectTransform != null)
+					{
+						SlideButtonY(rectTransform, m_CommandButtonsDefaultPositions[i].y + 50f, selectedDuration);
+					}
+				}
+				else
+				{
+					// 選択されなかったボタン：その場でフェードアウト
+					if (images != null)
+					{
+						for (int j = 0; j < images.Length; j++)
+						{
+							FadeImage(images[j], 0f, unselectedDuration);
+						}
+					}
+					if (texts != null)
+					{
+						for (int j = 0; j < texts.Length; j++)
+						{
+							FadeText(texts[j], 0f, unselectedDuration);
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// 1拍目（入力開始拍）になった瞬間に呼び出され、コマンドボタンの座標・アルファ値・背景色を初期状態にリセットします。
+		/// </summary>
+		private void ResetCommandButtons()
+		{
+			// 実行中のすべてのコマンドフェードやスライドのアニメーションを確実に Kill して停止する
+			for (int i = 0; i < m_ActiveTweens.Count; i++)
+			{
+				if (m_ActiveTweens[i] != null && m_ActiveTweens[i].IsActive())
+				{
+					m_ActiveTweens[i].Kill();
+				}
+			}
+			m_ActiveTweens.Clear();
+
+			if (m_CommandButtons == null)
+			{
+				return;
+			}
+
+			m_IsAnimatingCommandSelection = false;
+
+			m_PrevIntentType = null;
+			m_PrevPower = 1;
+
+			for (int i = 0; i < m_CommandButtons.Length; i++)
+			{
+				var btn = m_CommandButtons[i];
+				if (btn == null)
+				{
+					continue;
+				}
+
+				// 位置の復元とアニメーション停止
+				var rect = btn.GetComponent<RectTransform>();
+				if (rect != null)
+				{
+					rect.DOKill();
+					rect.anchoredPosition = m_CommandButtonsDefaultPositions[i];
+				}
+
+				// 配下にあるすべての Image (本体背景およびアイコン) の透明度と色を復元
+				var images = btn.GetComponentsInChildren<Image>(true);
+				if (images != null)
+				{
+					for (int j = 0; j < images.Length; j++)
+					{
+						var img = images[j];
+						if (img == null)
+						{
+							continue;
+						}
+						img.DOKill();
+
+						// ボタン本体の背景画像（一番最初のImage）はキャッシュされた初期色に戻す
+						// 子オブジェクトの画像（アイコンなど）は元のアルファ値 1 に戻す
+						if (img == btn.GetComponent<Image>())
+						{
+							img.color = m_CommandButtonsDefaultColors[i];
+						}
+						else
+						{
+							img.color = new Color(img.color.r, img.color.g, img.color.b, 1f);
+						}
+					}
+				}
+
+				// 配下にあるすべての TMP_Text の透明度を復元
+				var texts = btn.GetComponentsInChildren<TMP_Text>(true);
+				if (texts != null)
+				{
+					for (int j = 0; j < texts.Length; j++)
+					{
+						var txt = texts[j];
+						if (txt == null)
+						{
+							continue;
+						}
+						txt.DOKill();
+						txt.color = new Color(txt.color.r, txt.color.g, txt.color.b, 1f);
+					}
+				}
+
+				// インタラクティブ状態を復元（Battleフェーズでの入力許可）
+				btn.interactable = true;
+			}
+
+			// レイアウトグループを再び有効化し、ボタンを元の並びに自動整列させます
+			if (m_CommandLayoutGroup != null)
+			{
+				m_CommandLayoutGroup.enabled = true;
+			}
+		}
+
+		/// <summary>
+		/// 指定した Image のアルファ値を DOTween.To でフェードアニメーションさせます。
+		/// </summary>
+		/// <param name="image">対象のImageコンポーネント</param>
+		/// <param name="targetAlpha">目標のアルファ値</param>
+		/// <param name="duration">アニメーションの時間（秒）</param>
+		private void FadeImage(Image image, float targetAlpha, float duration)
+		{
+			if (image == null)
+			{
+				return;
+			}
+
+			// 既存の同対象へのアニメーションがあれば事前に停止
+			image.DOKill();
+
+			var t = DOTween.To(() => image.color.a, a =>
+			{
+				var c = image.color;
+				image.color = new Color(c.r, c.g, c.b, a);
+			}, targetAlpha, duration)
+				.SetTarget(image)
+				.SetEase(Ease.OutQuad);
+
+			m_ActiveTweens.Add(t);
+		}
+
+		/// <summary>
+		/// 指定した TMP_Text のアルファ値を DOTween.To でフェードアニメーションさせます。
+		/// </summary>
+		/// <param name="text">対象のTMP_Textコンポーネント</param>
+		/// <param name="targetAlpha">目標のアルファ値</param>
+		/// <param name="duration">アニメーションの時間（秒）</param>
+		private void FadeText(TMP_Text text, float targetAlpha, float duration)
+		{
+			if (text == null)
+			{
+				return;
+			}
+
+			// 既存の同対象へのアニメーションがあれば事前に停止
+			text.DOKill();
+
+			var t = DOTween.To(() => text.color.a, a =>
+			{
+				var c = text.color;
+				text.color = new Color(c.r, c.g, c.b, a);
+			}, targetAlpha, duration)
+				.SetTarget(text)
+				.SetEase(Ease.OutQuad);
+
+			m_ActiveTweens.Add(t);
+		}
+
+		/// <summary>
+		/// 指定した RectTransform の anchoredPosition.y を DOTween.To でアニメーションさせます。
+		/// </summary>
+		/// <param name="rect">対象のRectTransform</param>
+		/// <param name="targetY">目標の anchoredPosition.y</param>
+		/// <param name="duration">アニメーションの時間（秒）</param>
+		private void SlideButtonY(RectTransform rect, float targetY, float duration)
+		{
+			if (rect == null)
+			{
+				return;
+			}
+
+			// 既存の同対象へのアニメーションがあれば事前に停止
+			rect.DOKill();
+
+			var t = DOTween.To(() => rect.anchoredPosition.y, y =>
+			{
+				rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
+			}, targetY, duration)
+				.SetTarget(rect)
+				.SetEase(Ease.OutQuad);
+
+			m_ActiveTweens.Add(t);
 		}
 
 		/// <summary>
@@ -1163,11 +1753,60 @@ namespace GamblingAction.UI
 			SetActive(m_PreparingCountdownPanel, false);
 			SetActive(m_MissionPanel, false);
 			SetActive(m_MissionSelectionPanel, false);
-		}
+            SetActive(m_WaitingPanel, false);
+        }
 
 		private static void SetActive(GameObject go, bool active)
 		{
 			if (go != null && go.activeSelf != active) go.SetActive(active);
+		}
+
+        private void ShowWaitingPanel()
+        {
+            SetActive(m_WaitingPanel, true);
+        }
+
+        private void HideWaitingPanel()
+        {
+            SetActive(m_WaitingPanel, false);
+        }
+        
+		/// <summary>
+        /// 指定した親オブジェクトの配下から、非アクティブオブジェクトも含めて名前で子コンポーネントを再帰的に検索します。
+        /// </summary>
+        /// <typeparam name="T">検索するコンポーネントの型</typeparam>
+        /// <param name="root">検索の起点となるTransform</param>
+        /// <param name="name">検索対象のゲームオブジェクト名</param>
+        /// <returns>見つかったコンポーネント。見つからない場合は null</returns>
+        private static T FindChild<T>(Transform root, string name) where T : Component
+		{
+			if (root == null)
+			{
+				return null;
+			}
+
+			// 直下の子から名前が一致するものを取得
+			var direct = root.Find(name);
+			if (direct != null)
+			{
+				var c = direct.GetComponent<T>();
+				if (c != null)
+				{
+					return c;
+				}
+			}
+
+			// 見つからない場合は非アクティブオブジェクトも含めて配下全体から再帰的に取得
+			var all = root.GetComponentsInChildren<T>(true);
+			for (int i = 0; i < all.Length; i++)
+			{
+				if (all[i].name == name)
+				{
+					return all[i];
+				}
+			}
+
+			return null;
 		}
 	}
 }

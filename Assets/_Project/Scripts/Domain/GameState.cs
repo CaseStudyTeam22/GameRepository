@@ -1,18 +1,34 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GamblingAction.Core;
 using GamblingAction.Core.Dto;
 using GamblingAction.Net;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace GamblingAction.Domain
 {
 	public class GameState : IGameState, IDisposable
 	{
+		private static readonly string[] CharacterSheetUrls = new string[]
+		{
+			"https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/export?format=csv&gid=0",         // Normal
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=573545404", // Doctor
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=484412955", // NouveauRiche
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=369696735", // Fighter
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=34508704", // Guardian
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=2137123423", // Scammer
+			"https://docs.google.com/spreadsheets/d/1UnmLUayVJn8xHJbpH6IwUFvAO5Mps5EUMAGYah3tdBY/export?format=csv&gid=795014052"  // Debtor
+		};
+
 		private readonly INetClient m_Net;
 		private readonly Dictionary<string, PlayerDto> m_Players = new();
 		private List<ItemDto> m_Items = new();
+		private int m_SelectedCharaIndex = 1;
+		private CharaDataMessage m_SelectedCharaData;
+		private readonly Dictionary<int, CharaDataMessage> m_CharaDataCache = new();
 
 		// この端末を一意に識別するトークン。アプリ起動中は変わらない。
 		// 接続のたびにサーバへ送り、再接続時に元の席（P1/P2・スコア等）を復元させる。
@@ -25,12 +41,25 @@ namespace GamblingAction.Domain
 		public int CurrentBeat { get; private set; }
 		public int TimeLeft { get; private set; }
 		public bool GameActive { get; private set; }
+		public int CycleCount { get; private set; }
+		public int CurrentBarIndex { get; private set; }
+		public int CurrentAbsoluteBeat { get; private set; }
+		public int NextBeat { get; private set; }
+		public int NextBarIndex { get; private set; }
+		public int NextAbsoluteBeat { get; private set; }
+		public long BeatSequence { get; private set; }
+		public long RoundId { get; private set; }
+		public long BeatStartServerMs { get; private set; }
+		public long NextBoundaryServerMs { get; private set; }
+		public int BeatIntervalMs { get; private set; }
+		public int BeatsPerBar { get; private set; } = 4;
 		public EGamePhase Phase { get; private set; } = EGamePhase.Lobby;
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
-        public bool SuddenDeathAlreadyStarted { get; private set; }
+		public bool SuddenDeathAlreadyStarted { get; private set; }
+		public bool IsReady { get; private set; }
 
-        public PlayerDto Me =>
+		public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
 
 		public PlayerDto Opponent =>
@@ -55,13 +84,18 @@ namespace GamblingAction.Domain
 		public event Action<FinalRaisePendingMessage> OnFinalRaisePending;
 		public event Action<FinalRaiseCanceledMessage> OnFinalRaiseCanceled;
 		public event Action OnFinalRaiseStarted;
-        public event Action OnSuddenDeathStarted;
+        /// イカサマスキル発動中に相手の intent が更新された際、イカサマプレイヤーのみに通知されるイベント。
+        /// UI表示は未実装（骨格のみ）。
+        public event Action<OpponentIntentRevealedMessage> OnOpponentIntentRevealed;
 
-        public GameState(INetClient net)
+		public event Action OnSuddenDeathStarted;
+
+		public GameState(INetClient net)
 		{
-            Debug.Log("[GameState] Created instance: " + this.GetHashCode());
-            m_Net = net;
+			Debug.Log("[GameState] Created instance: " + this.GetHashCode());
+			m_Net = net;
 			Subscribe();
+			_ = PreloadAllCharaDataAsync();
 		}
 
 		public void SubmitIntent(string type, string dir, int power)
@@ -70,35 +104,126 @@ namespace GamblingAction.Domain
 			var me = Me;
 			if (me == null || me.IsAI) return;
 
-			// テストで4拍ごとに押し出し力+1
-			m_Players[MyId].PushModifier.AddModifier("test", new Modifier { Type = "push", RawValue = 1.0f, RatioValue = 0.0f});
-			Debug.Log($"[GameState] SubmitIntent: type={type} dir={dir} basePower={power} finalPower={GetCalculatedPower(MyId, type, power)}");
-
-			// スタミナ上限を追加
-			m_Players[MyId].StaminaModifier.AddModifier("test", new Modifier { Type = "stamina", RawValue = 1.0f, RatioValue = 0.0f });
-
 			// ステータスを更新
 			RefreshPlayerStats(m_Players[MyId]);
 			// 自分の stats 変化を UI に反映する。
 			OnPlayersChanged?.Invoke();
 
-			// 補正等を考慮した力を持ってくる
-			int finalPower = GetCalculatedPower(MyId, type, power);
-
-			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = finalPower });
+			m_Net.Emit(ClientEvents.SetIntent, new SetIntentMessage { Type = type, Dir = dir, Power = power });
 		}
 
 		public void SubmitReady(bool isAI)
 		{
-			m_Net.Emit(ClientEvents.PlayerReady, new PlayerReadyMessage { IsAI = isAI });
+			IsReady = true;
+
+			if (m_SelectedCharaData == null)
+			{
+				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
+			}
+
+			m_Net.Emit(ClientEvents.PlayerReady,
+				new PlayerReadyMessage
+				{
+					IsAI = isAI,
+					CharaData = m_SelectedCharaData
+				});
 		}
 
-		public void SubmitUnready()
+		private async Task<Dictionary<string, string[]>> LoadCSVFromUrlAsync(string url)
 		{
-			m_Net.Emit(ClientEvents.PlayerUnready, new { });
+			if (string.IsNullOrEmpty(url) || url.Contains("YOUR_SPREADSHEET_ID"))
+			{
+				return null;
+			}
+
+			try
+			{
+				using var req = UnityWebRequest.Get(url);
+				var operation = req.SendWebRequest();
+				while (!operation.isDone)
+				{
+					await Task.Yield();
+				}
+
+				if (req.result != UnityWebRequest.Result.Success)
+				{
+					Debug.LogError($"CSV読み込み失敗: {req.error} (URL: {url})");
+					return null;
+				}
+
+				var dict = new Dictionary<string, string[]>();
+				var lines = req.downloadHandler.text.Split('\n');
+				foreach (var line in lines)
+				{
+					var cols = line.Split(',');
+					if (cols.Length < 1) continue;
+
+					string key = cols[0].Trim();
+					if (string.IsNullOrEmpty(key)) continue;
+
+					var vals = new List<string>();
+					for (int i = 1; i < cols.Length; i++)
+					{
+						string cVal = cols[i].Trim();
+						if (cVal.StartsWith("\"") && cVal.EndsWith("\""))
+						{
+							cVal = cVal.Substring(1, cVal.Length - 2).Trim();
+						}
+						if (string.IsNullOrEmpty(cVal)) continue; // カンマの連続による空要素を除外
+						vals.Add(cVal);
+					}
+					dict[key] = vals.ToArray();
+				}
+
+				return dict;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogError($"CSV読み込み中に例外が発生しました: {ex.Message} (URL: {url})");
+				return null;
+			}
 		}
 
-		public void SubmitEnterLobby()
+		private int[] ParseIntArray(string val, int[] defaultValue, bool isScale = false)
+		{
+			if (string.IsNullOrEmpty(val)) return defaultValue;
+			var parts = val.Split(new[] { '/', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length == 0) return defaultValue;
+			var result = new List<int>();
+			foreach (var part in parts)
+			{
+				if (int.TryParse(part.Trim(), out var parsed))
+				{
+					result.Add(parsed);
+				}
+			}
+
+			// 1つしか数値がない場合
+			if (result.Count == 1)
+			{
+				int baseVal = result[0];
+				if (isScale)
+				{
+					// move, push などの場合は 2倍、3倍にする
+					return new[] { baseVal, baseVal * 2, baseVal * 3 };
+				}
+				else
+				{
+					// defense, skill などの場合は同じ値をコピーする
+					return new[] { baseVal, baseVal, baseVal };
+				}
+			}
+
+			return result.Count > 0 ? result.ToArray() : defaultValue;
+		}
+
+        public void SubmitUnready()
+        {
+            IsReady = false;
+
+            m_Net.Emit(ClientEvents.PlayerUnready, new { });
+        }
+        public void SubmitEnterLobby()
 		{
 			m_Net.Emit(ClientEvents.EnterLobby, new { });
 		}
@@ -125,10 +250,28 @@ namespace GamblingAction.Domain
 
 		public void SubmitSelectChara(int index)
 		{
-			m_Net.Emit(ClientEvents.SelectChara, new SelectCharaMessage { Index = index });
-		}
+			if (IsReady)
+			{
+				Debug.Log("Ready中はキャラ変更不可");
+				return;
+			}
 
-		public void SubmitFinalRaisePropose(bool accept)
+			m_SelectedCharaIndex = index;
+
+			m_Net.Emit(ClientEvents.SelectChara,
+				new SelectCharaMessage
+				{
+					Index = index
+				});
+
+			m_SelectedCharaData = GetCharaData(index);
+			Debug.Log(
+				$"名前={m_SelectedCharaData.Name} " +
+				$"体力={m_SelectedCharaData.MaxStamina} " +
+				$"突進={m_SelectedCharaData.PushPower} " +
+				$"防御={m_SelectedCharaData.DefensePower}");
+		}
+        public void SubmitFinalRaisePropose(bool accept)
 		{
 			m_Net.Emit(ClientEvents.FinalRaisePropose, new FinalRaiseProposeMessage { Accept = accept });
 		}
@@ -138,34 +281,13 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.FinalRaiseRespond, new FinalRaiseRespondMessage { Accept = accept });
 		}
 
-		public int GetCalculatedPower(string playerId, string intentType, int basePower)
+		public void NotifySuddenDeathRequested()
 		{
-			if (!m_Players.TryGetValue(playerId, out var player)) return basePower;
-
-			float finalPower = basePower;
-
-			// 行動タイプ別に応じてバフを適応
-			// stringで管理してる関係上switchｶﾅｰ
-			switch(intentType)
-			{
-				case IntentTypes.Push:
-					finalPower = player.PushModifier.GetModifiedValue(basePower);
-					break;
-				case IntentTypes.Move:
-					finalPower = player.MoveModifier.GetModifiedValue(basePower);
-					break;
-				// スタミナは一旦まち
-			}
-
-			return Mathf.RoundToInt(finalPower);
+			// サーバーへリクエスト送信
+			m_Net.Emit("request_sudden_death", null);
 		}
-        public void NotifySuddenDeathRequested()
-        {
-            // サーバーへリクエスト送信
-            m_Net.Emit("request_sudden_death",null);
-        }
 
-        private void Subscribe()
+		private void Subscribe()
 		{
 			m_Net.OnConnected += () =>
 			{
@@ -191,28 +313,44 @@ namespace GamblingAction.Domain
 			m_Net.On<WaitingForOthersMessage>(ServerEvents.WaitingForOthers, HandleWaitingForOthers);
 			m_Net.On<string>(ServerEvents.PlayerLeft, HandlePlayerLeft);
 
-			m_Net.On(ServerEvents.StartCountdown,      () => OnCountdownStart?.Invoke());
-			m_Net.On(ServerEvents.CountdownCanceled,   () => OnCountdownCancel?.Invoke());
-			m_Net.On(ServerEvents.PrepareRound,        () => OnPrepareRound?.Invoke());
+			m_Net.On(ServerEvents.StartCountdown, () => OnCountdownStart?.Invoke());
+			m_Net.On(ServerEvents.CountdownCanceled, () => OnCountdownCancel?.Invoke());
+			m_Net.On(ServerEvents.PrepareRound, () => OnPrepareRound?.Invoke());
 			m_Net.On<CharaSelectedMessage>(ServerEvents.CharaSelected,
 				msg => OnCharaSelected?.Invoke(msg.PlayerId, msg.Index));
-			m_Net.On(ServerEvents.StartExchange,       () => SetPhase(EGamePhase.Exchange));
-			m_Net.On(ServerEvents.StartBuffSelection,  () => SetPhase(EGamePhase.BuffSelection));
+			m_Net.On(ServerEvents.StartExchange, () => SetPhase(EGamePhase.Exchange));
+			m_Net.On(ServerEvents.StartBuffSelection, () => SetPhase(EGamePhase.BuffSelection));
 			m_Net.On(ServerEvents.StartMatchCountdown, () => SetPhase(EGamePhase.Countdown));
-			m_Net.On(ServerEvents.RoundStart,          () => SetPhase(EGamePhase.Battle));
-			m_Net.On(ServerEvents.CloseAll,            HandleCloseAll);
-			m_Net.On(ServerEvents.RoomFull,           HandleRoomFull);
+			m_Net.On(ServerEvents.RoundStart, () => SetPhase(EGamePhase.Battle));
+			m_Net.On(ServerEvents.CloseAll, HandleCloseAll);
+			m_Net.On(ServerEvents.RoomFull, HandleRoomFull);
 
 			m_Net.On<FinalRaiseOfferMessage>(ServerEvents.FinalRaiseOffer, HandleFinalRaiseOffer);
 			m_Net.On<FinalRaisePendingMessage>(ServerEvents.FinalRaisePending, HandleFinalRaisePending);
 			m_Net.On<FinalRaiseCanceledMessage>(ServerEvents.FinalRaiseCanceled, HandleFinalRaiseCanceled);
 			m_Net.On(ServerEvents.FinalRaiseStarted, HandleFinalRaiseStarted);
-            m_Net.On("sudden_death_started", () =>{Debug.Log("[GameState] sudden_death_started received");RaiseSuddenDeathStarted();});
+			// イカサマスキル発動中、相手のintentが更新された際の通知（イカサマのソケットにのみ送信される）。
+			m_Net.On<OpponentIntentRevealedMessage>(ServerEvents.OpponentIntentRevealed,
+				msg => OnOpponentIntentRevealed?.Invoke(msg));
 
-        }
+			m_Net.On("sudden_death_started", () => { Debug.Log("[GameState] sudden_death_started received"); RaiseSuddenDeathStarted(); });
+		}
 
-        private void HandleInit(InitMessage msg)
+		private void HandleInit(InitMessage msg)
 		{
+			CurrentBeat = 0;
+			CurrentBarIndex = 0;
+			CurrentAbsoluteBeat = 0;
+			NextBeat = 0;
+			NextBarIndex = 0;
+			NextAbsoluteBeat = 0;
+			BeatSequence = 0;
+			RoundId = 0;
+			BeatStartServerMs = 0;
+			NextBoundaryServerMs = 0;
+			BeatIntervalMs = 0;
+			BeatsPerBar = 4;
+
 			MyId = msg.Id;
 			GridSize = msg.GridSize;
 			ReplacePlayers(msg.Players);
@@ -238,6 +376,27 @@ namespace GamblingAction.Domain
 			CurrentBeat = msg.Beat;
 			TimeLeft = msg.TimeLeft;
 			GameActive = msg.GameActive;
+			CycleCount = msg.CycleCount;
+			CurrentBarIndex = msg.BarIndex;
+			BeatSequence = msg.BeatSequence;
+			RoundId = msg.RoundId;
+			BeatStartServerMs = msg.BeatStartServerMs;
+			NextBoundaryServerMs = msg.NextBoundaryServerMs;
+			BeatIntervalMs = msg.BeatIntervalMs;
+			BeatsPerBar = msg.BeatsPerBar > 0 ? msg.BeatsPerBar : 4;
+
+			CurrentAbsoluteBeat = ((CurrentBarIndex - 1) * BeatsPerBar) + CurrentBeat;
+			if (CurrentBeat >= BeatsPerBar)
+			{
+				NextBeat = 1;
+				NextBarIndex = CurrentBarIndex + 1;
+			}
+			else
+			{
+				NextBeat = CurrentBeat + 1;
+				NextBarIndex = CurrentBarIndex;
+			}
+			NextAbsoluteBeat = ((NextBarIndex - 1) * BeatsPerBar) + NextBeat;
 			OnBeatChanged?.Invoke();
 		}
 
@@ -269,6 +428,7 @@ namespace GamblingAction.Domain
 		{
 			// 試合終了時はファイナルレイズ状態を必ずリセット（中断 / 完走どちらの経路でも）。
 			IsFinalDuel = false;
+			RoundId = 0;
 			SetPhase(EGamePhase.GameOver);
 			OnGameOver?.Invoke(msg.WinnerRole);
 		}
@@ -325,13 +485,9 @@ namespace GamblingAction.Domain
 			foreach (var kv in incoming)
 			{
 				var player = kv.Value;
-				// modifierはnullならインスタンス化しておく
-				player.PushModifier ??= new ModifierContainer {Modifiers = new()};
-				player.MoveModifier ??= new ModifierContainer {Modifiers = new()};
-				player.StaminaModifier ??= new ModifierContainer {Modifiers = new()};
 
 				m_Players[kv.Key] = kv.Value;
-				
+
 				// プレイヤーの統計情報を更新
 				RefreshPlayerStats(player);
 			}
@@ -342,19 +498,10 @@ namespace GamblingAction.Domain
 		{
 			if (player == null) return;
 
-			// スタミナの補正計算
-			int modifiedStamina = Mathf.RoundToInt(player.StaminaModifier.GetModifiedValue(player.Stamina));
-
-			// 現在との差分を計算
-			int diff = modifiedStamina - player.Stamina;
-			player.MaxStamina += diff; // 最大値更新
-			
-			if (diff < 0 && player.Stamina > player.MaxStamina)
-			{
-				player.Stamina = player.MaxStamina;
-			}
-			
-			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, MaxStamina={player.MaxStamina}");
+			Debug.Log($"[GameState] PlayerStats Refreshed: {player.Id}, " +
+					  $"CurrentMaxStamina={player.CurrentMaxStamina} (Base={player.MaxStamina}), " +
+					  $"CurrentPushPower={player.CurrentPushPower}, " +
+					  $"CurrentDefensePower={player.CurrentDefensePower}");
 		}
 
 		private void SetPhase(EGamePhase phase)
@@ -389,43 +536,224 @@ namespace GamblingAction.Domain
 			m_Net.Off(ServerEvents.FinalRaisePending);
 			m_Net.Off(ServerEvents.FinalRaiseCanceled);
 			m_Net.Off(ServerEvents.FinalRaiseStarted);
+			m_Net.Off(ServerEvents.OpponentIntentRevealed);
 		}
-        public void RaiseSuddenDeathStarted()
-        {
-            SuddenDeathAlreadyStarted = true;
-            OnSuddenDeathStarted?.Invoke();
-        }
 
-    }
-
-    // Modifierの拡張メソッド定義
-    public static class ModifierDomainExtensions
-	{
-		public static float GetModifiedValue(this ModifierContainer container, float baseValue)
+		public void RaiseSuddenDeathStarted()
 		{
-			if (container == null || container.Modifiers == null) return baseValue;
-			float totalRaw = 0.0f;
-			float totalRatio = 0.0f;
-			foreach (var modifier in container.Modifiers.Values)
+			SuddenDeathAlreadyStarted = true;
+			OnSuddenDeathStarted?.Invoke();
+		}
+
+		private async Task PreloadAllCharaDataAsync()
+		{
+			var tasks = new List<Task<CharaDataMessage>>();
+			for (int i = 0; i < CharacterSheetUrls.Length; i++)
 			{
-				totalRaw += modifier.RawValue;
-				totalRatio += modifier.RatioValue;
+				int index = i;
+				tasks.Add(BuildCharaDataAsync(index));
 			}
-			return (baseValue + totalRaw) * (1 + totalRatio);
+
+			var results = await Task.WhenAll(tasks);
+			for (int i = 0; i < results.Length; i++)
+			{
+				m_CharaDataCache[i] = results[i];
+			}
+			Debug.Log("[GameState] All character data preloaded successfully.");
 		}
 
-		public static void AddModifier(this ModifierContainer container, string tag, Modifier modifier)
+		public CharaDataMessage GetCharaData(int index)
 		{
-			if (container.Modifiers == null) container.Modifiers = new Dictionary<string, Modifier>();
-			container.Modifiers[tag] = modifier;
+			if (m_CharaDataCache.TryGetValue(index, out var data))
+			{
+				return data;
+			}
+			return BuildDefaultCharaData(index);
 		}
 
-		public static void RemoveModifier(this ModifierContainer container, string tag)
+		private CharaDataMessage BuildDefaultCharaData(int charaIndex)
 		{
-			container.Modifiers?.Remove(tag);
+			var charaData = new CharaDataMessage
+			{
+				Name = "Normal",
+				MaxStamina = 5,
+				InitMoney = 10000,
+				InitChips = 0,
+				PushPower = 0,
+				DefensePower = 0,
+				MoveSpeed = 0,
+				MoveCost = new[] { 1, 3, 5 },
+				PushCost = new[] { 3, 5, 9 },
+				AttackCost = new[] { 3, 3, 3 }, // attack廃止につき固定値
+				DefenseCost = new[] { 2, 2, 2 },
+				SkillCost = new[] { 0, 0, 0 },  // Normalはスキルを持たないため0固定
+				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
+			};
+
+			if (charaIndex == 1)
+			{
+				charaData.Name = "Doctor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 3, 3, 3 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "heal_instant", StaminaRec = 2, ChipCost = 3 };
+			}
+			else if (charaIndex == 2)
+			{
+				charaData.Name = "NouveauRiche";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 8000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 0, 0, 0 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "double_cost_power", StaminaRec = 0, ChipCost = 0 };
+			}
+			else if (charaIndex == 3)
+			{
+				charaData.Name = "Fighter";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 3, 3, 3 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "fighter_skill", StaminaRec = 0, ChipCost = 3 };
+			}
+			else if (charaIndex == 4)
+			{
+				charaData.Name = "Guardian";
+				charaData.MaxStamina = 7;
+				charaData.InitMoney = 10000;
+				charaData.InitChips = 3;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 4, 4, 4 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "guardian_skill", StaminaRec = 0, ChipCost = 4 };
+			}
+			else if (charaIndex == 5)
+			{
+				charaData.Name = "Scammer";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 12000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 0;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 15, 15, 15 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "scammer_skill", StaminaRec = 0, ChipCost = 15 };
+			}
+			else if (charaIndex == 6)
+			{
+				charaData.Name = "Debtor";
+				charaData.MaxStamina = 5;
+				charaData.InitMoney = 6000;
+				charaData.InitChips = 0;
+				charaData.PushPower = 1;
+				charaData.DefensePower = 0;
+				charaData.MoveSpeed = 0;
+				charaData.SkillCost = new[] { 2, 2, 2 };
+				charaData.Skills = new CharaSkillDataMessage { Id = "debtor_skill", StaminaRec = 0, ChipCost = 2 };
+			}
+
+			return charaData;
 		}
 
+		private async Task<CharaDataMessage> BuildCharaDataAsync(int charaIndex)
+		{
+			var charaData = BuildDefaultCharaData(charaIndex);
+
+			if (charaIndex >= 0 && charaIndex < CharacterSheetUrls.Length)
+			{
+				string url = CharacterSheetUrls[charaIndex];
+				var csvData = await LoadCSVFromUrlAsync(url);
+
+				if (csvData != null)
+				{
+					int maxStamina;
+					int initMoney;
+					int initChips;
+					int pushPower;
+					int defPower;
+
+					if (csvData.TryGetValue("キャラクター名", out var nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+					else if (csvData.TryGetValue("Name", out nameVals) && nameVals.Length > 0)
+						charaData.Name = nameVals[0];
+
+					if (csvData.TryGetValue("スタミナ（体幹）", out var maxStaminaVals) && maxStaminaVals.Length > 0)
+					{
+						if (int.TryParse(maxStaminaVals[0], out maxStamina))
+							charaData.MaxStamina = maxStamina;
+					}
+					else if (csvData.TryGetValue("MaxStamina", out maxStaminaVals) && maxStaminaVals.Length > 0)
+					{
+						if (int.TryParse(maxStaminaVals[0], out maxStamina))
+							charaData.MaxStamina = maxStamina;
+					}
+
+					if (csvData.TryGetValue("資金", out var initMoneyVals) && initMoneyVals.Length > 0)
+					{
+						if (int.TryParse(initMoneyVals[0], out initMoney))
+							charaData.InitMoney = initMoney;
+					}
+					else if (csvData.TryGetValue("InitMoney", out initMoneyVals) && initMoneyVals.Length > 0)
+					{
+						if (int.TryParse(initMoneyVals[0], out initMoney))
+							charaData.InitMoney = initMoney;
+					}
+
+					if (csvData.TryGetValue("チップ", out var initChipsVals) && initChipsVals.Length > 0)
+					{
+						if (int.TryParse(initChipsVals[0], out initChips))
+							charaData.InitChips = initChips;
+					}
+					else if (csvData.TryGetValue("InitChips", out initChipsVals) && initChipsVals.Length > 0)
+					{
+						if (int.TryParse(initChipsVals[0], out initChips))
+							charaData.InitChips = initChips;
+					}
+
+					if (csvData.TryGetValue("突進", out var pushVals))
+					{
+						if (pushVals.Length > 0 && int.TryParse(pushVals[0], out pushPower))
+							charaData.PushPower = pushPower;
+
+						if (pushVals.Length > 1)
+							charaData.PushCost = ParseIntArray(pushVals[1], charaData.PushCost, isScale: true);
+					}
+
+					if (csvData.TryGetValue("防御", out var defenseVals))
+					{
+						if (defenseVals.Length > 0 && int.TryParse(defenseVals[0], out defPower))
+							charaData.DefensePower = defPower;
+
+						if (defenseVals.Length > 1)
+							charaData.DefenseCost = ParseIntArray(defenseVals[1], charaData.DefenseCost, isScale: false);
+					}
+
+					if (csvData.TryGetValue("スキル", out var skillVals))
+					{
+						if (skillVals.Length > 1)
+						{
+							charaData.SkillCost = ParseIntArray(skillVals[1], charaData.SkillCost, isScale: false);
+							charaData.Skills.ChipCost = charaData.SkillCost[0];
+						}
+					}
+
+					if (csvData.TryGetValue("SkillId", out var skillIdVals) && skillIdVals.Length > 0)
+						charaData.Skills.Id = skillIdVals[0];
+				}
+			}
+
+			return charaData;
+		}
 	}
-
-
 }

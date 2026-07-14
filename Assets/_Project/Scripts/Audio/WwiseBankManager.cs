@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,7 +11,7 @@ namespace GamblingAction.Audio
     {
         public static WwiseBankManager Instance { get; private set; }
 
-        [Header("g—p‰Â”\‚ÈSoundBank‚Ìˆê——‚ğInspector‚Å“o˜^‚·‚é(“o˜^‚µ‚Ä‚¢‚È‚¢‚Ì‚ÍƒGƒ‰[ƒƒO‚ªo‚é)")]
+        [Header("ä½¿ç”¨å¯èƒ½ãªSoundBankã®ä¸€è¦§ã‚’Inspectorã§ç™»éŒ²ã™ã‚‹(ç™»éŒ²ã—ã¦ã„ãªã„ã®ã¯ã‚¨ãƒ©ãƒ¼ãƒ­ã‚°ãŒå‡ºã‚‹)")]
         [SerializeField]
         private List<string> m_RegisteredBankNames = new List<string>();
 
@@ -66,7 +66,7 @@ namespace GamblingAction.Audio
         {
             if (!IsRegistered(bankName))
             {
-                Debug.LogError($"[WwiseBankManager] –¢“o˜^‚ÌSoundBank–¼‚ªw’è‚³‚ê‚Ü‚µ‚½: {bankName} {SceneLabel}");
+                Debug.LogError($"[WwiseBankManager] æœªç™»éŒ²ã®SoundBankåãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ: {bankName} {SceneLabel}");
                 onCompleted?.Invoke(false);
                 return;
             }
@@ -76,7 +76,7 @@ namespace GamblingAction.Audio
                 StopCoroutine(pending);
                 m_PendingUnloads.Remove(bankName);
                 m_BankRefCounts[bankName] = 1;
-                Debug.Log($"[WwiseBankManager] ’x‰„ƒAƒ“ƒ[ƒh‚ğƒLƒƒƒ“ƒZƒ‹‚µ‚Ü‚µ‚½: {bankName} {SceneLabel}");
+                Debug.Log($"[WwiseBankManager] é…å»¶ã‚¢ãƒ³ãƒ­ãƒ¼ãƒ‰ã‚’ã‚­ãƒ£ãƒ³ã‚»ãƒ«ã—ã¾ã—ãŸ: {bankName} {SceneLabel}");
                 onCompleted?.Invoke(true);
                 return;
             }
@@ -84,7 +84,7 @@ namespace GamblingAction.Audio
             if (m_BankRefCounts.TryGetValue(bankName, out int refCount) && refCount > 0)
             {
                 m_BankRefCounts[bankName] = refCount + 1;
-                Debug.Log($"[WwiseBankManager] QÆƒJƒEƒ“ƒg‚ğ‰ÁZ‚µ‚Ü‚µ‚½: {bankName} => {m_BankRefCounts[bankName]} {SceneLabel}");
+                Debug.Log($"[WwiseBankManager] å‚ç…§ã‚«ã‚¦ãƒ³ãƒˆã‚’åŠ ç®—ã—ã¾ã—ãŸ: {bankName} => {m_BankRefCounts[bankName]} {SceneLabel}");
                 onCompleted?.Invoke(true);
                 return;
             }
@@ -93,7 +93,7 @@ namespace GamblingAction.Audio
 
             if (result != AKRESULT.AK_Success)
             {
-                Debug.LogError($"[WwiseBankManager] SoundBank‚Ìƒ[ƒh‚É¸”s‚µ‚Ü‚µ‚½: {bankName}, Result: {result} {SceneLabel}");
+                Debug.LogError($"[WwiseBankManager] SoundBankã®ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•—ã—ã¾ã—ãŸ: {bankName}, Result: {result} {SceneLabel}");
                 onCompleted?.Invoke(false);
                 return;
             }
@@ -101,7 +101,7 @@ namespace GamblingAction.Audio
             m_BankRefCounts[bankName] = 1;
             m_LoadedBankIds[bankName] = bankID;
 
-            Debug.Log($"[WwiseBankManager] SoundBank‚ğƒ[ƒh‚µ‚Ü‚µ‚½: {bankName} (ID: {bankID}) {SceneLabel}");
+            Debug.Log($"[WwiseBankManager] SoundBankã‚’ãƒ­ãƒ¼ãƒ‰ã—ã¾ã—ãŸ: {bankName} (ID: {bankID}) {SceneLabel}");
             onCompleted?.Invoke(true);
         }
 
@@ -114,13 +114,13 @@ namespace GamblingAction.Audio
 
             if (!IsRegistered(bankName))
             {
-                Debug.LogError($"[WwiseBankManager] –¢“o˜^‚ÌSoundBank–¼‚ªw’è‚³‚ê‚Ü‚µ‚½: {bankName} {SceneLabel}");
+                Debug.LogError($"[WwiseBankManager] æœªç™»éŒ²ã®SoundBankåãŒæŒ‡å®šã•ã‚Œã¾ã—ãŸ: {bankName} {SceneLabel}");
                 return;
             }
 
             if (!m_BankRefCounts.TryGetValue(bankName, out int refCount) || refCount <= 0)
             {
-                Debug.LogWarning($"[WwiseBankManager] g—p’†‚Å‚Í‚È‚¢SoundBank‚Å‚·: {bankName} {SceneLabel}");
+                Debug.LogWarning($"[WwiseBankManager] ä½¿ç”¨ä¸­ã§ã¯ãªã„SoundBankã§ã™: {bankName} {SceneLabel}");
                 return;
             }
 
@@ -129,7 +129,7 @@ namespace GamblingAction.Audio
 
             if (refCount > 0)
             {
-                Debug.Log($"[WwiseBankManager] QÆƒJƒEƒ“ƒg‚ğŒ¸Z‚µ‚Ü‚µ‚½: {bankName} => {refCount} {SceneLabel}");
+                Debug.Log($"[WwiseBankManager] å‚ç…§ã‚«ã‚¦ãƒ³ãƒˆã‚’æ¸›ç®—ã—ã¾ã—ãŸ: {bankName} => {refCount} {SceneLabel}");
                 return;
             }
 
@@ -160,7 +160,7 @@ namespace GamblingAction.Audio
 
             if (!m_LoadedBankIds.TryGetValue(bankName, out uint bankID))
             {
-                Debug.LogWarning($"[WwiseBankManager] bankID‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñ: {bankName} {SceneLabel}");
+                Debug.LogWarning($"[WwiseBankManager] bankIDãŒè¦‹ã¤ã‹ã‚Šã¾ã›ã‚“: {bankName} {SceneLabel}");
                 m_PendingUnloads.Remove(bankName);
                 m_BankRefCounts.Remove(bankName);
                 yield break;
@@ -170,7 +170,7 @@ namespace GamblingAction.Audio
 
             if (result != AKRESULT.AK_Success)
             {
-                Debug.LogError($"[WwiseBankManager] SoundBank‚ÌƒAƒ“ƒ[ƒh‚É¸”s‚µ‚Ü‚µ‚½: {bankName}, Result: {result} {SceneLabel}");
+                Debug.LogError($"[WwiseBankManager] SoundBankã®ã‚¢ãƒ³ãƒ­ãƒ¼ãƒ‰ã«å¤±æ•—ã—ã¾ã—ãŸ: {bankName}, Result: {result} {SceneLabel}");
                 m_PendingUnloads.Remove(bankName);
                 yield break;
             }
@@ -179,7 +179,7 @@ namespace GamblingAction.Audio
             m_BankRefCounts.Remove(bankName);
             m_LoadedBankIds.Remove(bankName);
 
-            Debug.Log($"[WwiseBankManager] SoundBank‚ğƒAƒ“ƒ[ƒh‚µ‚Ü‚µ‚½: {bankName} (ID: {bankID}) {SceneLabel}");
+            Debug.Log($"[WwiseBankManager] SoundBankã‚’ã‚¢ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ã¾ã—ãŸ: {bankName} (ID: {bankID}) {SceneLabel}");
         }
 
         private bool IsRegistered(string bankName)

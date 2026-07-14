@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -55,7 +55,7 @@ namespace GamblingAction.UI
 		private Ease m_SlideEase = Ease.OutQuad;
 
 		[Header("キャラ切替（自分側 Portrait）")]
-		[SerializeField, Tooltip("キャラ立ち絵。index 0=ランダム（初期表示）, 1=A, 2=B, 3=C")]
+		[SerializeField, Tooltip("キャラ立ち絵。index 0=Normal/Random, 1=Doctor, 2=NouveauRiche, 3=Fighter, 4=Guardian, 5=Scammer, 6=Debtor")]
 		private Sprite[] m_CharaSprites;
 		[SerializeField, Tooltip("退場時に旧絵が外側（左）へ退く距離（px）")]
 		private float m_CharaExitOffset = 60f;
@@ -68,8 +68,14 @@ namespace GamblingAction.UI
 
 		private IGameState m_State;
 
-		// ブロック内から名前で取得した要素。
-		private TMP_Text m_SelfNameText, m_SelfStateText;
+        [Header("Status Preview")]
+        [SerializeField]
+        private CharaStatusPreviewView m_SelfStatusPreview;
+        [SerializeField]
+        private CharaStatusPreviewView m_OpponentStatusPreview;
+
+        // ブロック内から名前で取得した要素。
+        private TMP_Text m_SelfNameText, m_SelfStateText;
 		private Image m_SelfStateBg, m_SelfNameBg;
 		private TMP_Text m_OpponentNameText, m_OpponentStateText;
 		private Image m_OpponentStateBg, m_OpponentNameBg;
@@ -115,10 +121,10 @@ namespace GamblingAction.UI
 			m_State.OnPlayersChanged   += Refresh;
 			m_State.OnCountdownStart   += HandleCountdownStart;
 			m_State.OnCountdownCancel  += HandleCountdownCancel;
-			m_State.OnCharaSelected    += HandleCharaSelected;
+			m_State.OnCharaSelected += HandleCharaSelected;
 
-			// Lobby に入ったことをサーバへ通知する（相手側の滑り込み起点）。
-			m_State.SubmitEnterLobby();
+            // Lobby に入ったことをサーバへ通知する（相手側の滑り込み起点）。
+            m_State.SubmitEnterLobby();
 
 			Refresh();
 		}
@@ -135,7 +141,7 @@ namespace GamblingAction.UI
 			m_State.OnCountdownStart   -= HandleCountdownStart;
 			m_State.OnCountdownCancel  -= HandleCountdownCancel;
 			m_State.OnCharaSelected    -= HandleCharaSelected;
-		}
+        }
 
 		// 各ブロック内の要素を名前で取得する。
 		private void FindElements()
@@ -160,9 +166,12 @@ namespace GamblingAction.UI
 
 			m_CharaButtons = new[]
 			{
-				Find<Button>(m_PreparingPanel, "CharaOption/Chara_A"),
-				Find<Button>(m_PreparingPanel, "CharaOption/Chara_B"),
-				Find<Button>(m_PreparingPanel, "CharaOption/Chara_C"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Doctor"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_NouveauRiche"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Fighter"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Guardian"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Scammer"),
+				Find<Button>(m_PreparingPanel, "CharaOption/Chara_Debtor"),
 			};
 			m_RandomButton = Find<Button>(m_PreparingPanel, "CharaOption/Chara_Random");
 
@@ -231,23 +240,26 @@ namespace GamblingAction.UI
 			return c;
 		}
 
-		private void OnReadyClicked()
-		{
-			if (!m_IsReady)
-			{
-				bool isAI = m_ReadyAsAIToggle != null && m_ReadyAsAIToggle.isOn;
-				m_State.SubmitReady(isAI);
-				m_IsReady = true;
-			}
-			else
-			{
-				m_State.SubmitUnready();
-				m_IsReady = false;
-			}
-			UpdateReadyButtonText();
-		}
+        private void OnReadyClicked()
+        {
+            if (!m_IsReady)
+            {
+                bool isAI = m_ReadyAsAIToggle != null &&
+                            m_ReadyAsAIToggle.isOn;
 
-		private void UpdateReadyButtonText()
+                m_State.SubmitReady(isAI);
+                m_IsReady = true;
+            }
+            else
+            {
+                m_State.SubmitUnready();
+                m_IsReady = false;
+            }
+
+            UpdateReadyButtonText();
+            UpdateCharaButtons(); 
+        }
+        private void UpdateReadyButtonText()
 		{
 			if (m_ReadyButtonText != null)
 				m_ReadyButtonText.text = m_IsReady ? "Cancel" : "I'm Ready";
@@ -279,6 +291,36 @@ namespace GamblingAction.UI
 
 			ApplyLabels(me, opponent);
 			ApplyGlobalState(me, opponent);
+			UpdateStatusPreviews(me, opponent);
+		}
+
+		private void UpdateStatusPreviews(PlayerDto me, PlayerDto opponent)
+		{
+			if (m_SelfStatusPreview != null)
+			{
+				if (me != null)
+				{
+					var data = m_State.GetCharaData(me.CharaIndex);
+					m_SelfStatusPreview.SetStatus(data);
+				}
+				else
+				{
+					m_SelfStatusPreview.Clear();
+				}
+			}
+
+			if (m_OpponentStatusPreview != null)
+			{
+				if (opponent != null && opponent.InLobby)
+				{
+					var data = m_State.GetCharaData(opponent.CharaIndex);
+					m_OpponentStatusPreview.SetStatus(data);
+				}
+				else
+				{
+					m_OpponentStatusPreview.Clear();
+				}
+			}
 		}
 
 		// 名札 → BG → 準備状態 の順に、間隔を空けて滑り込ませる。
@@ -375,19 +417,19 @@ namespace GamblingAction.UI
 			{
 				for (int i = 0; i < m_CharaButtons.Length; i++)
 				{
-					// ボタン index 0/1/2（A/B/C）は立ち絵 index 1/2/3 に対応。
+					// ボタン index 0~5 は立ち絵 index 1~6 に対応。
 					int spriteIndex = i + 1;
 					if (m_CharaButtons[i] != null)
 						m_CharaButtons[i].onClick.AddListener(() => SelectChara(spriteIndex));
 				}
 			}
-			// ランダムボタンは立ち絵 index 0。
+			// ランダムボタンは 1〜6 (Doctor, NouveauRiche, Fighter, Guardian, Scammer, Debtor) からランダムに選択
 			if (m_RandomButton != null)
-				m_RandomButton.onClick.AddListener(() => SelectChara(0));
+				m_RandomButton.onClick.AddListener(() => SelectChara(UnityEngine.Random.Range(1, 7)));
 		}
 
 		// 自分のキャラ選択（ボタン押下）。選択中ボタンを拡大し、自分側 Portrait を切り替え、
-		// サーバへ通知して相手側にも同期させる。引数は立ち絵 index：0=ランダム, 1=A, 2=B, 3=C。
+		// サーバへ通知して相手側にも同期させる。引数は立ち絵 index：0=Normal/Random, 1=Doctor, 2=NouveauRiche, 3=Fighter, 4=Guardian, 5=Scammer, 6=Debtor。
 		private void SelectChara(int spriteIndex)
 		{
 			// ランダム + A/B/C を 1 グループとして、選択中だけ拡大する。
@@ -397,6 +439,13 @@ namespace GamblingAction.UI
 
 			m_SelfSwapper?.Swap(spriteIndex);
 			m_State.SubmitSelectChara(spriteIndex);
+
+			// 自分のステータスプレビューを即時更新（サーバー応答待ちなしで立即反映）
+			if (m_SelfStatusPreview != null)
+			{
+				var data = m_State.GetCharaData(spriteIndex);
+				m_SelfStatusPreview.SetStatus(data);
+			}
 		}
 
 		// サーバからの選択同期。自分の分はローカルで再生済みなので無視し、相手の分だけ反映する。
@@ -404,6 +453,12 @@ namespace GamblingAction.UI
 		{
 			if (playerId == m_State.MyId) return;
 			m_OpponentSwapper?.Swap(index);
+
+			if (m_OpponentStatusPreview != null)
+			{
+				var data = m_State.GetCharaData(index);
+				m_OpponentStatusPreview.SetStatus(data);
+			}
 		}
 
 		private void SetButtonScale(Button button, bool selected)
@@ -435,6 +490,13 @@ namespace GamblingAction.UI
 			SetButtonScale(m_RandomButton, true);
 			for (int i = 0; i < m_CharaButtons.Length; i++)
 				SetButtonScale(m_CharaButtons[i], false);
+
+			// 相手が既に在室していてキャラ選択済みであれば Portrait も初期同期する
+			var opponent = m_State.Opponent;
+			if (opponent != null && opponent.InLobby && opponent.CharaIndex != 0)
+			{
+				m_OpponentSwapper?.Swap(opponent.CharaIndex);
+			}
 		}
 
 		// 片側の Portrait（2 枚スロット）のキャラ切替を担う。旧絵を外側へ退場させつつ、
@@ -540,7 +602,24 @@ namespace GamblingAction.UI
 					slot.color = new Color(c.r, c.g, c.b, a);
 				}, targetAlpha, m_Config.Duration).SetEase(m_Config.Ease);
 			}
-		}
 
-	}
+		}
+        private void UpdateCharaButtons()
+        {
+            bool interactable = !m_IsReady;
+
+            if (m_RandomButton != null)
+                m_RandomButton.interactable = interactable;
+
+            if (m_CharaButtons != null)
+            {
+                foreach (var button in m_CharaButtons)
+                {
+                    if (button != null)
+                        button.interactable = interactable;
+                }
+            }
+        }
+
+    }
 }

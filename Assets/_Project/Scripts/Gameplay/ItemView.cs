@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;

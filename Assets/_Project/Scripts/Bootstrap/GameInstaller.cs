@@ -106,7 +106,7 @@ namespace GamblingAction.Bootstrap
 			m_State.OnConnectionChanged += c => Debug.Log($"[Probe] connection={c}");
 			m_State.OnStateInitialized  += () => Debug.Log($"[Probe] init MyId={m_State.MyId} Players={m_State.Players.Count}");
 			m_State.OnPhaseChanged      += p => Debug.Log($"[Probe] phase={p}");
-			m_State.OnBeatChanged       += () => Debug.Log($"[Probe] beat={m_State.CurrentBeat} t={m_State.TimeLeft} active={m_State.GameActive}");
+			m_State.OnBeatChanged       += () => Debug.Log($"[Probe] beat={m_State.CurrentBeat} t={m_State.TimeLeft} active={m_State.GameActive} turn={m_State.CycleCount}");
 			m_State.OnGameEvents        += e => Debug.Log($"[Probe] events x{e.Length}");
 			m_State.OnRoundOver         += w => Debug.Log($"[Probe] round_over winner={w}");
 			m_State.OnGameOver          += w => Debug.Log($"[Probe] game_over winner={w}");
