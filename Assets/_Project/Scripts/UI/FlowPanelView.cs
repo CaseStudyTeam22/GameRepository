@@ -112,7 +112,15 @@ namespace GamblingAction.UI
 		/// <summary>ボタン選択移動のクールダウン（秒）。連続入力チカチカ防止用</summary>
 		private const float m_NavCooldown = 0.2f;
 
-		private IGameState m_State;
+        /// <summary>ハイリスク選択時</summary>
+        private const string m_HighRiskEffectText = "突進 <color=#4CFF7A>Up</color> / スタミナ <color=#FF5A5A>Down</color>";
+
+        /// <summary>ローリスク選択時</summary>
+        private const string m_LowRiskEffectText = "回復量 <color=#4CFF7A>Up</color>";
+        /// <summary>スキップ選択時</summary>
+        private const string m_SkipRiskEffectText = "効果なし";
+
+        private IGameState m_State;
 
 		// この回で両替申請したチップ数。精算は両替・カード選択が終わってからまとめて行うため、
 		// カード選択ボタンの可否判定は「現チップ + この値」で行う。
@@ -125,7 +133,11 @@ namespace GamblingAction.UI
 		private Button m_LowRiskButton;
 		private Button m_SkipBuffButton;
 
-		private TMP_Text m_MissionText;
+        private TMP_Text m_HighRiskEffectTextView;
+        private TMP_Text m_LowRiskEffectTextView;
+        private TMP_Text m_SkipRiskEffectTextView;
+
+        private TMP_Text m_MissionText;
 		private TMP_Text m_MissionRewardText;
 		private Image    m_MissionProgressFill;
 
@@ -610,7 +622,11 @@ namespace GamblingAction.UI
 			m_LowRiskButton         = FindIn<Button>(m_BuffPanel, "LowRiskButton");
 			m_SkipBuffButton        = FindIn<Button>(m_BuffPanel, "SkipBuffButton");
 
-			m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
+            m_HighRiskEffectTextView = FindByPath<TMP_Text>(m_BuffPanel, "HighRiskButton/HighRiskEffectText");
+            m_LowRiskEffectTextView  = FindByPath<TMP_Text>(m_BuffPanel, "LowRiskButton/LowRiskEffectText");
+            m_SkipRiskEffectTextView = FindByPath<TMP_Text>(m_BuffPanel, "SkipBuffButton/SkipRiskEffectText");
+
+            m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
 			m_PrepareTimeText = FindIn<TMP_Text>(m_PreparingCountdownPanel, "TimeText");
 		}
 
@@ -725,7 +741,11 @@ namespace GamblingAction.UI
 			if (m_HighRiskButton != null) m_HighRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.HighRisk));
 			if (m_LowRiskButton != null)  m_LowRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.LowRisk));
 			if (m_SkipBuffButton != null) m_SkipBuffButton.onClick.AddListener(() => SubmitBuff(null));
-
+         
+			WireRiskHighlight(m_HighRiskButton, 0);
+            WireRiskHighlight(m_LowRiskButton, 1);
+            WireRiskHighlight(m_SkipBuffButton, 2);
+            
 			if (m_MissionOptionButtons != null)
 			{
 				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
@@ -767,6 +787,7 @@ namespace GamblingAction.UI
 		private void SubmitBuff(string id)
 		{
 			m_State.SubmitBuff(id);
+            ClearRiskSelectionText();            
 			if (m_HighRiskButton != null) m_HighRiskButton.interactable = false;
 			if (m_LowRiskButton != null)  m_LowRiskButton.interactable = false;
 			if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = false;
@@ -948,7 +969,8 @@ namespace GamblingAction.UI
 			if (m_State.Phase != EGamePhase.BuffSelection)
 			{
 				SetActive(m_BuffPanel, false);
-				return;
+                ClearRiskSelectionText();
+                return;
 			}
 
 			// BuffSelection フェーズ：自分がバフ未選択の時のみ表示
@@ -957,7 +979,11 @@ namespace GamblingAction.UI
 			bool showBuffPanel = !buffSelected;
 
 			SetActive(m_BuffPanel, showBuffPanel);
-		}
+            if (!showBuffPanel)
+            {
+                ClearRiskSelectionText();
+            }
+        }
 
 		// ミッション選択パネルの表示制御
 		private void UpdateMissionSelectionUI()
@@ -1754,6 +1780,7 @@ namespace GamblingAction.UI
 			SetActive(m_MissionPanel, false);
 			SetActive(m_MissionSelectionPanel, false);
             SetActive(m_WaitingPanel, false);
+            ClearRiskSelectionText();
         }
 
 		private static void SetActive(GameObject go, bool active)
@@ -1808,5 +1835,60 @@ namespace GamblingAction.UI
 
 			return null;
 		}
-	}
+
+
+        private void WireRiskHighlight(Button button, int index)
+        {
+            if (button == null) return;
+
+            var highlight = button.GetComponent<ButtonFocusHighlight>();
+            if (highlight == null) return;
+
+            highlight.HighlightChanged += (_, highlighted) =>
+            {
+                if (!highlighted) return;
+                ShowRiskSelectionText(index);
+            };
+        }
+
+        private void ShowRiskSelectionText(int index)
+        {
+            ClearRiskSelectionText();
+
+            TMP_Text target = index switch
+            {
+                0 => m_HighRiskEffectTextView,
+                1 => m_LowRiskEffectTextView,
+                2 => m_SkipRiskEffectTextView,
+                _ => null,
+            };
+
+            if (target == null) return;
+
+            target.text = index switch
+            {
+                0 => m_HighRiskEffectText,
+                1 => m_LowRiskEffectText,
+                2 => m_SkipRiskEffectText,
+                _ => string.Empty,
+            };
+
+            SetActive(target.gameObject, !string.IsNullOrEmpty(target.text));
+        }
+
+        private void ClearRiskSelectionText()
+        {
+            ClearRiskEffectText(m_HighRiskEffectTextView);
+            ClearRiskEffectText(m_LowRiskEffectTextView);
+            ClearRiskEffectText(m_SkipRiskEffectTextView);
+        }
+
+        private void ClearRiskEffectText(TMP_Text text)
+        {
+            if (text == null) return;
+
+            text.text = string.Empty;
+            SetActive(text.gameObject, false);
+        }
+    }
 }

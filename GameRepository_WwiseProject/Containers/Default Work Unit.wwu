@@ -1467,10 +1467,25 @@
 							</PropertyList>
 							<ChildrenList>
 								<Sound Name="start" ID="{9C45FD91-BB44-40FC-A51F-C43E40D65CFE}" ShortID="555889930">
+									<Comment> </Comment>
 									<PropertyList>
+										<Property Name="Pitch" Type="int32">
+											<ValueList>
+												<Value>-30</Value>
+											</ValueList>
+											<ModifierList>
+												<ModifierInfo>
+													<Modifier Name="" ID="{7682D307-AE36-45D3-A5E3-A54743FDD2A3}">
+														<PropertyList>
+															<Property Name="Enabled" Type="bool" Value="True"/>
+														</PropertyList>
+													</Modifier>
+												</ModifierInfo>
+											</ModifierList>
+										</Property>
 										<Property Name="Volume" Type="Real64">
 											<ValueList>
-												<Value>-96</Value>
+												<Value>-15</Value>
 											</ValueList>
 										</Property>
 									</PropertyList>
