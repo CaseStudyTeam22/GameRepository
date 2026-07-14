@@ -36,7 +36,7 @@ module.exports = {
         'push': { staminaDmg: 0 },
         'attack': { staminaDmg: 1 }, // 小注削 1，大招削 3（× power）
         'defense': { reduction: 0.8 },
-        'idle': { staminaRec: 0, chipsRec: 30 },
+        'idle': { staminaRec: 0, chipsRec: 100 },
         'skill': { staminaDmg: 0 }, // ここがキャラによって可変するため、要調整
         'rest': { staminaRec: 1 }
     },
