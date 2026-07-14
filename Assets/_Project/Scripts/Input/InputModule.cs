@@ -272,8 +272,8 @@ namespace GamblingAction.Input
 		// ─────────────────────────────────────────────────────────────
 
 		private void OnPushPerformed(InputAction.CallbackContext ctx)    => OnSkillPressed(m_PushAction,    IntentTypes.Push);
-		private void OnAttackPerformed(InputAction.CallbackContext ctx)  => OnSkillPressed(m_AttackAction,  IntentTypes.Attack);
-		private void OnDefensePerformed(InputAction.CallbackContext ctx) => OnSkillPressed(m_DefenseAction, IntentTypes.Defense);
+		private void OnAttackPerformed(InputAction.CallbackContext ctx)  => OnSkillPressed(m_AttackAction,  IntentTypes.Defense);
+		private void OnDefensePerformed(InputAction.CallbackContext ctx) => OnSkillPressed(m_DefenseAction, IntentTypes.Skill);
 		private void OnRestPerformed(InputAction.CallbackContext ctx)    => OnSkillPressed(m_RestAction,    IntentTypes.Rest);
 
 		// スキルボタンが押された瞬間の共通処理。
@@ -503,7 +503,7 @@ namespace GamblingAction.Input
 			string type = !string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None
 				? m_ActiveMode
 				: IntentTypes.Move;
-			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense;
+			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense && type != IntentTypes.Skill;
 			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
 			{
 				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
@@ -517,6 +517,8 @@ namespace GamblingAction.Input
 			m_ActiveMode        = null;
 			m_LastSentDir       = null;
 			m_Power             = 1;
+			m_GamepadHoverX     = -1;
+			m_GamepadHoverY     = -1;
 			m_State.SubmitIntent(IntentTypes.None, null, 1);
 			LocalIntentBus.Clear();
 		}
@@ -567,7 +569,8 @@ namespace GamblingAction.Input
 			if (!m_GroundPlane.Raycast(ray, out float enter)) return null;
 
 			Vector3 hit   = ray.GetPoint(enter);
-			Vector3 toHit = hit - me.transform.position;
+			Vector3 mePos = m_Board.GridToWorld(me.X, me.Y);
+			Vector3 toHit = hit - mePos;
 			toHit.y = 0f;
 
 			if (toHit.magnitude < 0.1f) return null;
