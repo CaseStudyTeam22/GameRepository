@@ -396,6 +396,16 @@ MonoBehaviour:
   m_BumpPunchStrength: 0.05
   m_BumpPunchDuration: 0.25
   m_BumpPunchVibrato: 8
+  m_SkillEffects:
+  - {fileID: 0}
+  - {fileID: 7986504087968017091, guid: 12a56ee4630040c4eb17ae9707ed4cef, type: 3}
+  - {fileID: 0}
+  - {fileID: 8145502431507700120, guid: 000832214335ffd4782827d2a4510f4a, type: 3}
+  - {fileID: 1289543790355709915, guid: b99922c2f59b1a542bdd06ae8bee47ae, type: 3}
+  - {fileID: 7053385775836331393, guid: 354b6251e950209409c75ab984acf000, type: 3}
+  - {fileID: 7155335147208632822, guid: ce509ba925accc34f8dce4206a759b0a, type: 3}
+  m_SkillEffectYOffset: 0
+  m_SkillEffectLifetime: 3
 --- !u!114 &111067695440281047
 MonoBehaviour:
   m_ObjectHideFlags: 0

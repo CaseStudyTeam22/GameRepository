@@ -68,7 +68,7 @@ namespace GamblingAction.Gameplay.SkillPreview
 			if (me == null) return;
 
 			var intent = LocalIntentBus.Current;
-			Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}");
+			//Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}");
 
 			if (!intent.IsActive || intent.Mode != IntentTypes.Push) return;
 

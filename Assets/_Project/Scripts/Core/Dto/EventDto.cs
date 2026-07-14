@@ -33,9 +33,10 @@ namespace GamblingAction.Core.Dto
 
 	public static class VfxTypes
 	{
-		public const string PushVfx   = "push_vfx";
-		public const string AttackVfx = "attack_vfx";
-		public const string RestVfx   = "rest_vfx";
-		public const string Bump      = "bump";
+		public const string PushVfx    = "push_vfx";
+		public const string AttackVfx  = "attack_vfx";
+		public const string RestVfx    = "rest_vfx";
+		public const string DefenseVfx = "defense_vfx";
+		public const string Bump       = "bump";
 	}
 }

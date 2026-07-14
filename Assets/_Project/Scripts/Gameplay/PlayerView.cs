@@ -60,7 +60,7 @@ namespace GamblingAction.Gameplay
 		private Material m_BaseMaterial;
 		private float m_BaseY;
 		private Tween m_MoveTween;
-		// 土煙はマス移動のたびに生成せず、1個を使い回す（メモリ効率のため）
+		// 土煙はマス移動のたびに生成せず、1個を使い回す
 		private ParticleSystem m_DustInstance;
 
 		private bool m_IsFalling;
@@ -172,13 +172,6 @@ namespace GamblingAction.Gameplay
 				m_FallVelocity = 0f;
 				m_KickoffDone = false;
 			}
-			/*else if (!m_IsFalling && (dto.X != m_LastX || dto.Y != m_LastY))
-			{
-				var target = m_Board.GridToWorld(dto.X, dto.Y);
-				target.y = m_BaseY;
-				m_MoveTween?.Kill();
-				m_MoveTween = transform.DOMove(target, m_MoveDuration).SetEase(m_MoveEase);
-			}*/
 			else if (!m_IsFalling && (dto.X != m_LastX || dto.Y != m_LastY))
 			{
 				var target = m_Board.GridToWorld(dto.X, dto.Y);
@@ -242,7 +235,7 @@ namespace GamblingAction.Gameplay
 			m_LastY = dto.Y;
 		}
 
-	
+
 		/// 足元に土煙を1回放出する。
 		/// インスタンスは初回のみ生成し、以降は使い回す。
 		private void EmitDust()
@@ -262,7 +255,7 @@ namespace GamblingAction.Gameplay
 			m_DustInstance.Emit(m_DustEmitCount);
 		}
 
-	
+
 		/// 移動中、現在の足元位置で土煙を少量ずつ放出する（軌跡用）。
 		private void EmitDustTrail()
 		{
@@ -311,6 +304,36 @@ namespace GamblingAction.Gameplay
 					m_Fx.PlayPushedPunch(ev.Dir);
 				else if (ev.Type == EventTypes.Vfx && ev.VfxType == VfxTypes.Bump)
 					m_Fx.PlayBumpPunch(ev.Dir);
+				else if (ev.Type == EventTypes.Vfx &&
+					(ev.VfxType == VfxTypes.RestVfx ||
+					 ev.VfxType == VfxTypes.AttackVfx ||
+					 ev.VfxType == VfxTypes.DefenseVfx))
+				{
+					// スキル起因の VFX を検知したら、このプレイヤーのスキルに応じたエフェクトを出す。
+					// charaIndex は sync_state で 0 に戻るため使わず、skillData.id で判定する。
+					if (m_State.Players.TryGetValue(m_PlayerId, out var dto))
+					{
+						int idx = SkillIdToIndex(dto.SkillData != null ? dto.SkillData.Id : null);
+						Debug.Log($"[SkillVfx] id={dto.Id} MyId={m_State.MyId} isMe={m_PlayerId == m_State.MyId} skillId={(dto.SkillData != null ? dto.SkillData.Id : "null")} idx={idx}");
+						m_Fx.PlaySkill(idx);
+					}
+				}
+			}
+		}
+
+		// サーバーの skillData.id を、PlayerFxController の配列添字に変換する。
+		// 添字はキャラ番号（1=医師〜6=債務者）に合わせてある。0 = 不明でエフェクト無し。
+		private static int SkillIdToIndex(string skillId)
+		{
+			switch (skillId)
+			{
+				case "heal_instant":   return 1; // 医師
+				case "nouveau_skill":  return 2; // 成金
+				case "fighter_skill":  return 3; // 格闘家
+				case "guardian_skill": return 4; // ガーディアン
+				case "scammer_skill":  return 5; // イカサマ
+				case "debtor_skill":   return 6; // 債務者
+				default:               return 0; // 不明 = エフェクト無し
 			}
 		}
 

@@ -25,11 +25,20 @@ namespace GamblingAction.Gameplay.Editor
 			DrawGroup("被弾シェイク（ランダム方向）",
 				"m_HitShakeStrength", "m_HitShakeDuration", "m_HitShakeVibrato");
 
-			DrawGroup("押し出されパンチ（押された方向）",
+			DrawGroup("押し出されpassパンチ（押された方向）",
 				"m_PushedPunchStrength", "m_PushedPunchDuration", "m_PushedPunchVibrato");
 
 			DrawGroup("移動衝突パンチ（衝突した方向）",
 				"m_BumpPunchStrength", "m_BumpPunchDuration", "m_BumpPunchVibrato");
+
+			// スキルエフェクトは配列を含むため、FoldoutHeaderGroup を使わずに描画する。
+			EditorGUILayout.LabelField("スキルエフェクト", EditorStyles.boldLabel);
+			EditorGUI.indentLevel++;
+			DrawField("m_SkillEffects");
+			DrawField("m_SkillEffectYOffset");
+			DrawField("m_SkillEffectLifetime");
+			EditorGUI.indentLevel--;
+			EditorGUILayout.Space();
 
 			serializedObject.ApplyModifiedProperties();
 		}

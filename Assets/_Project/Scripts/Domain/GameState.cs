@@ -361,6 +361,8 @@ namespace GamblingAction.Domain
 
 		private void HandleSyncState(SyncStateMessage msg)
 		{
+			//ReplacePlayers(msg.Players);
+			//OnPlayersChanged?.Invoke();
 			ReplacePlayers(msg.Players);
 			OnPlayersChanged?.Invoke();
 		}
