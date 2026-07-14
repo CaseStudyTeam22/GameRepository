@@ -342,80 +342,66 @@ namespace GamblingAction.Input
 		// 決定・キャンセル コールバック
 		// ─────────────────────────────────────────────────────────────
 
-		// Y ボタン / 左クリックで現在の向きを確定送信する。未選択なら Move。
+		// Y ボタン / 左クリックで現在の向きを確定送信する。
 		private void OnConfirmPerformed(InputAction.CallbackContext ctx)
 		{
 			if (!CanAcceptInput()) return;
 
-			// Pushモードのときはグリッド選択ベースの決定処理を行う
-			if (!string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode == IntentTypes.Push)
+			// develop/0611 の仕様に基づき、Pushモード以外のときは決定処理を行わない（即リターン）
+			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
+			if (LocalIntentBus.Current.IsConfirmed) return;
+
+			var me = m_State.Me;
+			if (me == null) return;
+
+			int targetX = -1;
+			int targetY = -1;
+
+			if (ctx.control.device is Mouse)
 			{
-				if (LocalIntentBus.Current.IsConfirmed) return;
-
-				var me = m_State.Me;
-				if (me == null) return;
-
-				int targetX = -1;
-				int targetY = -1;
-
-				if (ctx.control.device is Mouse)
+				if (ResolveMouseGrid(out int gx, out int gy))
 				{
-					if (ResolveMouseGrid(out int gx, out int gy))
-					{
-						targetX = gx;
-						targetY = gy;
-					}
+					targetX = gx;
+					targetY = gy;
 				}
-				else
+			}
+			else
+			{
+				if (m_GamepadHoverX >= 0 && m_GamepadHoverY >= 0)
 				{
-					if (m_GamepadHoverX >= 0 && m_GamepadHoverY >= 0)
-					{
-						targetX = m_GamepadHoverX;
-						targetY = m_GamepadHoverY;
-					}
+					targetX = m_GamepadHoverX;
+					targetY = m_GamepadHoverY;
 				}
-
-				if (targetX >= 0 && targetY >= 0)
-				{
-					ClampToReachable(me.X, me.Y, targetX, targetY, out int clampedX, out int clampedY);
-
-					int dx = clampedX - me.X;
-					int dy = clampedY - me.Y;
-					string dir = null;
-					int power = 1;
-
-					if (dx != 0)
-					{
-						dir = dx > 0 ? Directions.Right : Directions.Left;
-						power = Mathf.Abs(dx);
-					}
-					else if (dy != 0)
-					{
-						dir = dy > 0 ? Directions.Down : Directions.Up;
-						power = Mathf.Abs(dy);
-					}
-
-					if (dir != null)
-					{
-						m_LastSentDir = dir;
-						m_Power = power;
-						m_State.SubmitIntent(m_ActiveMode, dir, power);
-						LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
-					}
-				}
-				return;
 			}
 
-			// それ以外のモード（Moveなど）は従来の方向ベースの決定処理
-			string dirNormal = ResolveDir();
-			if (dirNormal == null) return;
+			if (targetX >= 0 && targetY >= 0)
+			{
+				ClampToReachable(me.X, me.Y, targetX, targetY, out int clampedX, out int clampedY);
 
-			string type = string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode == IntentTypes.None
-				? IntentTypes.Move
-				: m_ActiveMode;
-			m_LastSentDir = dirNormal;
-			m_State.SubmitIntent(type, dirNormal, m_Power);
-			LocalIntentBus.Set(type, dirNormal, m_Power);
+				int dx = clampedX - me.X;
+				int dy = clampedY - me.Y;
+				string dir = null;
+				int power = 1;
+
+				if (dx != 0)
+				{
+					dir = dx > 0 ? Directions.Right : Directions.Left;
+					power = Mathf.Abs(dx);
+				}
+				else if (dy != 0)
+				{
+					dir = dy > 0 ? Directions.Down : Directions.Up;
+					power = Mathf.Abs(dy);
+				}
+
+				if (dir != null)
+				{
+					m_LastSentDir = dir;
+					m_Power = power;
+					m_State.SubmitIntent(m_ActiveMode, dir, power);
+					LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
+				}
+			}
 		}
 
 		private void OnCancelPerformed(InputAction.CallbackContext ctx)
