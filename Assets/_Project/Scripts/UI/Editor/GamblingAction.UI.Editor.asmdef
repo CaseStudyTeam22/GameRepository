@@ -2,8 +2,7 @@
     "name": "GamblingAction.UI.Editor",
     "rootNamespace": "GamblingAction.UI.Editor",
     "references": [
-        "GamblingAction.UI",
-        "Unity.TextMeshPro"
+        "GamblingAction.UI"
     ],
     "includePlatforms": [
         "Editor"

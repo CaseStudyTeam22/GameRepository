@@ -8,7 +8,6 @@ namespace GamblingAction.UI
 	// 全画面パネルを表示して終了を促す。
 	// 現状のサーバは片方が抜けた状態から復帰できないため、続行させずに再起動へ誘導する。
 	// GameInstaller prefab 内の DisconnectNoticeCanvas に付ける。
-	// パネルはメニュー「GamblingAction/UI/相手切断パネルを生成」で生成できる。
 	public class DisconnectNoticeView : MonoBehaviour
 	{
 		[SerializeField, Tooltip("相手切断時に表示するパネル（暗幕以下）。通常は非表示")]
