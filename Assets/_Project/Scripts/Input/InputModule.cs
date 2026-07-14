@@ -7,10 +7,52 @@ using UnityInput = UnityEngine.Input;
 
 namespace GamblingAction.Input
 {
+	// プレイヤーの入力を処理するモジュール（PlayerInput / Input System 版）。
+	//
+	// 【なぜ PlayerInput 方式か】
+	//   InputAction を直接 new する方式だと、接続中の全 Gamepad・全インスタンスに
+	//   ブロードキャストされ、Multiplayer Play Mode で両インスタンスが同じパッド入力を
+	//   受け取ってしまう（両キャラが同じ動きをする）。
+	//   PlayerInput は Control Scheme（Gamepad / Keyboard&Mouse）を手がかりに
+	//   デバイスをプレイヤーへ排他的にペアリングするため、MPPM でも分離が効く。
+	//
+	// 【前提】
+	//   同じ GameObject に PlayerInput コンポーネントが付いており、
+	//   Actions に InputSystem_Actions、Behavior が「Invoke C# Events」、
+	//   Default Map が「Player」に設定されていること。
+	//
+	// 【Action 割り当て（InputSystem_Actions の Player マップ）】
+	//   Move       : 左スティック / WASD          … 方向
+	//   Push       : LT / Q                        … 突進
+	//   Attack     : LB / W                        … スキル（攻撃）
+	//   Defense    : RT / E                        … 防御
+	//   Rest       : R                             … 回復（コントローラー割当なし）
+	//   Confirm    : buttonNorth(Y) / 左クリック   … 決定
+	//   Cancel     : Escape                        … キャンセル（コントローラー割当なし）
+	//   PowerCycle : buttonWest(X/□/Y)            … 強さ変更（1→2→3→1）
+	//   Point      : マウス位置                    … 方向解決用
+	//   Scroll     : マウスホイール                … 強さ増減
 	public class InputModule : MonoBehaviour
 	{
+		// ─────────────────────────────────────────────────────────────
+		// 定数
+		// ─────────────────────────────────────────────────────────────
+
+		// 左スティックのデッドゾーン（これ未満は無入力と見なす）
+		private const float m_StickDeadZone = 0.5f;
+
+		// 左スティック方向変更のクールダウン（秒）。チカチカ防止用
+		private const float m_StickDirChangeInterval = 0.15f;
+
+		// ─────────────────────────────────────────────────────────────
+		// シリアライズフィールド
+		// ─────────────────────────────────────────────────────────────
+
 		[FormerlySerializedAs("worldCamera")]
 		[SerializeField] private Camera m_WorldCamera;
+
+		// 同じ GameObject に付いている PlayerInput。未設定なら自動取得する。
+		[SerializeField] private PlayerInput m_PlayerInput;
 
 #if UNITY_EDITOR
 		// デバッグ時のみデフォルト値はtrueとして、コードやエディタから設定可能にする
@@ -21,22 +63,60 @@ namespace GamblingAction.Input
 		private const bool m_KeepActionOnRelease = false;
 #endif
 
-		private IGameState m_State;
-		private IBoardCoords m_Board;
-		private Plane m_GroundPlane = new Plane(Vector3.up, Vector3.zero);
+		// ─────────────────────────────────────────────────────────────
+		// InputAction 参照（PlayerInput のアセットから取得）
+		// ─────────────────────────────────────────────────────────────
 
-		private KeyCode? m_ActiveSkillKey;
+		private InputAction m_MoveAction;
+		private InputAction m_PushAction;
+		private InputAction m_AttackAction;
+		private InputAction m_DefenseAction;
+		private InputAction m_RestAction;
+		private InputAction m_ConfirmAction;
+		private InputAction m_CancelAction;
+		private InputAction m_PowerCycleAction;
+		private InputAction m_PointAction;
+		private InputAction m_ScrollAction;
+
+		// ─────────────────────────────────────────────────────────────
+		// 内部状態
+		// ─────────────────────────────────────────────────────────────
+
+		private IGameState   m_State;
+		private IBoardCoords m_Board;
+		private Plane        m_GroundPlane = new Plane(Vector3.up, Vector3.zero);
+
+		// 現在アクティブなスキル Action（離し判定用）。null は無効。
+		private InputAction m_ActiveSkillAction;
+
+		// 左スティック方向変更クールダウン残り時間（秒）
+		private float m_StickDirChangeCooldown;
+
 		private string m_ActiveMode;
 		private string m_LastSentDir;
-		private int m_Power = 1;
+		private int    m_Power = 1;
 
-		private InputAction m_ConfirmAction;
-		private InputAction m_GamepadNavAction;
 		private float m_GamepadNavCooldown;
 		private const float k_GamepadNavCooldownTime = 0.2f;
 
 		private int m_GamepadHoverX = -1;
 		private int m_GamepadHoverY = -1;
+
+		// ─────────────────────────────────────────────────────────────
+		// ライフサイクル
+		// ─────────────────────────────────────────────────────────────
+
+		private void Awake()
+		{
+			if (m_PlayerInput == null) m_PlayerInput = GetComponent<PlayerInput>();
+			if (m_PlayerInput == null)
+			{
+				Debug.LogError("[Input] PlayerInput コンポーネントが見つかりません");
+				return;
+			}
+
+			ResolveActions();
+		}
 
 		private void Start()
 		{
@@ -49,32 +129,93 @@ namespace GamblingAction.Input
 
 			if (m_State != null) m_State.OnBeatChanged += HandleBeatChanged;
 
-			// InputAction 構築
-			m_ConfirmAction = new InputAction("ConfirmIntent", InputActionType.Button);
-			m_ConfirmAction.AddBinding("<Gamepad>/buttonSouth");
-			m_ConfirmAction.AddBinding("<Mouse>/leftButton");
-			m_ConfirmAction.performed += OnConfirmActionPerformed;
-			m_ConfirmAction.Enable();
+			// Project-wide actions の警告対策：
+			// 全マップを一旦無効化し、Player マップだけを有効にする。
+			// これで UI マップ等との二重発火を防ぐ。
+			EnablePlayerMapOnly();
 
-			m_GamepadNavAction = new InputAction("GamepadNav", InputActionType.Value, expectedControlType: "Vector2");
-			m_GamepadNavAction.AddBinding("<Gamepad>/leftStick");
-			m_GamepadNavAction.AddCompositeBinding("Dpad")
-				.With("Up",    "<Gamepad>/dpad/up")
-				.With("Down",  "<Gamepad>/dpad/down")
-				.With("Left",  "<Gamepad>/dpad/left")
-				.With("Right", "<Gamepad>/dpad/right");
-			m_GamepadNavAction.Enable();
+			RegisterCallbacks();
 		}
 
 		private void OnDestroy()
 		{
 			if (m_State != null) m_State.OnBeatChanged -= HandleBeatChanged;
-
-			m_ConfirmAction?.Disable();
-			m_ConfirmAction?.Dispose();
-			m_GamepadNavAction?.Disable();
-			m_GamepadNavAction?.Dispose();
+			UnregisterCallbacks();
 		}
+
+		// ─────────────────────────────────────────────────────────────
+		// Action 取得・マップ制御
+		// ─────────────────────────────────────────────────────────────
+
+		// PlayerInput のアクションアセットから各 Action を名前で取得する。
+		private void ResolveActions()
+		{
+			m_MoveAction       = m_PlayerInput.actions["Move"];
+			m_PushAction       = m_PlayerInput.actions["Push"];
+			m_AttackAction     = m_PlayerInput.actions["Attack"];
+			m_DefenseAction    = m_PlayerInput.actions["Defense"];
+			m_RestAction       = m_PlayerInput.actions["Rest"];
+			m_ConfirmAction    = m_PlayerInput.actions["Confirm"];
+			m_CancelAction     = m_PlayerInput.actions["Cancel"];
+			m_PowerCycleAction = m_PlayerInput.actions["PowerCycle"];
+			m_PointAction      = m_PlayerInput.actions["Point"];
+			m_ScrollAction     = m_PlayerInput.actions["Scroll"];
+		}
+
+		// 全アクションマップを無効化し、Player マップだけを有効にする。
+		private void EnablePlayerMapOnly()
+		{
+			var asset = m_PlayerInput.actions;
+			if (asset == null) return;
+
+			foreach (var map in asset.actionMaps)
+				map.Disable();
+
+			var playerMap = asset.FindActionMap("Player", throwIfNotFound: false);
+			if (playerMap != null) playerMap.Enable();
+			else Debug.LogWarning("[Input] Player マップが見つかりません");
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// コールバック登録
+		// ─────────────────────────────────────────────────────────────
+
+		private void RegisterCallbacks()
+		{
+			// スキル系（押した瞬間 performed / 離した瞬間 canceled）
+			m_PushAction.performed    += OnPushPerformed;
+			m_PushAction.canceled     += OnSkillCanceled;
+			m_AttackAction.performed  += OnAttackPerformed;
+			m_AttackAction.canceled   += OnSkillCanceled;
+			m_DefenseAction.performed += OnDefensePerformed;
+			m_DefenseAction.canceled  += OnSkillCanceled;
+			m_RestAction.performed    += OnRestPerformed;
+			m_RestAction.canceled     += OnSkillCanceled;
+
+			// 決定・キャンセル
+			m_ConfirmAction.performed += OnConfirmPerformed;
+			m_CancelAction.performed  += OnCancelPerformed;
+
+			// 強さ変更（ボタン=サイクル / ホイール=増減）
+			m_PowerCycleAction.performed += OnPowerCyclePerformed;
+			m_ScrollAction.performed     += OnScrollPerformed;
+		}
+
+		private void UnregisterCallbacks()
+		{
+			if (m_PushAction != null)       { m_PushAction.performed    -= OnPushPerformed;    m_PushAction.canceled    -= OnSkillCanceled; }
+			if (m_AttackAction != null)     { m_AttackAction.performed  -= OnAttackPerformed;  m_AttackAction.canceled  -= OnSkillCanceled; }
+			if (m_DefenseAction != null)    { m_DefenseAction.performed -= OnDefensePerformed; m_DefenseAction.canceled -= OnSkillCanceled; }
+			if (m_RestAction != null)       { m_RestAction.performed    -= OnRestPerformed;    m_RestAction.canceled    -= OnSkillCanceled; }
+			if (m_ConfirmAction != null)    m_ConfirmAction.performed    -= OnConfirmPerformed;
+			if (m_CancelAction != null)     m_CancelAction.performed     -= OnCancelPerformed;
+			if (m_PowerCycleAction != null) m_PowerCycleAction.performed -= OnPowerCyclePerformed;
+			if (m_ScrollAction != null)     m_ScrollAction.performed     -= OnScrollPerformed;
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 拍変更ハンドラ
+		// ─────────────────────────────────────────────────────────────
 
 		private void HandleBeatChanged()
 		{
@@ -84,14 +225,19 @@ namespace GamblingAction.Input
 
 		private void ResetIntentState()
 		{
-			m_ActiveSkillKey = null;
-			m_ActiveMode = null;
-			m_LastSentDir = null;
-			m_Power = 1;
-			m_GamepadHoverX = -1;
-			m_GamepadHoverY = -1;
+			m_ActiveSkillAction      = null;
+			m_ActiveMode             = null;
+			m_LastSentDir            = null;
+			m_Power                  = 1;
+			m_StickDirChangeCooldown = 0f;
+			m_GamepadHoverX          = -1;
+			m_GamepadHoverY          = -1;
 			LocalIntentBus.Clear();
 		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 毎フレーム処理（方向の連続追跡のみ）
+		// ─────────────────────────────────────────────────────────────
 
 		private void Update()
 		{
@@ -102,9 +248,12 @@ namespace GamblingAction.Input
 				return;
 			}
 
-			HandleSkillKeys();
-			HandleSkillKeyReleased();
-			HandleEscape();
+			m_StickDirChangeCooldown -= Time.deltaTime;
+
+			// スキルモード中（Push以外）は左スティック or マウスで方向をリアルタイム更新する
+			HandleDirectionUpdate();
+
+			// Pushモード中のグリッドホバー選択処理
 			HandleHover();
 		}
 
@@ -118,23 +267,24 @@ namespace GamblingAction.Input
 			return true;
 		}
 
-		private void HandleSkillKeys()
-		{
-			TrySetSkillMode(KeyCode.Q, IntentTypes.Push);
-			// attack廃止につきコメントアウト
-			// TrySetSkillMode(KeyCode.W, IntentTypes.Attack);
-			TrySetSkillMode(KeyCode.W, IntentTypes.Defense);
-			TrySetSkillMode(KeyCode.E, IntentTypes.Skill);
-		}
+		// ─────────────────────────────────────────────────────────────
+		// スキルボタン コールバック
+		// ─────────────────────────────────────────────────────────────
 
-		private void TrySetSkillMode(KeyCode key, string mode)
-		{
-			if (!UnityInput.GetKeyDown(key)) return;
-			if (m_ActiveSkillKey == key) return;
+		private void OnPushPerformed(InputAction.CallbackContext ctx)    => OnSkillPressed(m_PushAction,    IntentTypes.Push);
+		private void OnAttackPerformed(InputAction.CallbackContext ctx)  => OnSkillPressed(m_AttackAction,  IntentTypes.Defense);
+		private void OnDefensePerformed(InputAction.CallbackContext ctx) => OnSkillPressed(m_DefenseAction, IntentTypes.Skill);
+		private void OnRestPerformed(InputAction.CallbackContext ctx)    => OnSkillPressed(m_RestAction,    IntentTypes.Rest);
 
-			m_ActiveSkillKey = key;
-			m_ActiveMode = mode;
-			m_Power = 1;
+		// スキルボタンが押された瞬間の共通処理。
+		private void OnSkillPressed(InputAction action, string mode)
+		{
+			if (!CanAcceptInput()) return;
+			if (m_ActiveMode == mode) return; // 同モードの二重押しは無視
+
+			m_ActiveSkillAction = action;
+			m_ActiveMode        = mode;
+			m_Power             = 1;
 
 			if (mode == IntentTypes.Skill)
 			{
@@ -146,6 +296,7 @@ namespace GamblingAction.Input
 
 			if (mode == IntentTypes.Defense)
 			{
+				// 防御は方向なしでも有効
 				m_LastSentDir = null;
 				m_State.SubmitIntent(IntentTypes.Defense, null, m_Power);
 				LocalIntentBus.Set(IntentTypes.Defense, null, m_Power, -1, -1, -1, -1, true);
@@ -154,68 +305,64 @@ namespace GamblingAction.Input
 
 			if (mode == IntentTypes.Push)
 			{
+				// Pushはグリッド選択モードに入るため、方向はここでは送信しない
 				m_LastSentDir = null;
 				m_GamepadHoverX = -1;
 				m_GamepadHoverY = -1;
 				LocalIntentBus.Set(IntentTypes.Push, null, m_Power, -1, -1, -1, -1, false);
 				return;
 			}
-		}
 
-		private void HandleSkillKeyReleased()
-		{
-			if (!m_ActiveSkillKey.HasValue) return;
-			if (UnityInput.GetKeyUp(m_ActiveSkillKey.Value))
+			// それ以外のモードでは方向が必要
+			string dir = ResolveDir();
+			if (dir == null)
 			{
-				if (m_KeepActionOnRelease) return;
-
-				// コマンドをキャンセルする(押しっぱの状態でないと4拍目に受け付けない)
-				CancelAll();
+				m_LastSentDir = null;
+				return;
 			}
+
+			m_LastSentDir = dir;
+			m_State.SubmitIntent(mode, dir, m_Power);
+			PublishLocal();
 		}
 
-		private void HandleEscape()
+		// スキルボタンが離された瞬間の共通処理。
+		// 自身が起動した Action のときだけキャンセルする。
+		private void OnSkillCanceled(InputAction.CallbackContext ctx)
 		{
-			if (UnityInput.GetKeyDown(KeyCode.Escape)) CancelAll();
+			if (m_ActiveSkillAction == null) return;
+			if (ctx.action != m_ActiveSkillAction) return;
+
+			if (m_KeepActionOnRelease) return;
+
+			CancelAll();
 		}
 
-		private void CancelAll()
-		{
-			m_ActiveSkillKey = null;
-			m_ActiveMode = null;
-			m_LastSentDir = null;
-			m_Power = 1;
-			m_GamepadHoverX = -1;
-			m_GamepadHoverY = -1;
-			m_State.SubmitIntent(IntentTypes.None, null, 1);
-			LocalIntentBus.Clear();
-		}
+		// ─────────────────────────────────────────────────────────────
+		// 決定・キャンセル コールバック
+		// ─────────────────────────────────────────────────────────────
 
-		private void OnConfirmActionPerformed(InputAction.CallbackContext context)
+		// Y ボタン / 左クリックで現在の向きを確定送信する。
+		private void OnConfirmPerformed(InputAction.CallbackContext ctx)
 		{
-			Debug.Log($"[Input] OnConfirmAction: device={context.control.device.name}, activeMode={m_ActiveMode}");
-			if (m_State == null) { Debug.LogWarning("[Input] m_State is null"); return; }
-			if (!CanAcceptInput()) { Debug.LogWarning($"[Input] CanAcceptInput is false (GameActive={m_State.GameActive}, Beat={m_State.CurrentBeat})"); return; }
+			if (!CanAcceptInput()) return;
+
+			// develop/0611 の仕様に基づき、Pushモード以外のときは決定処理を行わない（即リターン）
 			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
-			if (LocalIntentBus.Current.IsConfirmed) { Debug.Log("[Input] Already confirmed"); return; }
+			if (LocalIntentBus.Current.IsConfirmed) return;
 
 			var me = m_State.Me;
-			if (me == null) { Debug.LogWarning("[Input] Local player Me is null"); return; }
+			if (me == null) return;
 
 			int targetX = -1;
 			int targetY = -1;
 
-			if (context.control.device is Mouse)
+			if (ctx.control.device is Mouse)
 			{
 				if (ResolveMouseGrid(out int gx, out int gy))
 				{
 					targetX = gx;
 					targetY = gy;
-					Debug.Log($"[Input] Mouse target resolved: {gx}, {gy}");
-				}
-				else
-				{
-					Debug.LogWarning("[Input] Mouse grid could not be resolved");
 				}
 			}
 			else
@@ -224,7 +371,6 @@ namespace GamblingAction.Input
 				{
 					targetX = m_GamepadHoverX;
 					targetY = m_GamepadHoverY;
-					Debug.Log($"[Input] Gamepad target resolved: {targetX}, {targetY}");
 				}
 			}
 
@@ -252,16 +398,189 @@ namespace GamblingAction.Input
 				{
 					m_LastSentDir = dir;
 					m_Power = power;
-					Debug.Log($"[Input] Submitting push intent: dir={dir}, power={power}, target={clampedX},{clampedY}");
 					m_State.SubmitIntent(m_ActiveMode, dir, power);
 					LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
 				}
-				else
-				{
-					Debug.LogWarning("[Input] Calculated direction is null");
-				}
 			}
 		}
+
+		private void OnCancelPerformed(InputAction.CallbackContext ctx)
+		{
+			if (!CanAcceptInput()) return;
+			CancelAll();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 強さ変更 コールバック
+		// ─────────────────────────────────────────────────────────────
+
+		// buttonWest 押下でパワーを 1→2→3→1 とサイクルさせる。
+		private void OnPowerCyclePerformed(InputAction.CallbackContext ctx)
+		{
+			if (!CanAcceptInput()) return;
+			if (!HasIntentToCharge()) return;
+
+			int next = m_Power < 3 ? m_Power + 1 : 1;
+			SetPowerAndResend(next);
+		}
+
+		// マウスホイールでパワーを増減する。
+		private void OnScrollPerformed(InputAction.CallbackContext ctx)
+		{
+			if (!CanAcceptInput()) return;
+			if (!HasIntentToCharge()) return;
+
+			float scrollY = ctx.ReadValue<Vector2>().y;
+			if (Mathf.Approximately(scrollY, 0f)) return;
+
+			int next = scrollY > 0 ? Mathf.Min(3, m_Power + 1) : Mathf.Max(1, m_Power - 1);
+			if (next == m_Power) return;
+			SetPowerAndResend(next);
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// Update 内：方向の連続追跡
+		// ─────────────────────────────────────────────────────────────
+
+		// スキルモード中、左スティック or マウスの向きをリアルタイム更新する。
+		// スティックが動いていればスティック優先（クールダウンあり）、
+		// 中立ならマウス位置を使う。
+		private void HandleDirectionUpdate()
+		{
+			if (string.IsNullOrEmpty(m_ActiveMode)) return;
+			if (m_ActiveMode == IntentTypes.Rest) return;
+			if (m_ActiveMode == IntentTypes.Push) return; // Push時はグリッド選択を行うため除外
+
+			string stickDir = ResolveStickDir();
+
+			if (stickDir != null)
+			{
+				if (m_StickDirChangeCooldown > 0f) return;
+				if (stickDir == m_LastSentDir) return;
+
+				m_LastSentDir            = stickDir;
+				m_StickDirChangeCooldown = m_StickDirChangeInterval;
+			}
+			else
+			{
+				string mouseDir = ResolveMouseDir();
+				if (mouseDir == null || mouseDir == m_LastSentDir) return;
+				m_LastSentDir = mouseDir;
+			}
+
+			m_State.SubmitIntent(m_ActiveMode, m_LastSentDir, m_Power);
+			PublishLocal();
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 共通ユーティリティ
+		// ─────────────────────────────────────────────────────────────
+
+		private bool HasIntentToCharge()
+		{
+			if (!string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None) return true;
+			if (!string.IsNullOrEmpty(m_LastSentDir)) return true;
+			return false;
+		}
+
+		private void SetPowerAndResend(int newPower)
+		{
+			m_Power = newPower;
+			string type = !string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None
+				? m_ActiveMode
+				: IntentTypes.Move;
+			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense && type != IntentTypes.Skill;
+			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
+			{
+				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
+				PublishLocal();
+			}
+		}
+
+		private void CancelAll()
+		{
+			m_ActiveSkillAction = null;
+			m_ActiveMode        = null;
+			m_LastSentDir       = null;
+			m_Power             = 1;
+			m_GamepadHoverX     = -1;
+			m_GamepadHoverY     = -1;
+			m_State.SubmitIntent(IntentTypes.None, null, 1);
+			LocalIntentBus.Clear();
+		}
+
+		private void PublishLocal()
+		{
+			if (string.IsNullOrEmpty(m_ActiveMode))
+				LocalIntentBus.Clear();
+			else
+				LocalIntentBus.Set(m_ActiveMode, m_LastSentDir, m_Power);
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// 方向リゾルバ
+		// ─────────────────────────────────────────────────────────────
+
+		// スティックが動いていればスティック優先、中立ならマウスから方向を返す。
+		private string ResolveDir()
+		{
+			return ResolveStickDir() ?? ResolveMouseDir();
+		}
+
+		// Move Action（左スティック）の傾きから4方向文字列を解決する。
+		// デッドゾーン以下なら null。
+		private string ResolveStickDir()
+		{
+			if (m_MoveAction == null) return null;
+			Vector2 stick = m_MoveAction.ReadValue<Vector2>();
+			if (stick.magnitude < m_StickDeadZone) return null;
+
+			return Mathf.Abs(stick.x) > Mathf.Abs(stick.y)
+				? (stick.x > 0 ? Directions.Right : Directions.Left)
+				: (stick.y > 0 ? Directions.Up    : Directions.Down);
+		}
+
+		// Point Action（マウス位置）をワールド座標に投影し、
+		// プレイヤー基準の4方向文字列を解決する。
+		private string ResolveMouseDir()
+		{
+			if (m_WorldCamera == null || m_Board == null) return null;
+			if (m_PointAction == null) return null;
+
+			var me = m_State.Me;
+			if (me == null) return null;
+
+			Vector2 mousePos = m_PointAction.ReadValue<Vector2>();
+			var ray = m_WorldCamera.ScreenPointToRay(mousePos);
+			if (!m_GroundPlane.Raycast(ray, out float enter)) return null;
+
+			Vector3 hit   = ray.GetPoint(enter);
+			Vector3 mePos = m_Board.GridToWorld(me.X, me.Y);
+			Vector3 toHit = hit - mePos;
+			toHit.y = 0f;
+
+			if (toHit.magnitude < 0.1f) return null;
+
+			// X-Z 平面での角度から 4 方向を割り出す。
+			// Unity の座標系において：
+			//   Z+ (前/Up) : (0, 0, 1)
+			//   Z- (後/Down) : (0, 0, -1)
+			//   X+ (右/Right) : (1, 0, 0)
+			//   X- (左/Left) : (-1, 0, 0)
+			// ※ BoardCoords の方向定義（Directions）に合わせる。
+			if (Mathf.Abs(toHit.x) > Mathf.Abs(toHit.z))
+			{
+				return toHit.x > 0 ? Directions.Right : Directions.Left;
+			}
+			else
+			{
+				return toHit.z > 0 ? Directions.Up : Directions.Down;
+			}
+		}
+
+		// ─────────────────────────────────────────────────────────────
+		// グリッド選択・ホバー処理（Push用）
+		// ─────────────────────────────────────────────────────────────
 
 		private void HandleHover()
 		{
@@ -271,8 +590,8 @@ namespace GamblingAction.Input
 			var me = m_State.Me;
 			if (me == null) return;
 
-			// ゲームパッド入力を処理
-			Vector2 nav = m_GamepadNavAction.ReadValue<Vector2>();
+			// ゲームパッド入力を処理（m_MoveActionを使用）
+			Vector2 nav = m_MoveAction != null ? m_MoveAction.ReadValue<Vector2>() : Vector2.zero;
 			bool hasGamepadInput = nav.magnitude > 0.5f;
 
 			if (m_GamepadNavCooldown > 0f)
