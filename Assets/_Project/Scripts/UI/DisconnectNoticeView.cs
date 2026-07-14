@@ -5,11 +5,10 @@ using UnityEngine.UI;
 namespace GamblingAction.UI
 {
 	// 相手が完全に切断した（サーバの猶予時間を過ぎて player_left が届いた）ときに、
-	// 用意しておいた全画面パネルを表示して終了を促す。
+	// 全画面パネルを表示して終了を促す。
 	// 現状のサーバは片方が抜けた状態から復帰できないため、続行させずに再起動へ誘導する。
-	//
-	// GameInstaller prefab 配下の DisconnectNoticeCanvas に付け、この子ツリーだけで完結する。
-	// パネルの生成はメニュー「GamblingAction/UI/相手切断パネルを生成」で行える。
+	// GameInstaller prefab 内の DisconnectNoticeCanvas に付ける。
+	// パネルはメニュー「GamblingAction/UI/相手切断パネルを生成」で生成できる。
 	public class DisconnectNoticeView : MonoBehaviour
 	{
 		[SerializeField, Tooltip("相手切断時に表示するパネル（暗幕以下）。通常は非表示")]
@@ -45,7 +44,7 @@ namespace GamblingAction.UI
 
 		private void HandlePlayerLeft(string id)
 		{
-			// 自分が抜けた通知（自分の切断が確定した場合）は対象外。
+			// 自分が抜けた通知は対象外。
 			if (id == m_State.MyId) return;
 			if (m_Panel != null)
 				m_Panel.SetActive(true);

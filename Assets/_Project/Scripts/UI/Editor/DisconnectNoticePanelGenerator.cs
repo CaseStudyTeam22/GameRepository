@@ -5,10 +5,9 @@ using UnityEngine.UI;
 
 namespace GamblingAction.UI.Editor
 {
-	// DisconnectNoticeView 用の全画面パネルを一度だけ生成するメニュー。
+	// DisconnectNoticeView 用の全画面パネルを生成するメニュー。
 	// GameInstaller の prefab を開き、ルートを選択した状態で実行する。
-	// View もパネルも DisconnectNoticeCanvas の子ツリーに収まり、ルート側には何も付かない。
-	// 再実行すると旧パネルを消して作り直す。生成後の文言・配色はエディタ上で自由に調整してよい。
+	// 再実行すると既存のパネルを消して作り直す。
 	public static class DisconnectNoticePanelGenerator
 	{
 		private const string k_CanvasName = "DisconnectNoticeCanvas";
@@ -27,7 +26,7 @@ namespace GamblingAction.UI.Editor
 				return;
 			}
 
-			// 再実行や旧構成（ルート直付け）の掃除。
+			// 既存の生成物を消してから作り直す。
 			var oldCanvas = root.transform.Find(k_CanvasName);
 			if (oldCanvas != null) Undo.DestroyObjectImmediate(oldCanvas.gameObject);
 			var oldView = root.GetComponent<DisconnectNoticeView>();
@@ -37,7 +36,7 @@ namespace GamblingAction.UI.Editor
 			if (font == null)
 				Debug.LogWarning($"[DisconnectNotice] フォントが見つかりません: {k_FontPath}（後で手動設定してください）");
 
-			// Canvas は常駐（View がイベントを待つため）。表示/非表示は Scrim 以下で切り替える。
+			// Canvas を無効にすると View が動かなくなるため、表示/非表示は Scrim 以下で切り替える。
 			var canvasGo = new GameObject(k_CanvasName);
 			Undo.RegisterCreatedObjectUndo(canvasGo, "Create " + k_CanvasName);
 			canvasGo.transform.SetParent(root.transform, false);
@@ -87,7 +86,6 @@ namespace GamblingAction.UI.Editor
 			buttonText.color = Color.white;
 			buttonText.alignment = TextAlignmentOptions.Center;
 
-			// View は Canvas 自身に付け、参照を割り当てる。
 			var view = canvasGo.AddComponent<DisconnectNoticeView>();
 			var so = new SerializedObject(view);
 			so.FindProperty("m_Panel").objectReferenceValue = scrim.gameObject;
