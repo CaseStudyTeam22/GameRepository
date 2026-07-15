@@ -1,4 +1,4 @@
-﻿using DG.Tweening;
+using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Core.Skills;
 using GamblingAction.Domain;
@@ -139,10 +139,8 @@ namespace GamblingAction.Gameplay
 
 			if (m_PlayerId != m_State.MyId && m_IntentBubble != null)
 			{
-				if (dto.Intent == null || string.IsNullOrEmpty(dto.Intent.Type) || dto.Intent.Type == "none")
-				{
-					m_IntentBubble.Hide();
-				}
+				// イカサマ状態による意図の可視化は同期処理(dto.Intent == null)で消去しないようにします。
+				// 吹き出しの表示・非表示は HandleOpponentIntentRevealed メッセージでのみ制御します。
 			}
 		}
 
@@ -316,12 +314,46 @@ namespace GamblingAction.Gameplay
 
 		private void HandleOpponentIntentRevealed(OpponentIntentRevealedMessage msg)
 		{
+			if (m_PlayerId == m_State.MyId) return; // 自分自身のインテントは表示しない（相手のものだけ表示する）
+
 			if (msg != null && msg.Intent != null)
 			{
 				if (m_IntentBubble != null)
 				{
-					m_IntentBubble.ShowIntent(msg.Intent.Type);
+					if (msg.Intent.Type == "none")
+					{
+						m_IntentBubble.Hide();
+					}
+					else
+					{
+						string resolvedSkillId = msg.Intent.Type;
+						if (msg.Intent.Type == "skill")
+						{
+							int opponentCharaIndex = -1;
+							if (m_State.Players.TryGetValue(m_PlayerId, out var oppDto))
+							{
+								opponentCharaIndex = oppDto.CharaIndex;
+							}
+							resolvedSkillId = GetSkillIdForChara(opponentCharaIndex);
+						}
+						m_IntentBubble.ShowIntent(resolvedSkillId);
+					}
 				}
+			}
+		}
+
+		private string GetSkillIdForChara(int charaIndex)
+		{
+			switch (charaIndex)
+			{
+				case 0: return "guardian_skill";
+				case 1: return "doctor_skill";
+				case 2: return "nouveau_riche_skill";
+				case 3: return "fighter_skill";
+				case 4: return "guardian_skill";
+				case 5: return "scammer_skill";
+				case 6: return "debtor_skill";
+				default: return "skill";
 			}
 		}
 	}

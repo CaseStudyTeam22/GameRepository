@@ -83,7 +83,8 @@ namespace GamblingAction.Gameplay.SkillPreview
 
 			if (isFighterSkill)
 			{
-				Color normalColor = new Color(baseColor.r, baseColor.g, baseColor.b, m_OpacityNormal);
+				float opacity = intent.IsConfirmed ? m_OpacityConfirmed : m_OpacityHover;
+				Color color = new Color(baseColor.r, baseColor.g, baseColor.b, opacity);
 				int myX = me.X;
 				int myY = me.Y;
 				string currentDir = intent.Dir;
@@ -109,7 +110,7 @@ namespace GamblingAction.Gameplay.SkillPreview
 						int tx = cx + dx;
 						int ty = cy + dy;
 						if (tx == myX && ty == myY) continue; // 自分自身は除外
-						Show(tx, ty, normalColor, m_CellPrefab);
+						Show(tx, ty, color, m_CellPrefab);
 					}
 				}
 				return;

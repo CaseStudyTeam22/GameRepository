@@ -138,6 +138,7 @@ namespace GamblingAction.UI
 		private Button[]   m_MissionOptionButtons;
 		private TMP_Text[] m_MissionDescriptionTexts;
 		private TMP_Text[] m_MissionRewardTexts;
+		private TMP_Text[] m_MissionDebuffTexts;
 
 		private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
 		private TMP_Text m_P2Name, m_P2Money, m_P2Chips;
@@ -631,14 +632,17 @@ namespace GamblingAction.UI
 			m_MissionOptionButtons    = new Button[3];
 			m_MissionDescriptionTexts = new TMP_Text[3];
 			m_MissionRewardTexts      = new TMP_Text[3];
+			m_MissionDebuffTexts      = new TMP_Text[3];
 
 			for (int i = 0; i < 3; i++)
 			{
 				string path = $"Option{i + 1}";
 				m_MissionOptionButtons[i]    = FindByPath<Button>(m_MissionSelectionPanel, $"{path}/Button");
-				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Description");
-				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Reward");
+				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Description");
+				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Reward");
+				m_MissionDebuffTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Debuff");
 			}
+
 		}
 
 		private void FindStageControls()
@@ -964,7 +968,7 @@ namespace GamblingAction.UI
 					// ミッション達成時は文字色を緑にする
 					m_MissionText.color = me.Mission.IsCleared ? new Color(0.18f, 0.9f, 0.3f, 1f) : Color.white;
 				}
-				if (m_MissionRewardText != null) m_MissionRewardText.text = $"Reward: {me.Mission.RewardType} x{me.Mission.RewardValue}";
+				if (m_MissionRewardText != null) m_MissionRewardText.text = $"報酬: {FormatReward(me.Mission.RewardType, me.Mission.RewardValue)}";
 				if (m_MissionProgressFill != null)
 				{
 					float progress = me.Mission.TargetCount > 0 ? (float)me.Mission.CurrentCount / me.Mission.TargetCount : 0f;
@@ -1020,7 +1024,19 @@ namespace GamblingAction.UI
 						if (m_MissionDescriptionTexts != null && i < m_MissionDescriptionTexts.Length && m_MissionDescriptionTexts[i] != null)
 							m_MissionDescriptionTexts[i].text = mission.Description;
 						if (m_MissionRewardTexts != null && i < m_MissionRewardTexts.Length && m_MissionRewardTexts[i] != null)
-							m_MissionRewardTexts[i].text = $"{mission.RewardType} x{mission.RewardValue}";
+							m_MissionRewardTexts[i].text = FormatReward(mission.RewardType, mission.RewardValue);
+						if (m_MissionDebuffTexts != null && i < m_MissionDebuffTexts.Length && m_MissionDebuffTexts[i] != null)
+						{
+							if (mission.Debuff != null && !string.IsNullOrEmpty(mission.Debuff.Type))
+							{
+								m_MissionDebuffTexts[i].text = FormatDebuff(mission.Debuff);
+								m_MissionDebuffTexts[i].gameObject.SetActive(true);
+							}
+							else
+							{
+								m_MissionDebuffTexts[i].gameObject.SetActive(false);
+							}
+						}
 					}
 					else
 					{
@@ -1036,6 +1052,56 @@ namespace GamblingAction.UI
 					FocusButton(m_MissionOptionButtons, m_SelectedMissionIndex);
 			}
 		}
+
+		private string FormatReward(string type, int value)
+		{
+			string jpType = type;
+			switch (type)
+			{
+				case "PushPowerBonus": jpType = "突進力"; break;
+				case "ActionCostBonus": jpType = "全行動消費チップ"; break;
+				case "SkillCostBonus": jpType = "スキル消費チップ"; break;
+				case "DefenseBonus": jpType = "防御力"; break;
+				case "MaxStaminaBonus": jpType = "最大スタミナ"; break;
+				case "Chips": jpType = "チップ"; break;
+				case "CharaUnique": jpType = "キャラ固有報酬"; break;
+			}
+			string sign = value >= 0 ? "+" : "";
+			if (type == "Chips")
+			{
+				return $"{jpType} {sign}{value}";
+			}
+			else if (type == "ActionCostBonus" || type == "SkillCostBonus")
+			{
+				return $"{jpType} {value}";
+			}
+			else
+			{
+				return $"{jpType} {sign}{value}";
+			}
+		}
+
+		private string FormatDebuff(MissionDebuffDto debuff)
+		{
+			if (debuff == null || string.IsNullOrEmpty(debuff.Type)) return "";
+			string jpType = debuff.Type;
+			switch (debuff.Type)
+			{
+				case "pushPower": jpType = "突進力"; break;
+				case "actionCost": jpType = "全行動消費チップ"; break;
+				case "skillCost": jpType = "スキル消費チップ"; break;
+				case "defenseReduction": jpType = "防御力"; break;
+				case "maxStamina": jpType = "最大スタミナ"; break;
+			}
+			string sign = debuff.Value >= 0 ? "+" : "";
+			float displayVal = debuff.Value;
+			if (debuff.Type == "defenseReduction")
+			{
+				displayVal = Mathf.Round(debuff.Value * 10f);
+			}
+			return $"リスク: {jpType} {sign}{displayVal}";
+		}
+
 
 		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool isSelf)
 		{
