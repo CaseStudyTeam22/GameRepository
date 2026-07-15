@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -68,11 +68,16 @@ namespace GamblingAction.UI
 		/// <summary>選択 or ホバーのどちらかが立っていれば強調表示する。</summary>
 		private bool IsHighlighted => m_IsSelected || m_IsHovered;
 
-		// ─────────────────────────────────────────────────────────────
-		// ライフサイクル
-		// ─────────────────────────────────────────────────────────────
+        /// <summary>選択しているリスクの表示フラグ</summary>
+        private bool m_LastNotifiedHighlighted;
 
-		private void Awake()
+        public event System.Action<ButtonFocusHighlight, bool> HighlightChanged;
+
+        // ─────────────────────────────────────────────────────────────
+        // ライフサイクル
+        // ─────────────────────────────────────────────────────────────
+
+        private void Awake()
 		{
 			m_Rect      = GetComponent<RectTransform>();
 			m_Button    = GetComponent<Button>();
@@ -94,7 +99,8 @@ namespace GamblingAction.UI
 			m_IsSelected   = false;
 			m_IsHovered    = false;
 			m_TargetScale  = m_BaseScale;
-			if (m_Rect != null)    m_Rect.localScale = m_BaseScale;
+            NotifyHighlightChanged(false);
+            if (m_Rect != null)    m_Rect.localScale = m_BaseScale;
 			if (m_Outline != null) m_Outline.enabled = false;
 		}
 
@@ -148,13 +154,27 @@ namespace GamblingAction.UI
 
 			m_TargetScale = active ? m_BaseScale * m_SelectedScale : m_BaseScale;
 			if (m_Outline != null) m_Outline.enabled = active;
-		}
 
-		// ─────────────────────────────────────────────────────────────
-		// 毎フレーム処理
-		// ─────────────────────────────────────────────────────────────
+            NotifyHighlightChanged(active);
+        }
 
-		private void Update()
+
+        /// <summary>
+        /// ふちが出ているかを通知する
+        /// </summary>
+        private void NotifyHighlightChanged(bool highlighted)
+        {
+            if (m_LastNotifiedHighlighted == highlighted) return;
+
+            m_LastNotifiedHighlighted = highlighted;
+            HighlightChanged?.Invoke(this, highlighted);
+        }
+        
+		// ─────────────────────────────────────────────────────────────
+        // 毎フレーム処理
+        // ─────────────────────────────────────────────────────────────
+
+        private void Update()
 		{
 			// 拡大・縮小をなめらかに補間する
 			m_Rect.localScale = Vector3.Lerp(
