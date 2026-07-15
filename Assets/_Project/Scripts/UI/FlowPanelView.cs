@@ -148,7 +148,6 @@ namespace GamblingAction.UI
 		private Button m_ExchangeConfirmButton;
 		private Button m_HighRiskButton;
 		private Button m_LowRiskButton;
-		private Button m_SkipBuffButton;
 
         private TMP_Text m_HighRiskEffectTextView;
         private TMP_Text m_LowRiskEffectTextView;
@@ -161,6 +160,7 @@ namespace GamblingAction.UI
 		private Button[]   m_MissionOptionButtons;
 		private TMP_Text[] m_MissionDescriptionTexts;
 		private TMP_Text[] m_MissionRewardTexts;
+		private TMP_Text[] m_MissionDebuffTexts;
 
         private Transform[] m_MissionOptionTransforms;
         private Vector2[] m_MissionOptionBasePositions;
@@ -259,7 +259,7 @@ namespace GamblingAction.UI
 			InitializeCommandButtonsCache();
 
 			// FindFlowControls でボタン参照が揃ってから配列を構築する
-			m_BuffButtons = new[] { m_HighRiskButton, m_LowRiskButton, m_SkipBuffButton };
+			m_BuffButtons = new[] { m_HighRiskButton, m_LowRiskButton };
 
 			m_State.OnPhaseChanged   += HandlePhase;
 			m_State.OnPlayersChanged += HandlePlayersChanged;
@@ -362,6 +362,13 @@ namespace GamblingAction.UI
 		private void Update()
 		{
 			if (m_State == null) return;
+
+#if UNITY_EDITOR
+			if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.M))
+			{
+				m_State.SubmitDebugClearMission();
+			}
+#endif
 
 			m_NavCooldownRemaining -= Time.deltaTime;
 
@@ -642,7 +649,6 @@ namespace GamblingAction.UI
 
 			m_HighRiskButton        = FindIn<Button>(m_BuffPanel, "HighRiskButton");
 			m_LowRiskButton         = FindIn<Button>(m_BuffPanel, "LowRiskButton");
-			m_SkipBuffButton        = FindIn<Button>(m_BuffPanel, "SkipBuffButton");
 
             m_HighRiskEffectTextView = FindByPath<TMP_Text>(m_BuffPanel, "HighRiskButton/HighRiskEffectText");
             m_LowRiskEffectTextView  = FindByPath<TMP_Text>(m_BuffPanel, "LowRiskButton/LowRiskEffectText");
@@ -663,6 +669,7 @@ namespace GamblingAction.UI
 			m_MissionOptionButtons    = new Button[3];
 			m_MissionDescriptionTexts = new TMP_Text[3];
 			m_MissionRewardTexts      = new TMP_Text[3];
+			m_MissionDebuffTexts      = new TMP_Text[3];
 
             m_MissionOptionTransforms = new Transform[3];
             m_MissionOptionBasePositions = new Vector2[3];
@@ -672,15 +679,16 @@ namespace GamblingAction.UI
 			{
 				string path = $"Option{i + 1}";
 				m_MissionOptionButtons[i]    = FindByPath<Button>(m_MissionSelectionPanel, $"{path}/Button");
-				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Description");
-				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Reward");
-                m_MissionOptionTransforms[i] = FindByPath<Transform>(m_MissionSelectionPanel, path);
-                if (m_MissionOptionTransforms[i] != null)
-                {
+				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Description");
+				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Reward");
+				m_MissionDebuffTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Debuff");
+				m_MissionOptionTransforms[i] = FindByPath<Transform>(m_MissionSelectionPanel, path);
+				if (m_MissionOptionTransforms[i] != null)
+				{
 					m_MissionOptionBasePositions[i] = m_MissionOptionTransforms[i].localPosition;
-                }
-            }
-        }
+				}
+			}
+		}
 
 		private void FindStageControls()
 		{
@@ -782,12 +790,8 @@ namespace GamblingAction.UI
 
 			if (m_HighRiskButton != null) m_HighRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.HighRisk));
 			if (m_LowRiskButton != null)  m_LowRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.LowRisk));
-			if (m_SkipBuffButton != null) m_SkipBuffButton.onClick.AddListener(() => SubmitBuff(null));
-         
 			WireRiskHighlight(m_HighRiskButton, 0);
-            WireRiskHighlight(m_LowRiskButton, 1);
-            WireRiskHighlight(m_SkipBuffButton, 2);
-            
+			WireRiskHighlight(m_LowRiskButton, 1);
 			if (m_MissionOptionButtons != null)
 			{
 				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
@@ -833,7 +837,6 @@ namespace GamblingAction.UI
             ClearRiskSelectionText();            
 			if (m_HighRiskButton != null) m_HighRiskButton.interactable = false;
 			if (m_LowRiskButton != null)  m_LowRiskButton.interactable = false;
-			if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = false;
 		}
 
 		private void HandlePhase(EGamePhase phase)
@@ -898,7 +901,6 @@ namespace GamblingAction.UI
 				int chips = (m_State.Me?.Chips ?? 0) + (m_State.Me?.PendingExchange ?? 0);
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
-				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;
 
 				// バフ/ミッションパネル表示の更新
 				UpdateBuffPanelUI();
@@ -1011,7 +1013,7 @@ namespace GamblingAction.UI
 					// ミッション達成時は文字色を緑にする
 					m_MissionText.color = me.Mission.IsCleared ? new Color(0.18f, 0.9f, 0.3f, 1f) : Color.white;
 				}
-				if (m_MissionRewardText != null) m_MissionRewardText.text = $"Reward: {me.Mission.RewardType} x{me.Mission.RewardValue}";
+				if (m_MissionRewardText != null) m_MissionRewardText.text = $"報酬: {FormatReward(me.Mission.RewardType, me.Mission.RewardValue)}";
 				if (m_MissionProgressFill != null)
 				{
 					float progress = me.Mission.TargetCount > 0 ? (float)me.Mission.CurrentCount / me.Mission.TargetCount : 0f;
@@ -1078,7 +1080,19 @@ namespace GamblingAction.UI
 						if (m_MissionDescriptionTexts != null && i < m_MissionDescriptionTexts.Length && m_MissionDescriptionTexts[i] != null)
 							m_MissionDescriptionTexts[i].text = mission.Description;
 						if (m_MissionRewardTexts != null && i < m_MissionRewardTexts.Length && m_MissionRewardTexts[i] != null)
-							m_MissionRewardTexts[i].text = $"{mission.RewardType} x{mission.RewardValue}";
+							m_MissionRewardTexts[i].text = FormatReward(mission.RewardType, mission.RewardValue);
+						if (m_MissionDebuffTexts != null && i < m_MissionDebuffTexts.Length && m_MissionDebuffTexts[i] != null)
+						{
+							if (mission.Debuff != null && !string.IsNullOrEmpty(mission.Debuff.Type))
+							{
+								m_MissionDebuffTexts[i].text = FormatDebuff(mission.Debuff);
+								m_MissionDebuffTexts[i].gameObject.SetActive(true);
+							}
+							else
+							{
+								m_MissionDebuffTexts[i].gameObject.SetActive(false);
+							}
+						}
 					}
 					else
 					{
@@ -1095,6 +1109,73 @@ namespace GamblingAction.UI
                 StartMissionOptionFloatAnimation();
             }
 		}
+
+		private string FormatReward(string type, int value)
+		{
+			string jpType = type;
+			switch (type)
+			{
+				case "PushPowerBonus": jpType = "突進力"; break;
+				case "ActionCostBonus": jpType = "全行動消費チップ"; break;
+				case "SkillCostBonus": jpType = "スキル消費チップ"; break;
+				case "DefenseBonus": jpType = "防御力"; break;
+				case "MaxStaminaBonus": jpType = "最大スタミナ"; break;
+				case "Chips": jpType = "チップ"; break;
+				case "CharaUnique":
+					var me = m_State?.Me;
+					int charaIndex = me != null ? me.CharaIndex : -1;
+					jpType = charaIndex switch
+					{
+						0 or 4 => "固有バフ: スキル防御成功時にカウンター(相手スタミナ-3)",
+						1 => "固有バフ: スキル回復量 +10",
+						2 => "固有バフ: 自動両替のデメリット無効化(自身で両替額を決定可能)",
+						3 => "固有バフ: スキルによるスタミナ削り +10",
+						5 => "固有バフ: 相手の行動のぞき見の永続化",
+						6 => "固有バフ: ファイナルレイズ時の全行動コスト 0 化",
+						_ => "キャラ固有報酬"
+					};
+					break;
+			}
+			string sign = value >= 0 ? "+" : "";
+			if (type == "Chips")
+			{
+				return $"{jpType} {sign}{value}";
+			}
+			else if (type == "ActionCostBonus" || type == "SkillCostBonus")
+			{
+				return $"{jpType} {value}";
+			}
+			else if (type == "CharaUnique")
+			{
+				return jpType;
+			}
+			else
+			{
+				return $"{jpType} {sign}{value}";
+			}
+		}
+
+		private string FormatDebuff(MissionDebuffDto debuff)
+		{
+			if (debuff == null || string.IsNullOrEmpty(debuff.Type)) return "";
+			string jpType = debuff.Type;
+			switch (debuff.Type)
+			{
+				case "pushPower": jpType = "突進力"; break;
+				case "actionCost": jpType = "全行動消費チップ"; break;
+				case "skillCost": jpType = "スキル消費チップ"; break;
+				case "defenseReduction": jpType = "防御力"; break;
+				case "maxStamina": jpType = "最大スタミナ"; break;
+			}
+			string sign = debuff.Value >= 0 ? "+" : "";
+			float displayVal = debuff.Value;
+			if (debuff.Type == "defenseReduction")
+			{
+				displayVal = Mathf.Round(debuff.Value * 10f);
+			}
+			return $"リスク: {jpType} {sign}{displayVal}";
+		}
+
 
 		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool isSelf)
 		{

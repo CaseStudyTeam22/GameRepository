@@ -8,6 +8,7 @@ const os = require('os');
 const Config = require('./config');
 const Engine = require('./engine');
 const Skills = require('./skills');
+const Missions = require('./missions');
 
 const app = express();
 const server = http.createServer(app);
@@ -67,20 +68,32 @@ let finalRaiseFavoredRole = null;
 // ファイナルレイズ時のターンカウント
 let finalRaiseTurnCount = 0;
 
+function isGuardianBlocking(player, intents) {
+    if (!player || !intents) return false;
+    const intent = intents[player.id] || {};
+    return intent.type === 'skill' && player.skillData?.id === 'guardian_skill';
+}
+
 function updatePlayerCurrentStats(p) {
     if (!p) return;
+    p.modifiers = p.modifiers || { maxStaminaBonus: 0, pushPowerBonus: 0, defenseReductionBonus: 0.0, chipCostMultiplier: 1.0, defenseBonus: 0 };
+    p.activeDebuffs = p.activeDebuffs || {};
+
     const baseMax = p.maxStamina || Config.MAX_STAMINA;
     const maxStamina = p.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
-    const bonus = (p.modifiers && p.modifiers.maxStaminaBonus) || 0;
-    p.currentMaxStamina = maxStamina + bonus;
+    const bonus = p.modifiers.maxStaminaBonus || 0;
+    const debuffStamina = p.activeDebuffs.maxStamina || 0;
+    p.currentMaxStamina = maxStamina + bonus + debuffStamina;
 
     const basePush = p.basePushPower || 0;
-    const pushBonus = (p.modifiers && p.modifiers.pushPowerBonus) || 0;
-    p.currentPushPower = basePush + pushBonus;
+    const pushBonus = p.modifiers.pushPowerBonus || 0;
+    const debuffPush = p.activeDebuffs.pushPower || 0;
+    p.currentPushPower = basePush + pushBonus + debuffPush;
 
     const baseDef = p.baseDefensePower || 0;
-    const defBonus = (p.modifiers && p.modifiers.defenseReductionBonus) ? Math.round(p.modifiers.defenseReductionBonus * 10) : 0;
-    p.currentDefensePower = baseDef + defBonus;
+    const defBonus = p.modifiers.defenseReductionBonus ? Math.round(p.modifiers.defenseReductionBonus * 10) : 0;
+    const debuffDef = p.activeDebuffs.defenseReduction ? Math.round(p.activeDebuffs.defenseReduction * 10) : 0;
+    p.currentDefensePower = baseDef + defBonus + debuffDef;
 }
 
 // sync_state 送信時に自動的にステータスを更新するラッパー
@@ -89,8 +102,44 @@ io.emit = function (event, ...args) {
     if (event === 'sync_state') {
         for (let id in players) {
             updatePlayerCurrentStats(players[id]);
-            // 配信直前に所持チップを上限まで丸める（入手経路を問わない収束点）
             const pl = players[id];
+
+            pl.activeDebuffs = pl.activeDebuffs || {};
+            pl.modifiers = pl.modifiers || {};
+
+            // 行動チップ消費量の調整
+            const actionCostDebuff = pl.activeDebuffs.actionCost || 0;
+            const actionCostBuff = pl.modifiers.actionCostBonus || 0;
+            const totalActionCostMod = actionCostDebuff + actionCostBuff;
+
+            // スキルチップ消費量の調整
+            const skillCostDebuff = pl.activeDebuffs.skillCost || 0;
+            const skillCostBuff = pl.modifiers.skillCostBonus || 0;
+            const totalSkillCostMod = skillCostDebuff + skillCostBuff;
+
+            const baseCosts = pl.baseChipCosts || Config.CHIP_COST_BY_POWER;
+            const isDebtorUniqueFR = isFinalDuel && pl.modifiers.charaUniqueBuff && (pl.charaIndex === 6 || pl.charaName === 'Debtor');
+            if (isDebtorUniqueFR) {
+                pl.chipCosts = {
+                    move: [0, 0, 0],
+                    push: [0, 0, 0],
+                    attack: [0, 0, 0],
+                    defense: [0, 0, 0],
+                    skill: [0, 0, 0],
+                    rest: [0, 0, 0]
+                };
+            } else {
+                pl.chipCosts = {
+                    move: baseCosts.move.map(c => Math.max(0, c + totalActionCostMod)),
+                    push: baseCosts.push.map(c => Math.max(0, c + totalActionCostMod)),
+                    attack: baseCosts.attack.map(c => Math.max(0, c + totalActionCostMod)),
+                    defense: baseCosts.defense.map(c => Math.max(0, c + totalActionCostMod)),
+                    skill: baseCosts.skill.map(c => Math.max(0, c + totalSkillCostMod + totalActionCostMod)),
+                    rest: baseCosts.rest.map(c => Math.max(0, c + totalActionCostMod))
+                };
+            }
+
+            // 配信直前に所持チップを上限まで丸める
             if (pl.chips > Config.MAX_CHIPS) pl.chips = Config.MAX_CHIPS;
         }
     }
@@ -110,7 +159,10 @@ function resetPlayerPos(id) {
     p.selectedBuff = null; p.buffReady = false; p.pendingExchange = 0;
     // 債務者の次回突進強化はラウンド間で持ち越さない
     p.nextPushBonus = 0;
-    // scammerActive はゲーム内で持続するためここではリセットしない
+    // scammerActive はユニークバフがある場合のみラウンド間で持続する。通常はリセットする。
+    if (!p.modifiers || !p.modifiers.charaUniqueBuff) {
+        p.scammerActive = false;
+    }
 
     if (!isFinalDuel) {
         p.chips = p.initChips !== undefined ? p.initChips : Config.INITIAL_CHIPS;
@@ -159,6 +211,7 @@ function prepareSuddenDeathBattle() {
 
 function isNouveauRiche(player) {
     if (!player) return false;
+    if (player.modifiers && player.modifiers.charaUniqueBuff) return false;
     return player.charaIndex === 2 || player.charaName === 'NouveauRiche' || (player.skillData && player.skillData.id === 'double_cost_power');
 }
 
@@ -387,57 +440,55 @@ setInterval(() => {
             }
         }
 
-        const result = Engine.resolveActions(players, intents, items);
+        const result = Engine.resolveActions(players, intents, items, isFinalDuel);
         players = result.players;
         items = result.items;
 
-        // ミッション進捗の処理（配列をその場で変更しない安全な実装）
+        // ミッション進捗の処理
         if (result.events) {
-            const appendedEvents = [];
+            // Guardian のスキル防御成功チェック
             result.events.forEach(ev => {
-                if (ev.type === 'mission_progress') {
-                    const p = players[ev.playerId];
-                    // 防御的プログラミング: p.mission が存在し、オブジェクトであることを厳重にチェック
-                    if (p && p.mission && typeof p.mission === 'object' && !p.mission.isCleared) {
-                        const mTypeMap = { 'Move': 0, 'Push': 1, 'Defense': 2, 'GainChip': 4 };
-                        const targetType = mTypeMap[ev.missionType];
+                if (ev.type === 'hit' || ev.type === 'pushed') {
+                    const targetId = ev.targetId;
+                    const targetPlayer = players[targetId];
+                    if (targetPlayer && targetPlayer.charaIndex === 0 && isGuardianBlocking(targetPlayer, intents)) {
+                        result.events.push({ type: 'mission_progress', playerId: targetId, missionType: 'GuardianSkillDefense', amount: 1 });
+                    }
+                }
+            });
 
-                        // 型と値の存在確認を行ってから判定
-                        if (targetType !== undefined && p.mission.type === targetType) {
-                            p.mission.currentCount += ev.amount;
-                            console.log(`[Mission Progress] ${p.role}: ${p.mission.currentCount} / ${p.mission.targetCount} (${ev.missionType})`);
-
-                            if (p.mission.currentCount >= p.mission.targetCount) {
-                                p.mission.currentCount = p.mission.targetCount;
-                                p.mission.isCleared = true;
-
-                                const rType = p.mission.rewardType || 'Chips';
-                                const rVal = p.mission.rewardValue || 0;
-
-                                if (rType === 'Chips') {
-                                    p.chips += rVal;
-                                } else if (rType === 'MaxStaminaBonus') {
-                                    p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + rVal;
-                                    p.stamina += rVal; // Also increase current stamina
-                                } else if (rType === 'PushPowerBonus') {
-                                    p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
-                                } else if (rType === 'DefenseBonus') {
-                                    p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
-                                }
-
-                                console.log(`[Mission CLEARED] ${p.role} completed mission. Reward: ${rType} x${rVal}`);
-                                if (rType !== 'Chips') {
-                                    console.log(`[Server] [Buff Acquired] Player ${p.role} acquired buff: ${rType} (value: ${rVal}). Modifiers - MaxStaminaBonus: ${p.modifiers.maxStaminaBonus}, PushPowerBonus: ${p.modifiers.pushPowerBonus}, DefenseReductionBonus: ${p.modifiers.defenseReductionBonus}`);
-                                }
-                                // 演出イベントはここでは配列に追加して後で結合する
-                                appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
-                            }
+            // Fighter のスキルによる相手スタミナ 0 化チェック
+            result.events.forEach(ev => {
+                if (ev.type === 'hit') {
+                    const targetId = ev.targetId;
+                    const targetPlayer = players[targetId];
+                    const fighterPlayer = Object.values(players).find(pl => pl.charaIndex === 3);
+                    if (fighterPlayer && targetPlayer && targetPlayer.stamina === 0 && targetId !== fighterPlayer.id) {
+                        const fIntent = intents[fighterPlayer.id];
+                        if (fIntent && fIntent.type === 'skill') {
+                            result.events.push({ type: 'mission_progress', playerId: fighterPlayer.id, missionType: 'FighterSkillKill', amount: 1 });
                         }
                     }
                 }
             });
 
-            // もし追加の演出イベントがあれば、元の events 配列に結合して一括送信する
+            // Scammer の同じ動きチェック
+            const pList = Object.values(players);
+            if (pList.length === 2) {
+                const p1 = pList[0];
+                const p2 = pList[1];
+                const i1 = intents[p1.id] || { type: 'none' };
+                const i2 = intents[p2.id] || { type: 'none' };
+                if (i1.type === i2.type && i1.type !== 'none') {
+                    result.events.push({ type: 'mission_progress', playerId: p1.id, missionType: 'SameAction', amount: 1 });
+                    result.events.push({ type: 'mission_progress', playerId: p2.id, missionType: 'SameAction', amount: 1 });
+                }
+            }
+
+            const appendedEvents = [];
+            Missions.updateProgress(players, result.events, appendedEvents);
+            Missions.checkStateDependentMissions(players, appendedEvents);
+
             if (appendedEvents.length > 0) result.events = result.events.concat(appendedEvents);
             io.emit('game_events', result.events);
         }
@@ -767,12 +818,15 @@ io.on('connection', (socket) => {
             currentMaxStamina: Config.MAX_STAMINA,
             currentPushPower: 0,
             currentDefensePower: 0,
+            highRiskMissionsCleared: 0,
+            activeDebuffs: {},
             initMoney: Config.INITIAL_MONEY,
             initChips: Config.INITIAL_CHIPS,
             basePushPower: 0,
             baseMoveSpeed: 0,
             baseDefensePower: 0,
             chipCosts: JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER)),
+            baseChipCosts: JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER)),
             skillData: null,
             modifiers: {
                 maxStaminaBonus: 0,
@@ -838,6 +892,7 @@ io.on('connection', (socket) => {
                     skill: parseCosts(chara.skillCost, Config.CHIP_COST_BY_POWER.skill),
                     rest: parseCosts(chara.restCost, Config.CHIP_COST_BY_POWER.rest)
                 };
+                p.baseChipCosts = JSON.parse(JSON.stringify(p.chipCosts));
 
                 // スキルパラメータのクランプ
                 const recLimit = (Config.LIMITS && Config.LIMITS.SKILL_STAMINA_REC_LIMIT) || 3;
@@ -947,7 +1002,7 @@ io.on('connection', (socket) => {
         p.selectedBuff = data.buffId;
         p.buffReady = true;
         // リスク決定時にミッションを生成する
-        p.availableMissions = generateMissions(p.selectedBuff);
+        p.availableMissions = generateMissions(p, p.selectedBuff);
         io.emit('sync_state', { players });
         checkAllBuffsSelected();
     });
@@ -958,10 +1013,50 @@ io.on('connection', (socket) => {
         const mission = p.availableMissions.find(m => m.id === data.missionId);
         if (mission) {
             p.mission = JSON.parse(JSON.stringify(mission));
+            
+            // ハイリスクデバフの即時適用
+            p.activeDebuffs = p.activeDebuffs || {};
+            if (p.mission.debuff) {
+                p.activeDebuffs[p.mission.debuff.type] = p.mission.debuff.value;
+                console.log(`[Server] Applied debuff immediately to ${p.role}: ${p.mission.debuff.type} = ${p.mission.debuff.value}`);
+            }
+
             console.log(`[Server] Player ${p.role} selected mission: ${p.mission.description}`);
             io.emit('sync_state', { players });
             checkAllMissionsSelected();
         }
+    });
+
+    socket.on('debug_clear_mission', () => {
+        const p = players[socket.id];
+        if (!p || !p.mission) return;
+
+        console.log(`[Debug Command] Force clearing mission for ${p.role}: ${p.mission.description}`);
+        p.mission.currentCount = p.mission.targetCount;
+        p.mission.isCleared = true;
+
+        // ハイリスクミッションクリアの場合はカウンタを増やす
+        if (p.mission.id && p.mission.id.startsWith('high_risk')) {
+            p.highRiskMissionsCleared = (p.highRiskMissionsCleared || 0) + 1;
+            console.log(`[Debug Command] Incrementing highRiskMissionsCleared: ${p.highRiskMissionsCleared}`);
+        }
+
+        const rType = p.mission.rewardType || 'Chips';
+        const rVal = p.mission.rewardValue || 0;
+
+        if (rType === 'Chips') {
+            p.chips += rVal;
+        } else if (rType === 'MaxStaminaBonus') {
+            p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + rVal;
+            p.stamina += rVal;
+        } else if (rType === 'PushPowerBonus') {
+            p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
+        } else if (rType === 'DefenseBonus') {
+            p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
+        }
+
+        io.emit('sync_state', { players });
+        io.emit('game_events', [{ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "DEBUG CLEAR!" }]);
     });
 
     socket.on('set_intent', (data) => {
@@ -1063,16 +1158,11 @@ function autoBuffTimedOut() {
     for (let id in players) {
         const p = players[id];
         if (p.buffReady || p.isAI) continue;
-        // 両替後の予定チップで購入可否を判定し、ここでは記録のみ。
-        // チップの増減は精算でまとめて行う。
-        const expectedChips = p.chips + (p.pendingExchange || 0);
-        let pick = null;
-        if (expectedChips >= 15 && Math.random() < 0.5) pick = 'high_risk';
-        else if (expectedChips >= 5) pick = 'low_risk';
-        if (pick) p.selectedBuff = pick;
+
+        // Skip ボタン廃止に伴い、未選択時は自動で low_risk を選択する
+        p.selectedBuff = 'low_risk';
         p.buffReady = true;
-        // リスク決定時にミッションを生成する
-        p.availableMissions = generateMissions(p.selectedBuff);
+        p.availableMissions = generateMissions(p, p.selectedBuff);
         changed = true;
     }
     if (changed) io.emit('sync_state', { players });
@@ -1096,7 +1186,7 @@ function checkAllBuffsSelected() {
                 if (pick) pl.selectedBuff = pick;
                 pl.buffReady = true;
                 // リスク決定時にミッションを生成する
-                pl.availableMissions = generateMissions(pl.selectedBuff);
+                pl.availableMissions = generateMissions(pl, pl.selectedBuff);
                 changed = true;
             }
         });
@@ -1172,6 +1262,13 @@ function autoMissionTimedOut() {
         // ミッション未選択のプレイヤーに最初の候補を自動割当
         if (!p.mission && p.availableMissions && p.availableMissions.length > 0) {
             p.mission = JSON.parse(JSON.stringify(p.availableMissions[0]));
+            
+            // ハイリスクデバフの即時適用
+            p.activeDebuffs = p.activeDebuffs || {};
+            if (p.mission.debuff) {
+                p.activeDebuffs[p.mission.debuff.type] = p.mission.debuff.value;
+            }
+
             console.log(`[Server] Auto-assigned mission to Player ${p.role}: ${p.mission.description}`);
             changed = true;
         }
@@ -1285,6 +1382,48 @@ function handleRoundConcluded(winnerId, loserId) {
     const loser = players[loserId];
 
     if (!winner || !loser) return;
+
+    // --- ラウンド終了時のミッション最終判定および永続デバフ化処理 ---
+    for (let id in players) {
+        const p = players[id];
+        if (p.mission) {
+            // キャラ別ミッションの達成チェック (Doctor: スタミナ最大値でラウンド終了)
+            if (p.mission.type === 10 && p.stamina === p.currentMaxStamina) {
+                p.mission.isCleared = true;
+                p.modifiers.charaUniqueBuff = true;
+                console.log(`[Server] Doctor Unique Mission Cleared!`);
+            }
+            // キャラ別ミッションの達成チェック (NouveauRiche: スキル使用して相手を落として勝利)
+            if (p.mission.type === 14 && winnerId === p.id) {
+                const intent = p.intent || {};
+                if (intent.type === 'skill') {
+                    p.mission.isCleared = true;
+                    p.modifiers.charaUniqueBuff = true;
+                    console.log(`[Server] NouveauRiche Unique Mission Cleared!`);
+                }
+            }
+
+            if (p.mission.isCleared) {
+                // クリア成功：デバフ解除
+                p.activeDebuffs = {};
+                if (p.mission.isCharaUnique) {
+                    p.highRiskMissionsCleared = 0; // 完了したのでリセット
+                }
+            } else {
+                // クリア失敗：デバフを永続化（modifiers に蓄積）
+                if (p.mission.debuff) {
+                    const db = p.mission.debuff;
+                    if (db.type === 'maxStamina') p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + db.value;
+                    else if (db.type === 'pushPower') p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + db.value;
+                    else if (db.type === 'defenseReduction') p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + db.value;
+                    else if (db.type === 'actionCost') p.modifiers.actionCostBonus = (p.modifiers.actionCostBonus || 0) + db.value;
+                    else if (db.type === 'skillCost') p.modifiers.skillCostBonus = (p.modifiers.skillCostBonus || 0) + db.value;
+                    console.log(`[Server] Mission FAILED. Debuff is now PERMANENT for ${p.role}: ${db.type} = ${db.value}`);
+                }
+                p.activeDebuffs = {};
+            }
+        }
+    }
 
     // ファイナルレイズの勝者は即全勝扱いで試合終了。通常戦の途中でファイナルレイズに入ることがあるため、ここでスコアを最大値まで上げる。
     if (isFinalDuel) {
@@ -1405,10 +1544,10 @@ function startSuddenDeath() {
     isSuddenDeath = true;
     finalRaiseTurnCount = 0;
 
-    // 所持金をすべてチップへ変換する（100 = チップ1枚）。
+    // 所持金をすべてチップへ変換する（1:1に修正）。
     for (let id in players) {
         const p = players[id];
-        p.chips += Math.floor(p.money / 100);
+        p.chips += p.money;
         p.money = 0;
     }
 
@@ -1498,12 +1637,15 @@ function resetMatchState(isMatchStart = false) {
             p.basePushPower = 0;
             p.baseMoveSpeed = 0;
             p.chipCosts = JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER));
+            p.baseChipCosts = JSON.parse(JSON.stringify(Config.CHIP_COST_BY_POWER));
             p.skillData = null;
             p.initMoney = Config.INITIAL_MONEY;
             p.initChips = Config.INITIAL_CHIPS;
         }
 
         p.mission = null;
+        p.highRiskMissionsCleared = 0;
+        p.activeDebuffs = {};
         p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
         p.roundReady = false; p.intent = null;
         // Lobby 表示用フラグも初期化。ResultScene を抜けて Lobby に戻ったとき、
@@ -1531,73 +1673,8 @@ function resetMatch() {
     beginRound();
 }
 
-function generateMissions(selectedBuff) {
-    const types = [0, 1, 2, 4]; // Move:0, Push:1, Defense:2, GainChip:4
-    const missions = [];
-
-    // 基本的な3種類からランダムに選ぶ（重複なし）
-    const shuffled = types.slice().sort(() => 0.5 - Math.random());
-
-    for (let i = 0; i < 3; i++) {
-        const type = shuffled[i];
-        let targetCount = 0;
-        let baseChipsReward = 0;
-        let description = "";
-
-        switch (type) {
-            case 0: // Move
-                targetCount = 5 + Math.floor(Math.random() * 6); // 5-10 cells
-                baseChipsReward = targetCount * 2 * 10; // チップ報酬 (インフレ対応で10倍)
-                description = `フィールドを ${targetCount} マス移動しよう`;
-                break;
-            case 1: // Push
-                targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 pushes
-                baseChipsReward = targetCount * 5 * 10;
-                description = `相手を計 ${targetCount} 回プッシュしよう`;
-                break;
-            case 2: // Defense
-                targetCount = 2 + Math.floor(Math.random() * 3); // 2-4 defenses
-                baseChipsReward = targetCount * 4 * 10;
-                description = `防御を計 ${targetCount} 回使用しよう`;
-                break;
-            case 4: // GainChip
-                targetCount = 2 + Math.floor(Math.random() * 4); // 2-5 chips
-                baseChipsReward = Math.floor(targetCount * 3) * 10;
-                description = `チップを計 ${targetCount} 回獲得しよう`;
-                break;
-        }
-
-        let rewardType = 'Chips';
-        let rewardValue = baseChipsReward;
-
-        // 選択されたリスク（バフ）に応じて報酬を決定する
-        if (selectedBuff === 'high_risk') {
-            // High Risk: ステータス報酬確定
-            const statusRewards = ['MaxStaminaBonus', 'PushPowerBonus', 'DefenseBonus'];
-            rewardType = statusRewards[Math.floor(Math.random() * statusRewards.length)];
-            rewardValue = rewardType === 'MaxStaminaBonus' ? 2 : 1; // スタミナ最大値補正のみ2、それ以外は1
-        } else if (selectedBuff === 'low_risk') {
-            // Low Risk: チップ報酬確定
-            rewardType = 'Chips';
-            rewardValue = baseChipsReward;
-        } else {
-            // Skip または未設定（フォールバック）: チップ報酬とする
-            rewardType = 'Chips';
-            rewardValue = baseChipsReward;
-        }
-
-        missions.push({
-            id: `mission_${Date.now()}_${i}_${Math.floor(Math.random() * 1000)}`,
-            type: type,
-            description: description,
-            targetCount: targetCount,
-            currentCount: 0,
-            rewardType: rewardType,
-            rewardValue: rewardValue,
-            isCleared: false
-        });
-    }
-    return missions;
+function generateMissions(player, selectedBuff) {
+    return Missions.generateMissions(player, selectedBuff);
 }
 
 function getCurrentServerTimeMs() { return Date.now(); }

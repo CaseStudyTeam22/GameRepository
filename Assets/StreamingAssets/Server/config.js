@@ -74,7 +74,7 @@ module.exports = {
 
     ITEM_SPAWN_INTERVAL: 2,
     MAX_ITEMS_ON_FIELD: 10,
-    CHIP_ITEM_VALUE: 50,
+    CHIP_ITEM_VALUE: 100,
     MONEY_ITEM_VALUE: 500,
 
     // 債務者（debtor_skill）スキルの発動可能チップ上限。

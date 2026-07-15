@@ -103,6 +103,12 @@ namespace GamblingAction.Core.Dto
 		GainChip
 	}
 
+	public class MissionDebuffDto
+	{
+		[JsonProperty("type")]  public string Type;
+		[JsonProperty("value")] public float Value;
+	}
+
 	public class MissionDto
 	{
 		[JsonProperty("id")]           public string Id;
@@ -113,5 +119,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("rewardType")]   public string RewardType;
 		[JsonProperty("rewardValue")]  public int RewardValue;
 		[JsonProperty("isCleared")]    public bool IsCleared;
+		[JsonProperty("debuff")]       public MissionDebuffDto Debuff;
 	}
 }
+

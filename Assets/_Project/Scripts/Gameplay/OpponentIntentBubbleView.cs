@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+using UnityEngine;
+using GamblingAction.Core;
 
 namespace GamblingAction.Gameplay
 {
@@ -33,6 +34,9 @@ namespace GamblingAction.Gameplay
 
 		[SerializeField, Tooltip("休息(rest)時に表示するアイコン")]
 		private Sprite m_RestSprite;
+
+		[SerializeField, Tooltip("固有スキルスプライトデータベース")]
+		private SkillDatabase m_SkillDb;
 
 		private void Awake()
 		{
@@ -82,7 +86,14 @@ namespace GamblingAction.Gameplay
 				case "defense": return m_DefenseSprite;
 				case "skill":   return m_SkillSprite;
 				case "rest":    return m_RestSprite;
-				default:        return null;
+				default:
+					if (m_SkillDb != null)
+					{
+						Sprite icon = m_SkillDb.GetIcon(type);
+						if (icon != null) return icon;
+					}
+					if (type != null && type.EndsWith("_skill")) return m_SkillSprite;
+					return null;
 			}
 		}
 	}
