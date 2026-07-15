@@ -41,14 +41,14 @@ namespace GamblingAction.UI
         {
             // winnerRole はサーバ由来の "P1" / "P2"。どちらの端末でも同じ表記を出す。
             if (m_ResultText != null)
-                m_ResultText.text = $"WINNER: {winnerRole}";
+                m_ResultText.text = $"勝者：{winnerRole}";
 
             // 勝者はタイトル行が示すため、詳細行は所持金の内訳のみ表示する。
             if (m_DetailText != null && m_State.Me != null)
             {
                 int myMoney  = m_State.Me.Money;
                 int oppMoney = m_State.Opponent != null ? m_State.Opponent.Money : 0;
-                m_DetailText.text = $"You: {myMoney:N0}  |  Opponent: {oppMoney:N0}";
+                m_DetailText.text = $"あなた：{myMoney:N0}　相手：{oppMoney:N0}";
             }
 
             StartCountdown();
@@ -75,11 +75,11 @@ namespace GamblingAction.UI
             int remaining = Mathf.CeilToInt(k_CountdownSeconds);
             while (remaining > 0)
             {
-                m_CountdownText.text = remaining.ToString();
+                m_CountdownText.text = $"結果画面へ移動します（あと {remaining} 秒）";
                 yield return new WaitForSeconds(1f);
                 remaining--;
             }
-            m_CountdownText.text = "0";
+            m_CountdownText.text = "結果画面を読み込んでいます…";
         }
     }
 }
