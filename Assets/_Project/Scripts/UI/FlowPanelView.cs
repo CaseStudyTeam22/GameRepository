@@ -1,4 +1,3 @@
-using Codice.CM.SEIDInfo;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
