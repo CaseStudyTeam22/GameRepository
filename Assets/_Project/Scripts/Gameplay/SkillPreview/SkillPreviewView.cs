@@ -91,7 +91,7 @@ namespace GamblingAction.Gameplay.SkillPreview
 
 			foreach (var (gx, gy) in pattern.ResolveCells(intent, me))
 			{
-				if (intent.Mode == IntentTypes.Push)
+				if (intent.Mode == IntentTypes.Push || (intent.Mode == IntentTypes.Skill && me.CharaIndex == 2))
 				{
 					// 自分自身の移動軌跡は GridCursorView が描画するため、
 					// SkillPreviewView では描画をスキップして重なりを防ぐ。

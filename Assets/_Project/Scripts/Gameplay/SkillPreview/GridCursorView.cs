@@ -71,7 +71,8 @@ namespace GamblingAction.Gameplay.SkillPreview
 			//Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}, charaIndex={me.CharaIndex}");
 
 			bool isFighterSkill = (intent.Mode == IntentTypes.Skill && me.CharaIndex == 3);
-			if (!intent.IsActive || (intent.Mode != IntentTypes.Push && !isFighterSkill)) return;
+			bool isDirectionalSkill = (intent.Mode == IntentTypes.Skill && (me.CharaIndex == 3 || me.CharaIndex == 2));
+			if (!intent.IsActive || (intent.Mode != IntentTypes.Push && !isDirectionalSkill)) return;
 
 			if (m_CellPrefab == null)
 			{

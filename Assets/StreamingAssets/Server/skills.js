@@ -28,10 +28,11 @@ const Skills = {
         const isNarikin = skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche';
         if (isNarikin) {
             if (intent.type === 'skill') {
-                const Config = require('./config');
-                const power = Math.max(1, Math.min(3, intent.power || 1));
-                const pushCost = Config.CHIP_COST_BY_POWER['push'][power - 1] || 3;
-                return pushCost * 2;
+                 const Config = require('./config');
+                 const power = Math.max(1, Math.min(3, intent.power || 1));
+                 const pushCosts = (player.chipCosts && player.chipCosts.push) || (player.baseChipCosts && player.baseChipCosts.push) || Config.CHIP_COST_BY_POWER.push;
+                 const pushCost = pushCosts[power - 1] !== undefined ? pushCosts[power - 1] : 3;
+                 return pushCost * 2;
             }
         }
 
@@ -89,7 +90,7 @@ const Skills = {
         else if (skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche') {
             // 成金: 本来のpushの行動の2倍のチップを消費して強化pushを出せる。また、消費したチップはフィールドにばらまかれる
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: intent.dir, power: 3, x: player.prevX, y: player.prevY });
-
+            const startDist = Math.abs(opponent.x - player.x) + Math.abs(opponent.y - player.y);
             const power = Math.max(1, Math.min(3, intent.power || 1));
             const pushCost = (config.CHIP_COST_BY_POWER && config.CHIP_COST_BY_POWER['push']) ? config.CHIP_COST_BY_POWER['push'][power - 1] : 3;
             const consumedChips = pushCost * 2;

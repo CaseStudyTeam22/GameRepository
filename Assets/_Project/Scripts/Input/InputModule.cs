@@ -289,7 +289,7 @@ namespace GamblingAction.Input
 			if (mode == IntentTypes.Skill)
 			{
 				var me = m_State.Me;
-				if (me != null && me.CharaIndex == 3)
+				if (me != null && (me.CharaIndex == 3 || me.CharaIndex == 2))
 				{
 					// 格闘家のスキルの場合、Pushと同様に方向選択モードに入り、即決定はしない
 					m_LastSentDir = null;
@@ -378,7 +378,8 @@ namespace GamblingAction.Input
 			if (me == null) return;
 
 			bool isFighterSkill = (m_ActiveMode == IntentTypes.Skill && me.CharaIndex == 3);
-			if (string.IsNullOrEmpty(m_ActiveMode) || (m_ActiveMode != IntentTypes.Push && !isFighterSkill)) return;
+			bool isNouveauSkill = (m_ActiveMode == IntentTypes.Skill && me.CharaIndex == 2);
+			if (string.IsNullOrEmpty(m_ActiveMode) || (m_ActiveMode != IntentTypes.Push && !isFighterSkill && !isNouveauSkill)) return;
 			if (LocalIntentBus.Current.IsConfirmed) return;
 
 			if (isFighterSkill)
@@ -392,7 +393,7 @@ namespace GamblingAction.Input
 				m_State.SubmitIntent(IntentTypes.Skill, dir, 1);
 				LocalIntentBus.Set(IntentTypes.Skill, dir, 1, -1, -1, -1, -1, true);
 			}
-			else if (m_ActiveMode == IntentTypes.Push)
+			else if (m_ActiveMode == IntentTypes.Push || isNouveauSkill)
 			{
 				int targetX = -1;
 				int targetY = -1;
@@ -492,9 +493,9 @@ namespace GamblingAction.Input
 			if (m_ActiveMode == IntentTypes.Rest) return;
 			if (m_ActiveMode == IntentTypes.Push) return; // Push時はグリッド選択を行うため除外
 
-			// 格闘家のスキルの場合も方向選択モードで処理するため除外
-			bool isFighterSkill = (m_ActiveMode == IntentTypes.Skill && m_State.Me != null && m_State.Me.CharaIndex == 3);
-			if (isFighterSkill) return;
+			// 格闘家や成金のスキルの場合も方向選択モードで処理するため除外
+			bool isDirectionalSkill = (m_ActiveMode == IntentTypes.Skill && m_State.Me != null && (m_State.Me.CharaIndex == 3 || m_State.Me.CharaIndex == 2));
+			if (isDirectionalSkill) return;
 
 			string stickDir = ResolveStickDir();
 
@@ -525,7 +526,13 @@ namespace GamblingAction.Input
 		private bool HasIntentToCharge()
 		{
 			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode == IntentTypes.None) return false;
-			if (m_ActiveMode == IntentTypes.Defense || m_ActiveMode == IntentTypes.Skill || m_ActiveMode == IntentTypes.Rest) return false;
+			if (m_ActiveMode == IntentTypes.Defense || m_ActiveMode == IntentTypes.Rest) return false;
+			if (m_ActiveMode == IntentTypes.Skill)
+			{
+				var me = m_State.Me;
+				if (me != null && me.CharaIndex == 2) return true;
+				return false;
+			}
 			return true;
 		}
 
@@ -536,7 +543,7 @@ namespace GamblingAction.Input
 				? m_ActiveMode
 				: IntentTypes.Move;
 			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense && type != IntentTypes.Skill;
-			int powerToSend = (type == IntentTypes.Rest || type == IntentTypes.Defense || type == IntentTypes.Skill) ? 1 : m_Power;
+			int powerToSend = (type == IntentTypes.Rest || type == IntentTypes.Defense || (type == IntentTypes.Skill && m_State.Me?.CharaIndex != 2)) ? 1 : m_Power;
 			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
 			{
 				m_State.SubmitIntent(type, m_LastSentDir, powerToSend);
@@ -656,6 +663,7 @@ namespace GamblingAction.Input
 			if (me == null) return;
 
 			bool isFighterSkill = (m_ActiveMode == IntentTypes.Skill && me.CharaIndex == 3);
+			bool isNouveauSkill = (m_ActiveMode == IntentTypes.Skill && me.CharaIndex == 2);
 			if (isFighterSkill)
 			{
 				if (LocalIntentBus.Current.IsConfirmed) return;
@@ -668,7 +676,7 @@ namespace GamblingAction.Input
 				return;
 			}
 
-			if (m_ActiveMode != IntentTypes.Push) return;
+			if (m_ActiveMode != IntentTypes.Push && !isNouveauSkill) return;
 			if (LocalIntentBus.Current.IsConfirmed) return;
 
 			// ゲームパッド入力を処理（m_MoveActionを使用）

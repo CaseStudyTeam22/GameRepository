@@ -50,7 +50,8 @@ const Engine = {
             p.targetX = p.x; p.targetY = p.y;
 
             // 计算预想目标：push/move 均前进 power (1-3) 格（遇障碍/越界会在后面限制）
-            if (intent.type === 'push') {
+            const isNouveauSkill = intent.type === 'skill' && (p.charaIndex === 2 || p.charaName === 'NouveauRiche' || (p.skillData && (p.skillData.id === 'double_cost_power' || p.skillData.id === 'nouveau_skill')));
+            if (intent.type === 'push' || isNouveauSkill) {
                 const finalPushDist = Math.max(1, Math.min(3, power));
                 console.log(`[Server ENGINE] PUSH target calculation: Player=${p.id}, power=${power}, finalPushDist=${finalPushDist}, dir=${intent.dir}`);
                 if (intent.dir === 'up') p.targetY -= finalPushDist;
