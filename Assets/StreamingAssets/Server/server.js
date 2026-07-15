@@ -1027,6 +1027,38 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('debug_clear_mission', () => {
+        const p = players[socket.id];
+        if (!p || !p.mission) return;
+
+        console.log(`[Debug Command] Force clearing mission for ${p.role}: ${p.mission.description}`);
+        p.mission.currentCount = p.mission.targetCount;
+        p.mission.isCleared = true;
+
+        // ハイリスクミッションクリアの場合はカウンタを増やす
+        if (p.mission.id && p.mission.id.startsWith('high_risk')) {
+            p.highRiskMissionsCleared = (p.highRiskMissionsCleared || 0) + 1;
+            console.log(`[Debug Command] Incrementing highRiskMissionsCleared: ${p.highRiskMissionsCleared}`);
+        }
+
+        const rType = p.mission.rewardType || 'Chips';
+        const rVal = p.mission.rewardValue || 0;
+
+        if (rType === 'Chips') {
+            p.chips += rVal;
+        } else if (rType === 'MaxStaminaBonus') {
+            p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + rVal;
+            p.stamina += rVal;
+        } else if (rType === 'PushPowerBonus') {
+            p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
+        } else if (rType === 'DefenseBonus') {
+            p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
+        }
+
+        io.emit('sync_state', { players });
+        io.emit('game_events', [{ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "DEBUG CLEAR!" }]);
+    });
+
     socket.on('set_intent', (data) => {
         const p = players[socket.id];
         if (gameActive && currentBeat < 4 && p && !p.isAI) {

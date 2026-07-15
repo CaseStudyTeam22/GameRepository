@@ -34,10 +34,19 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 		[JsonProperty("charaIndex")]  public int CharaIndex;
 
+		[JsonProperty("skillData")]  public SkillDataDto SkillData;
+
 		// --- サーバー側でバフや補正値を適用した後の最終的な現在能力値 ---
 		[JsonProperty("currentMaxStamina")]   public int CurrentMaxStamina;   // バフ・ボーナス適用後の最大スタミナ。UI等でメモリ数を決める際はこちらを直接参照してください。
 		[JsonProperty("currentPushPower")]    public int CurrentPushPower;    // バフ・ボーナス適用後の突進力。
 		[JsonProperty("currentDefensePower")] public int CurrentDefensePower; // バフ・ボーナス適用後の防御力。
+	}
+
+	public class SkillDataDto
+	{
+		[JsonProperty("id")]         public string Id;
+		[JsonProperty("staminaRec")] public int StaminaRec;
+		[JsonProperty("chipCost")]   public int ChipCost;
 	}
 
 	public class PlayerModifiersDto

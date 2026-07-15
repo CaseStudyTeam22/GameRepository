@@ -1,4 +1,3 @@
-using Codice.CM.SEIDInfo;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -108,17 +107,37 @@ namespace GamblingAction.UI
 		[Tooltip("左スティックを最大に傾けたときのスライダー変化速度（chips/秒）")]
 		[SerializeField] private float m_SliderSpeed = 8f;
 
+
 		// ─────────────────────────────────────────────────────────────
 		// 定数（コントローラー UI 用）
 		// ─────────────────────────────────────────────────────────────
 
 		/// <summary>スティック入力のデッドゾーン（これ未満は無入力と見なす）</summary>
-		private const float m_StickDeadZone = 0.3f;
+		private const float m_StickDeadZone = 0.6f;
 
 		/// <summary>ボタン選択移動のクールダウン（秒）。連続入力チカチカ防止用</summary>
 		private const float m_NavCooldown = 0.2f;
 
-		private IGameState m_State;
+        /// <summary>ハイリスク選択時</summary>
+        private const string m_HighRiskEffectText = "突進 <color=#4CFF7A>Up</color> / スタミナ <color=#FF5A5A>Down</color>";
+
+        /// <summary>ローリスク選択時</summary>
+        private const string m_LowRiskEffectText = "回復量 <color=#4CFF7A>Up</color>";
+
+        /// <summary>スキップ選択時</summary>
+        private const string m_SkipRiskEffectText = "効果なし";
+
+        /// <summary> 移動する距離</summary>
+        private const float m_MissionOptionFloatDistance = 30f;
+
+        /// <summary> 移動に掛かる時間</summary>
+        private const float m_MissionOptionFloatDuration = 3.0f;
+
+        /// <summary> Optionが動く際の遅延</summary>
+        private const float m_MissionOptionFloatDelayStep = 0.3f;
+
+
+        private IGameState m_State;
 
 		// この回で両替申請したチップ数。精算は両替・カード選択が終わってからまとめて行うため、
 		// カード選択ボタンの可否判定は「現チップ + この値」で行う。
@@ -130,7 +149,11 @@ namespace GamblingAction.UI
 		private Button m_HighRiskButton;
 		private Button m_LowRiskButton;
 
-		private TMP_Text m_MissionText;
+        private TMP_Text m_HighRiskEffectTextView;
+        private TMP_Text m_LowRiskEffectTextView;
+        private TMP_Text m_SkipRiskEffectTextView;
+
+        private TMP_Text m_MissionText;
 		private TMP_Text m_MissionRewardText;
 		private Image    m_MissionProgressFill;
 
@@ -139,7 +162,12 @@ namespace GamblingAction.UI
 		private TMP_Text[] m_MissionRewardTexts;
 		private TMP_Text[] m_MissionDebuffTexts;
 
-		private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
+        private Transform[] m_MissionOptionTransforms;
+        private Vector2[] m_MissionOptionBasePositions;
+        private Tween[] m_MissionOptionFloatTweens;
+        private bool m_MissionSelectionAnimating;
+
+        private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
 		private TMP_Text m_P2Name, m_P2Money, m_P2Chips;
 		private Image[] m_NormalBeats;
 		private Image m_FinalBeat;
@@ -334,6 +362,13 @@ namespace GamblingAction.UI
 		private void Update()
 		{
 			if (m_State == null) return;
+
+#if UNITY_EDITOR
+			if (UnityEngine.Input.GetKeyDown(UnityEngine.KeyCode.M))
+			{
+				m_State.SubmitDebugClearMission();
+			}
+#endif
 
 			m_NavCooldownRemaining -= Time.deltaTime;
 
@@ -615,7 +650,11 @@ namespace GamblingAction.UI
 			m_HighRiskButton        = FindIn<Button>(m_BuffPanel, "HighRiskButton");
 			m_LowRiskButton         = FindIn<Button>(m_BuffPanel, "LowRiskButton");
 
-			m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
+            m_HighRiskEffectTextView = FindByPath<TMP_Text>(m_BuffPanel, "HighRiskButton/HighRiskEffectText");
+            m_LowRiskEffectTextView  = FindByPath<TMP_Text>(m_BuffPanel, "LowRiskButton/LowRiskEffectText");
+            m_SkipRiskEffectTextView = FindByPath<TMP_Text>(m_BuffPanel, "SkipBuffButton/SkipRiskEffectText");
+
+            m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
 			m_PrepareTimeText = FindIn<TMP_Text>(m_PreparingCountdownPanel, "TimeText");
 		}
 
@@ -632,15 +671,23 @@ namespace GamblingAction.UI
 			m_MissionRewardTexts      = new TMP_Text[3];
 			m_MissionDebuffTexts      = new TMP_Text[3];
 
-			for (int i = 0; i < 3; i++)
+            m_MissionOptionTransforms = new Transform[3];
+            m_MissionOptionBasePositions = new Vector2[3];
+            m_MissionOptionFloatTweens = new Tween[3];
+
+            for (int i = 0; i < 3; i++)
 			{
 				string path = $"Option{i + 1}";
 				m_MissionOptionButtons[i]    = FindByPath<Button>(m_MissionSelectionPanel, $"{path}/Button");
 				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Description");
 				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Reward");
 				m_MissionDebuffTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Button/Debuff");
+				m_MissionOptionTransforms[i] = FindByPath<Transform>(m_MissionSelectionPanel, path);
+				if (m_MissionOptionTransforms[i] != null)
+				{
+					m_MissionOptionBasePositions[i] = m_MissionOptionTransforms[i].localPosition;
+				}
 			}
-
 		}
 
 		private void FindStageControls()
@@ -743,7 +790,8 @@ namespace GamblingAction.UI
 
 			if (m_HighRiskButton != null) m_HighRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.HighRisk));
 			if (m_LowRiskButton != null)  m_LowRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.LowRisk));
-
+			WireRiskHighlight(m_HighRiskButton, 0);
+			WireRiskHighlight(m_LowRiskButton, 1);
 			if (m_MissionOptionButtons != null)
 			{
 				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
@@ -776,6 +824,7 @@ namespace GamblingAction.UI
 			var me = m_State.Me;
 			if (me != null && me.AvailableMissions != null && index < me.AvailableMissions.Count)
 			{
+				StopMissionOptionFloatAnimation();
 				m_State.SubmitMission(me.AvailableMissions[index].Id);
 				SetActive(m_MissionSelectionPanel, false);
                 ShowWaitingPanel();
@@ -785,6 +834,7 @@ namespace GamblingAction.UI
 		private void SubmitBuff(string id)
 		{
 			m_State.SubmitBuff(id);
+            ClearRiskSelectionText();            
 			if (m_HighRiskButton != null) m_HighRiskButton.interactable = false;
 			if (m_LowRiskButton != null)  m_LowRiskButton.interactable = false;
 		}
@@ -981,7 +1031,8 @@ namespace GamblingAction.UI
 			if (m_State.Phase != EGamePhase.BuffSelection)
 			{
 				SetActive(m_BuffPanel, false);
-				return;
+                ClearRiskSelectionText();
+                return;
 			}
 
 			// BuffSelection フェーズ：自分がバフ未選択の時のみ表示
@@ -990,7 +1041,11 @@ namespace GamblingAction.UI
 			bool showBuffPanel = !buffSelected;
 
 			SetActive(m_BuffPanel, showBuffPanel);
-		}
+            if (!showBuffPanel)
+            {
+                ClearRiskSelectionText();
+            }
+        }
 
 		// ミッション選択パネルの表示制御
 		private void UpdateMissionSelectionUI()
@@ -1006,7 +1061,13 @@ namespace GamblingAction.UI
 								 me.Mission == null;
 			SetActive(m_MissionSelectionPanel, showSelection);
 
-			if (showSelection)
+            if (!showSelection)
+            {
+                StopMissionOptionFloatAnimation();
+                return;
+            }
+
+            if (showSelection)
 			{
 				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
 				{
@@ -1045,7 +1106,8 @@ namespace GamblingAction.UI
 				m_SelectedMissionIndex = FindFirstSelectable(m_MissionOptionButtons, requireActive: true);
 				if (m_ControllerActive)
 					FocusButton(m_MissionOptionButtons, m_SelectedMissionIndex);
-			}
+                StartMissionOptionFloatAnimation();
+            }
 		}
 
 		private string FormatReward(string type, int value)
@@ -1059,7 +1121,20 @@ namespace GamblingAction.UI
 				case "DefenseBonus": jpType = "防御力"; break;
 				case "MaxStaminaBonus": jpType = "最大スタミナ"; break;
 				case "Chips": jpType = "チップ"; break;
-				case "CharaUnique": jpType = "キャラ固有報酬"; break;
+				case "CharaUnique":
+					var me = m_State?.Me;
+					int charaIndex = me != null ? me.CharaIndex : -1;
+					jpType = charaIndex switch
+					{
+						0 or 4 => "固有バフ: スキル防御成功時にカウンター(相手スタミナ-3)",
+						1 => "固有バフ: スキル回復量 +10",
+						2 => "固有バフ: 自動両替のデメリット無効化(自身で両替額を決定可能)",
+						3 => "固有バフ: スキルによるスタミナ削り +10",
+						5 => "固有バフ: 相手の行動のぞき見の永続化",
+						6 => "固有バフ: ファイナルレイズ時の全行動コスト 0 化",
+						_ => "キャラ固有報酬"
+					};
+					break;
 			}
 			string sign = value >= 0 ? "+" : "";
 			if (type == "Chips")
@@ -1069,6 +1144,10 @@ namespace GamblingAction.UI
 			else if (type == "ActionCostBonus" || type == "SkillCostBonus")
 			{
 				return $"{jpType} {value}";
+			}
+			else if (type == "CharaUnique")
+			{
+				return jpType;
 			}
 			else
 			{
@@ -1849,6 +1928,8 @@ namespace GamblingAction.UI
 			SetActive(m_MissionPanel, false);
 			SetActive(m_MissionSelectionPanel, false);
             SetActive(m_WaitingPanel, false);
+            ClearRiskSelectionText();
+            StopMissionOptionFloatAnimation();
         }
 
 		private static void SetActive(GameObject go, bool active)
@@ -1903,5 +1984,117 @@ namespace GamblingAction.UI
 
 			return null;
 		}
-	}
+
+
+        private void WireRiskHighlight(Button button, int index)
+        {
+            if (button == null) return;
+
+            var highlight = button.GetComponent<ButtonFocusHighlight>();
+            if (highlight == null) return;
+
+            highlight.HighlightChanged += (_, highlighted) =>
+            {
+                if (!highlighted) return;
+                ShowRiskSelectionText(index);
+            };
+        }
+
+        private void ShowRiskSelectionText(int index)
+        {
+            ClearRiskSelectionText();
+
+            TMP_Text target = index switch
+            {
+                0 => m_HighRiskEffectTextView,
+                1 => m_LowRiskEffectTextView,
+                2 => m_SkipRiskEffectTextView,
+                _ => null,
+            };
+
+            if (target == null) return;
+
+            target.text = index switch
+            {
+                0 => m_HighRiskEffectText,
+                1 => m_LowRiskEffectText,
+                2 => m_SkipRiskEffectText,
+                _ => string.Empty,
+            };
+
+            SetActive(target.gameObject, !string.IsNullOrEmpty(target.text));
+        }
+
+        private void ClearRiskSelectionText()
+        {
+            ClearRiskEffectText(m_HighRiskEffectTextView);
+            ClearRiskEffectText(m_LowRiskEffectTextView);
+            ClearRiskEffectText(m_SkipRiskEffectTextView);
+        }
+
+        private void ClearRiskEffectText(TMP_Text text)
+        {
+            if (text == null) return;
+
+            text.text = string.Empty;
+            SetActive(text.gameObject, false);
+        }
+
+        private void StartMissionOptionFloatAnimation()
+        {
+            if (m_MissionSelectionAnimating) return;
+            if (m_MissionOptionTransforms == null || m_MissionOptionFloatTweens == null) return;
+
+            m_MissionSelectionAnimating = true;
+
+            for (int i = 0; i < m_MissionOptionTransforms.Length; i++)
+            {
+                var option = m_MissionOptionTransforms[i];
+                if (option == null) continue;
+                if (!option.gameObject.activeSelf) continue;
+
+                Vector3 basePos = m_MissionOptionBasePositions[i];
+                option.localPosition = basePos;
+
+                m_MissionOptionFloatTweens[i]?.Kill();
+                m_MissionOptionFloatTweens[i] = DOTween.To(
+                        () => option.localPosition.y,
+                        y => option.localPosition = new Vector3(basePos.x, y, basePos.z),
+                        basePos.y + m_MissionOptionFloatDistance,
+                        m_MissionOptionFloatDuration
+                    )
+                    .SetEase(Ease.InOutSine)
+                    .SetLoops(-1, LoopType.Yoyo)
+                    .SetDelay(i * m_MissionOptionFloatDelayStep)
+                    .SetTarget(option);
+            }
+        }
+
+        private void StopMissionOptionFloatAnimation()
+        {
+            if (m_MissionOptionTransforms == null) return;
+
+            if (m_MissionOptionFloatTweens != null)
+            {
+                for (int i = 0; i < m_MissionOptionFloatTweens.Length; i++)
+                {
+                    m_MissionOptionFloatTweens[i]?.Kill();
+                    m_MissionOptionFloatTweens[i] = null;
+                }
+            }
+
+            for (int i = 0; i < m_MissionOptionTransforms.Length; i++)
+            {
+                var option = m_MissionOptionTransforms[i];
+                if (option == null) continue;
+
+                if (m_MissionOptionBasePositions != null && i < m_MissionOptionBasePositions.Length)
+                {
+                    option.localPosition = m_MissionOptionBasePositions[i];
+                }
+            }
+
+            m_MissionSelectionAnimating = false;
+        }
+    }
 }

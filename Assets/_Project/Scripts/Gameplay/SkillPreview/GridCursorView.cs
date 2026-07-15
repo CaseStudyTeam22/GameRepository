@@ -68,7 +68,7 @@ namespace GamblingAction.Gameplay.SkillPreview
 			if (me == null) return;
 
 			var intent = LocalIntentBus.Current;
-			Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}, charaIndex={me.CharaIndex}");
+			//Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}, charaIndex={me.CharaIndex}");
 
 			bool isFighterSkill = (intent.Mode == IntentTypes.Skill && me.CharaIndex == 3);
 			if (!intent.IsActive || (intent.Mode != IntentTypes.Push && !isFighterSkill)) return;

@@ -119,6 +119,7 @@ namespace GamblingAction.Domain
 				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
 			}
 
+			
 			m_Net.Emit(ClientEvents.PlayerReady,
 				new PlayerReadyMessage
 				{
@@ -316,6 +317,11 @@ namespace GamblingAction.Domain
 			m_Net.Emit(ClientEvents.MissionSelected, new MissionSelectedMessage { MissionId = missionId });
 		}
 
+		public void SubmitDebugClearMission()
+		{
+			m_Net.Emit("debug_clear_mission", new { });
+		}
+
 		public void SubmitRoundReady()
 		{
 			m_Net.Emit(ClientEvents.RoundReady, new { });
@@ -434,6 +440,8 @@ namespace GamblingAction.Domain
 
 		private void HandleSyncState(SyncStateMessage msg)
 		{
+			//ReplacePlayers(msg.Players);
+			//OnPlayersChanged?.Invoke();
 			ReplacePlayers(msg.Players);
 			OnPlayersChanged?.Invoke();
 		}
