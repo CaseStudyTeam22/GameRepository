@@ -102,6 +102,7 @@ namespace GamblingAction.UI
 		[Tooltip("左スティックを最大に傾けたときのスライダー変化速度（chips/秒）")]
 		[SerializeField] private float m_SliderSpeed = 8f;
 
+
 		// ─────────────────────────────────────────────────────────────
 		// 定数（コントローラー UI 用）
 		// ─────────────────────────────────────────────────────────────
@@ -117,8 +118,19 @@ namespace GamblingAction.UI
 
         /// <summary>ローリスク選択時</summary>
         private const string m_LowRiskEffectText = "回復量 <color=#4CFF7A>Up</color>";
+
         /// <summary>スキップ選択時</summary>
         private const string m_SkipRiskEffectText = "効果なし";
+
+        /// <summary> 移動する距離</summary>
+        private const float m_MissionOptionFloatDistance = 30f;
+
+        /// <summary> 移動に掛かる時間</summary>
+        private const float m_MissionOptionFloatDuration = 3.0f;
+
+        /// <summary> Optionが動く際の遅延</summary>
+        private const float m_MissionOptionFloatDelayStep = 0.3f;
+
 
         private IGameState m_State;
 
@@ -145,7 +157,12 @@ namespace GamblingAction.UI
 		private TMP_Text[] m_MissionDescriptionTexts;
 		private TMP_Text[] m_MissionRewardTexts;
 
-		private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
+        private Transform[] m_MissionOptionTransforms;
+        private Vector2[] m_MissionOptionBasePositions;
+        private Tween[] m_MissionOptionFloatTweens;
+        private bool m_MissionSelectionAnimating;
+
+        private TMP_Text m_P1Name, m_P1Money, m_P1Chips;
 		private TMP_Text m_P2Name, m_P2Money, m_P2Chips;
 		private Image[] m_NormalBeats;
 		private Image m_FinalBeat;
@@ -642,14 +659,23 @@ namespace GamblingAction.UI
 			m_MissionDescriptionTexts = new TMP_Text[3];
 			m_MissionRewardTexts      = new TMP_Text[3];
 
-			for (int i = 0; i < 3; i++)
+            m_MissionOptionTransforms = new Transform[3];
+            m_MissionOptionBasePositions = new Vector2[3];
+            m_MissionOptionFloatTweens = new Tween[3];
+
+            for (int i = 0; i < 3; i++)
 			{
 				string path = $"Option{i + 1}";
 				m_MissionOptionButtons[i]    = FindByPath<Button>(m_MissionSelectionPanel, $"{path}/Button");
 				m_MissionDescriptionTexts[i] = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Description");
 				m_MissionRewardTexts[i]      = FindByPath<TMP_Text>(m_MissionSelectionPanel, $"{path}/Reward");
-			}
-		}
+                m_MissionOptionTransforms[i] = FindByPath<Transform>(m_MissionSelectionPanel, path);
+                if (m_MissionOptionTransforms[i] != null)
+                {
+					m_MissionOptionBasePositions[i] = m_MissionOptionTransforms[i].localPosition;
+                }
+            }
+        }
 
 		private void FindStageControls()
 		{
@@ -778,6 +804,7 @@ namespace GamblingAction.UI
 			var me = m_State.Me;
 			if (me != null && me.AvailableMissions != null && index < me.AvailableMissions.Count)
 			{
+				StopMissionOptionFloatAnimation();
 				m_State.SubmitMission(me.AvailableMissions[index].Id);
 				SetActive(m_MissionSelectionPanel, false);
                 ShowWaitingPanel();
@@ -999,7 +1026,13 @@ namespace GamblingAction.UI
 								 me.Mission == null;
 			SetActive(m_MissionSelectionPanel, showSelection);
 
-			if (showSelection)
+            if (!showSelection)
+            {
+                StopMissionOptionFloatAnimation();
+                return;
+            }
+
+            if (showSelection)
 			{
 				for (int i = 0; i < m_MissionOptionButtons.Length; i++)
 				{
@@ -1026,7 +1059,8 @@ namespace GamblingAction.UI
 				m_SelectedMissionIndex = FindFirstSelectable(m_MissionOptionButtons, requireActive: true);
 				if (m_ControllerActive)
 					FocusButton(m_MissionOptionButtons, m_SelectedMissionIndex);
-			}
+                StartMissionOptionFloatAnimation();
+            }
 		}
 
 		private void ApplyPlayerSlot(PlayerDto dto, TMP_Text nameText, TMP_Text moneyText, TMP_Text chipsText, bool isSelf)
@@ -1781,6 +1815,7 @@ namespace GamblingAction.UI
 			SetActive(m_MissionSelectionPanel, false);
             SetActive(m_WaitingPanel, false);
             ClearRiskSelectionText();
+            StopMissionOptionFloatAnimation();
         }
 
 		private static void SetActive(GameObject go, bool active)
@@ -1889,6 +1924,63 @@ namespace GamblingAction.UI
 
             text.text = string.Empty;
             SetActive(text.gameObject, false);
+        }
+
+        private void StartMissionOptionFloatAnimation()
+        {
+            if (m_MissionSelectionAnimating) return;
+            if (m_MissionOptionTransforms == null || m_MissionOptionFloatTweens == null) return;
+
+            m_MissionSelectionAnimating = true;
+
+            for (int i = 0; i < m_MissionOptionTransforms.Length; i++)
+            {
+                var option = m_MissionOptionTransforms[i];
+                if (option == null) continue;
+                if (!option.gameObject.activeSelf) continue;
+
+                Vector3 basePos = m_MissionOptionBasePositions[i];
+                option.localPosition = basePos;
+
+                m_MissionOptionFloatTweens[i]?.Kill();
+                m_MissionOptionFloatTweens[i] = DOTween.To(
+                        () => option.localPosition.y,
+                        y => option.localPosition = new Vector3(basePos.x, y, basePos.z),
+                        basePos.y + m_MissionOptionFloatDistance,
+                        m_MissionOptionFloatDuration
+                    )
+                    .SetEase(Ease.InOutSine)
+                    .SetLoops(-1, LoopType.Yoyo)
+                    .SetDelay(i * m_MissionOptionFloatDelayStep)
+                    .SetTarget(option);
+            }
+        }
+
+        private void StopMissionOptionFloatAnimation()
+        {
+            if (m_MissionOptionTransforms == null) return;
+
+            if (m_MissionOptionFloatTweens != null)
+            {
+                for (int i = 0; i < m_MissionOptionFloatTweens.Length; i++)
+                {
+                    m_MissionOptionFloatTweens[i]?.Kill();
+                    m_MissionOptionFloatTweens[i] = null;
+                }
+            }
+
+            for (int i = 0; i < m_MissionOptionTransforms.Length; i++)
+            {
+                var option = m_MissionOptionTransforms[i];
+                if (option == null) continue;
+
+                if (m_MissionOptionBasePositions != null && i < m_MissionOptionBasePositions.Length)
+                {
+                    option.localPosition = m_MissionOptionBasePositions[i];
+                }
+            }
+
+            m_MissionSelectionAnimating = false;
         }
     }
 }
