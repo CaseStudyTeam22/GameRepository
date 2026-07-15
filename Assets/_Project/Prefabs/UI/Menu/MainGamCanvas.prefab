@@ -589,7 +589,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 82ccd4b366b2a494a86530064151cb6b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ea87b7dddb07499488d23d9d9ebbe672, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1090,7 +1090,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: c93465e1c0fb984428b2fbacc9db75b4, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 4e24e505fbc11c7489bdd3f4f828a15b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3334,6 +3334,7 @@ MonoBehaviour:
   m_PushButton: {fileID: 0}
   m_DefenseButton: {fileID: 0}
   m_SkillButton: {fileID: 0}
+  m_SkillDatabase: {fileID: 11400000, guid: 38fe1e67c0ac55244b08e3b77c2e6bc7, type: 2}
   m_SelectedColorPower1: {r: 0.9, g: 0.9, b: 0.1, a: 1}
   m_SelectedColorPower2: {r: 0.94, g: 0.5, b: 0.15, a: 1}
   m_SelectedColorPower3: {r: 0.89, g: 0.2, b: 0.2, a: 1}
@@ -6106,7 +6107,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 7913273731dbdd74c9271e9ed5898688, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 102f2678fafc19f44939f25050d13a4b, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

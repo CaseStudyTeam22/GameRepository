@@ -41,7 +41,7 @@ const Engine = {
             if (intent.type === 'rest') p.stamina = Math.min(maxStamina, p.stamina + restRec);
             else if (intent.type === 'none') {
                 p.stamina = Math.min(maxStamina, p.stamina + Config.EFFECTS.idle.staminaRec);
-                p.chips += Config.EFFECTS.idle.chipsRec;
+                if (p.chips <= 350) p.chips += Config.EFFECTS.idle.chipsRec;
             }
             // 确保当前定力不超上限（选卡后定力需要被 clamp）
             p.stamina = Math.min(p.stamina, maxStamina);

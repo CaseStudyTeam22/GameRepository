@@ -11,39 +11,39 @@ module.exports = {
 
     // 定力消耗：技能不消耗定力，定力只会因被攻击而减少
     COST: {
-        'move':    0,
-        'push':    0,
-        'attack':  0,
+        'move': 0,
+        'push': 0,
+        'attack': 0,
         'defense': 0,
-        'skill':   0,
-        'rest':    0
+        'skill': 0,
+        'rest': 0
     },
 
     // 筹码消耗：三档 power=1/2/3 对应 [小注, 加注, 梭哈]
     // defense / rest 不分档，取第一位
     CHIP_COST_BY_POWER: {
-        'move':    [1, 3, 5],
-        'push':    [3, 5, 9],
-        'attack':  [3, 5, 9],
+        'move': [1, 3, 5],
+        'push': [3, 5, 9],
+        'attack': [3, 5, 9],
         'defense': [2, 2, 2],
-        'skill':   [3, 5, 9],
-        'rest':    [6, 6, 6]
+        'skill': [3, 5, 9],
+        'rest': [6, 6, 6]
     },
 
     // 动作效果
     EFFECTS: {
-        'move':    { staminaDmg: 0 },
-        'push':    { staminaDmg: 0 },
-        'attack':  { staminaDmg: 1 }, // 小注削 1，大招削 3（× power）
+        'move': { staminaDmg: 0 },
+        'push': { staminaDmg: 0 },
+        'attack': { staminaDmg: 1 }, // 小注削 1，大招削 3（× power）
         'defense': { reduction: 0.8 },
-        'idle':    { staminaRec: 0, chipsRec: 30 },
-        'skill':   { staminaDmg: 0 }, // ここがキャラによって可変するため、要調整
-        'rest':    { staminaRec: 1 }
+        'idle': { staminaRec: 0, chipsRec: 100 },
+        'skill': { staminaDmg: 0 }, // ここがキャラによって可変するため、要調整
+        'rest': { staminaRec: 1 }
     },
 
     // スキル効果
     SKILLS: {
-        'docter': {heal: 2},
+        'docter': { heal: 2 },
         // 正直特殊処理が多すぎて値ってより関数にまとめたいな。
         // それこそこの設計を活かすなら値を呼んで適切に処理する関数的なね。
 
@@ -55,7 +55,7 @@ module.exports = {
         // area(攻撃範囲)
         // can watch action
         // 
-    },     
+    },
 
     // キャラのパラメータ許容上限（改ざん対策用）
     LIMITS: {
@@ -65,7 +65,7 @@ module.exports = {
     },
 
     // 【企画調整用】所持チップの上限。入手経路を問わず、これを超えた分は切り捨てる。
-    MAX_CHIPS: 350,
+    MAX_CHIPS: 35000,
 
     INITIAL_MONEY: 10000,
     INITIAL_CHIPS: 0,
@@ -80,7 +80,7 @@ module.exports = {
     // 債務者（debtor_skill）スキルの発動可能チップ上限。
     // チップがこの値を超えている場合はスキルを発動できない。
     // チップのインフレ調整時はこの値も合わせて見直すこと。
-    DEBTOR_CHIP_THRESHOLD: 100,
+    DEBTOR_CHIP_THRESHOLD: 200,
 
     // 勝利条件：3点先取
     // ファイナルレイズは、お互いどちらかが2-1になったときに発動する

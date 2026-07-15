@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -127,6 +127,11 @@ namespace GamblingAction.UI
             m_State.SubmitEnterLobby();
 
 			Refresh();
+
+			// 初期選択を Doctor（index 1）に設定する。
+			// スプレッドシートのキャッシュが揃っていればその値を、
+			// まだ読み込み中なら「読み込み中...」を表示する。
+			SelectChara(1);
 		}
 
 		private void OnDestroy()
@@ -444,7 +449,7 @@ namespace GamblingAction.UI
 			if (m_SelfStatusPreview != null)
 			{
 				var data = m_State.GetCharaData(spriteIndex);
-				m_SelfStatusPreview.SetStatus(data);
+				m_SelfStatusPreview.SetStatus(data, animate: true);
 			}
 		}
 
@@ -457,7 +462,7 @@ namespace GamblingAction.UI
 			if (m_OpponentStatusPreview != null)
 			{
 				var data = m_State.GetCharaData(index);
-				m_OpponentStatusPreview.SetStatus(data);
+				m_OpponentStatusPreview.SetStatus(data, animate: true);
 			}
 		}
 

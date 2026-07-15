@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -151,13 +151,13 @@ namespace GamblingAction.Domain
 					return null;
 				}
 
+				// RFC 4180 準拠のパーサでセル内改行（Alt+Enter）に対応する
+				var rows = ParseCsvRfc4180(req.downloadHandler.text);
 				var dict = new Dictionary<string, string[]>();
-				var lines = req.downloadHandler.text.Split('\n');
-				foreach (var line in lines)
-				{
-					var cols = line.Split(',');
-					if (cols.Length < 1) continue;
 
+				foreach (var cols in rows)
+				{
+					if (cols.Length < 1) continue;
 					string key = cols[0].Trim();
 					if (string.IsNullOrEmpty(key)) continue;
 
@@ -165,11 +165,7 @@ namespace GamblingAction.Domain
 					for (int i = 1; i < cols.Length; i++)
 					{
 						string cVal = cols[i].Trim();
-						if (cVal.StartsWith("\"") && cVal.EndsWith("\""))
-						{
-							cVal = cVal.Substring(1, cVal.Length - 2).Trim();
-						}
-						if (string.IsNullOrEmpty(cVal)) continue; // カンマの連続による空要素を除外
+						if (string.IsNullOrEmpty(cVal)) continue;
 						vals.Add(cVal);
 					}
 					dict[key] = vals.ToArray();
@@ -182,6 +178,87 @@ namespace GamblingAction.Domain
 				Debug.LogError($"CSV読み込み中に例外が発生しました: {ex.Message} (URL: {url})");
 				return null;
 			}
+		}
+
+		/// <summary>
+		/// RFC 4180 準拠の CSV パーサー。
+		/// ダブルクォートで囲まれたフィールド内の改行（Alt+Enter）やカンマを正しく扱う。
+		/// ""（クォートのエスケープ）にも対応する。
+		/// </summary>
+		private static List<string[]> ParseCsvRfc4180(string text)
+		{
+			var rows   = new List<string[]>();
+			var fields = new List<string>();
+			var sb     = new System.Text.StringBuilder();
+			bool inQuotes = false;
+			int i = 0;
+
+			while (i < text.Length)
+			{
+				char c = text[i];
+
+				if (inQuotes)
+				{
+					if (c == '"')
+					{
+						// "" → クォートのエスケープ
+						if (i + 1 < text.Length && text[i + 1] == '"')
+						{
+							sb.Append('"');
+							i += 2;
+						}
+						else
+						{
+							inQuotes = false;
+							i++;
+						}
+					}
+					else
+					{
+						sb.Append(c); // セル内改行もここで緊入される
+						i++;
+					}
+				}
+				else
+				{
+					if (c == '"')
+					{
+						inQuotes = true;
+						i++;
+					}
+					else if (c == ',')
+					{
+						fields.Add(sb.ToString());
+						sb.Clear();
+						i++;
+					}
+					else if (c == '\r' || c == '\n')
+					{
+						fields.Add(sb.ToString());
+						sb.Clear();
+						rows.Add(fields.ToArray());
+						fields = new List<string>();
+						// CRLF を 1 改行として扱う
+						if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+							i++;
+						i++;
+					}
+					else
+					{
+						sb.Append(c);
+						i++;
+					}
+				}
+			}
+
+			// 最後のフィールド / 行をフラッシュ
+			if (sb.Length > 0 || fields.Count > 0)
+			{
+				fields.Add(sb.ToString());
+				rows.Add(fields.ToArray());
+			}
+
+			return rows;
 		}
 
 		private int[] ParseIntArray(string val, int[] defaultValue, bool isScale = false)
@@ -587,7 +664,8 @@ namespace GamblingAction.Domain
 				AttackCost = new[] { 3, 3, 3 }, // attack廃止につき固定値
 				DefenseCost = new[] { 2, 2, 2 },
 				SkillCost = new[] { 0, 0, 0 },  // Normalはスキルを持たないため0固定
-				Skills = new CharaSkillDataMessage { Id = "", StaminaRec = 0, ChipCost = 0 }
+				Skills = new CharaSkillDataMessage { Id = "initial", StaminaRec = 0, ChipCost = 0 },
+				SkillDescription = "キャラクターを選択してください..."
 			};
 
 			if (charaIndex == 1)
@@ -750,6 +828,13 @@ namespace GamblingAction.Domain
 
 					if (csvData.TryGetValue("SkillId", out var skillIdVals) && skillIdVals.Length > 0)
 						charaData.Skills.Id = skillIdVals[0];
+
+					// スキル効果説明（「スキル内容」行の後の値を読み取る）
+					// Alt+Enter の改行は RFC 4180 パーサにより \n として緊入済み
+					if (csvData.TryGetValue("スキル内容", out var skillDescVals) && skillDescVals.Length > 0)
+						charaData.SkillDescription = skillDescVals[0];
+					else
+						charaData.SkillDescription = "";
 				}
 			}
 
