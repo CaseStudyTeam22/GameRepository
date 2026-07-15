@@ -306,6 +306,7 @@ const Engine = {
                         p.stamina = Math.max(0, p.stamina - 3);
                         events.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "COUNTER!" });
                     }
+                    events.push({ type: 'mission_progress', playerId: target.id, missionType: 'GuardianSkillDefense', amount: 1 });
                 } else if (tIntent.type === 'defense') {
                     // knockback軽減 (現在のスタミナ依存で先に計算)
                     const rawKnockback = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
@@ -376,6 +377,7 @@ const Engine = {
                         p.stamina = Math.max(0, p.stamina - 3);
                         events.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "COUNTER!" });
                     }
+                    events.push({ type: 'mission_progress', playerId: target.id, missionType: 'GuardianSkillDefense', amount: 1 });
                 }
                 // 高风险被击方：30% 概率伤害 +1
                 if (dmg > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) dmg += 1;

@@ -375,6 +375,13 @@ setInterval(() => {
         // カウントのリセット
         cycleCount = 0;
 
+        // ラウンド終了時、チップを持ち金に戻すキャッシュバック処理
+        for (let id in players) {
+            const p = players[id];
+            p.money += p.chips;
+            p.chips = 0;
+        }
+
         io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
         // 次ラウンドもゲートを通す：盤面・キャラ生成を待ってからチップ交換へ。
         setTimeout(beginRound, 3000);
@@ -416,6 +423,14 @@ setInterval(() => {
                     // サドンデス：勝敗つかず時間切れ。引き分けで次ラウンドへ。
                     gameActive = false;
                     finalRaiseTurnCount = 0;
+
+                    // ラウンド終了時、チップを持ち金に戻すキャッシュバック処理
+                    for (let id in players) {
+                        const p = players[id];
+                        p.money += p.chips;
+                        p.chips = 0;
+                    }
+
                     io.emit('round_over', { winnerRole: 'TIME UP - DRAW' });
                     setTimeout(beginRound, 3000);
                 }
@@ -452,7 +467,8 @@ setInterval(() => {
                 if (ev.type === 'hit' || ev.type === 'pushed') {
                     const targetId = ev.targetId;
                     const targetPlayer = players[targetId];
-                    if (targetPlayer && targetPlayer.charaIndex === 0 && isGuardianBlocking(targetPlayer, intents)) {
+                    const isGuard = targetPlayer && (targetPlayer.charaIndex === 4 || targetPlayer.charaName === 'Guardian' || targetPlayer.charaIndex === 0);
+                    if (targetPlayer && isGuard && isGuardianBlocking(targetPlayer, intents)) {
                         result.events.push({ type: 'mission_progress', playerId: targetId, missionType: 'GuardianSkillDefense', amount: 1 });
                     }
                 }
@@ -1393,14 +1409,14 @@ function handleRoundConcluded(winnerId, loserId, intents) {
         const p = players[id];
         if (p.mission) {
             // キャラ別ミッションの達成チェック (Doctor: スタミナ最大値でラウンド終了)
-            if (p.mission.type === 10 && p.stamina === p.currentMaxStamina) {
+            if (p.mission.type === Missions.MissionType.CharaDoctor && p.stamina === p.currentMaxStamina) {
                 p.mission.isCleared = true;
                 p.modifiers.charaUniqueBuff = true;
                 console.log(`[Server] Doctor Unique Mission Cleared!`);
             }
             // キャラ別ミッションの達成チェック (NouveauRiche: スキル使用して相手を落として勝利)
             // intents を優先参照する（落下判定の 1500ms 遅延中に p.intent がクリアされるため）
-            if (p.mission.type === 14 && winnerId === p.id) {
+            if (p.mission.type === Missions.MissionType.CharaNouveauRiche && winnerId === p.id) {
                 const intent = (intents && intents[p.id]) || p.intent || {};
                 if (intent.type === 'skill') {
                     p.mission.isCleared = true;

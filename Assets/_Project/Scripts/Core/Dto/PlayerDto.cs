@@ -94,13 +94,20 @@ namespace GamblingAction.Core.Dto
 
 	public enum EMissionType
 	{
-		Move,
-		Push,
-		//Attack,
-		Defend,
-		//Heal,
-		GainCoin,
-		GainChip
+		Move = 0,
+		Push = 1,
+		Defend = 2,
+		Skill = 3,
+		GainChip = 4,
+		StaminaOpponentZero = 5,
+		StaminaSelfZero = 6,
+		ChipsZero = 7,
+		CharaDoctor = 10,
+		CharaGuardian = 11,
+		CharaFighter = 12,
+		CharaScammer = 13,
+		CharaNouveauRiche = 14,
+		CharaDebtor = 15
 	}
 
 	public class MissionDebuffDto

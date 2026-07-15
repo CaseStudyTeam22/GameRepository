@@ -123,6 +123,7 @@ const Skills = {
                 // ガーディアン: スキル中はノックバック無効
                 if (tIntent.type === 'skill' && opponent.skillData?.id === 'guardian_skill') {
                     finalDist = 0;
+                    events.push({ type: 'mission_progress', playerId: opponent.id, missionType: 'GuardianSkillDefense', amount: 1 });
                 }
 
                 // 高リスク被撃：30% 確率でpush_powerを+1
@@ -209,6 +210,7 @@ const Skills = {
                 // ガーディアン: スキル中はダメージ無効
                 if (oppIntent.type === 'skill' && opponent.skillData?.id === 'guardian_skill') {
                     finalDmg = 0;
+                    events.push({ type: 'mission_progress', playerId: opponent.id, missionType: 'GuardianSkillDefense', amount: 1 });
                 }
 
                 if (finalDmg > 0) {
@@ -243,13 +245,24 @@ const Skills = {
             if (items) {
                 const chipValue = config.CHIP_ITEM_VALUE || 50;
                 const moneyValue = config.MONEY_ITEM_VALUE || 500;
+                let collectedChipsCount = 0;
                 for (let i = items.length - 1; i >= 0; i--) {
                     if (items[i].type === 'chips') {
                         chipsGained += chipValue;
+                        collectedChipsCount++;
                     } else {
                         moneyGained += moneyValue;
                     }
                     items.splice(i, 1);
+                }
+
+                for (let i = 0; i < collectedChipsCount; i++) {
+                    events.push({
+                        type: 'mission_progress',
+                        playerId: player.id,
+                        missionType: 'GainChip',
+                        amount: 1
+                    });
                 }
             }
 

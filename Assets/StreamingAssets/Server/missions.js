@@ -1,22 +1,40 @@
 const Config = require('./config');
 
+const MissionType = Object.freeze({
+    Move: 0,
+    Push: 1,
+    Defense: 2,
+    Skill: 3,
+    GainChip: 4,
+    StaminaOpponentZero: 5,
+    StaminaSelfZero: 6,
+    ChipsZero: 7,
+    CharaDoctor: 10,
+    CharaGuardian: 11,
+    CharaFighter: 12,
+    CharaScammer: 13,
+    CharaNouveauRiche: 14,
+    CharaDebtor: 15
+});
+
 const mTypeMap = {
-    'Move': 0,
-    'Push': 1,
-    'Defense': 2,
-    'GainChip': 4,
-    'Skill': 3,
-    'GuardianSkillDefense': 11,
-    'FighterSkillKill': 12,
-    'SameAction': 13
+    'Move': MissionType.Move,
+    'Push': MissionType.Push,
+    'Defense': MissionType.Defense,
+    'GainChip': MissionType.GainChip,
+    'Skill': MissionType.Skill,
+    'GuardianSkillDefense': MissionType.CharaGuardian,
+    'FighterSkillKill': MissionType.CharaFighter,
+    'SameAction': MissionType.CharaScammer
 };
 
 const Missions = {
+    MissionType,
     generateMissions: (player, selectedBuff) => {
         // ハイリスク2回達成かつキャラミッション未達成であれば、キャラ別ミッションを強制提示する。
         // キャラミッション達成済み（charaUniqueBuff === true）の場合は通常のミッション選択に進む。
         if (player.highRiskMissionsCleared >= 2 && !(player.modifiers && player.modifiers.charaUniqueBuff)) {
-            let type = 0;
+            let type = MissionType.Move;
             let description = "";
             let targetCount = 1;
             const charaIndex = player.charaIndex;
@@ -29,31 +47,31 @@ const Missions = {
             const isDebt = (charaIndex === 6 || charaName === 'Debtor');
 
             if (isDoc) {
-                type = 10;
+                type = MissionType.CharaDoctor;
                 description = "医師：スタミナが最大値の状態でラウンドを終了する。";
                 targetCount = 1;
             } else if (isGuard) {
-                type = 11;
+                type = MissionType.CharaGuardian;
                 description = "守護者：スキルによる防御を3回成功させる。";
                 targetCount = 3;
             } else if (isFight) {
-                type = 12;
+                type = MissionType.CharaFighter;
                 description = "格闘家：スキルで相手のスタミナを0にする。";
                 targetCount = 1;
             } else if (isScam) {
-                type = 13;
+                type = MissionType.CharaScammer;
                 description = "イカサマ師：相手と同じ動きを4回行う。";
                 targetCount = 4;
             } else if (isNouveau) {
-                type = 14;
+                type = MissionType.CharaNouveauRiche;
                 description = "成金：スキルを使用して相手を落としラウンドを獲得する。";
                 targetCount = 1;
             } else if (isDebt) {
-                type = 15;
+                type = MissionType.CharaDebtor;
                 description = "債務者：フィールドのチップを10個回収する。";
                 targetCount = 10;
             } else {
-                type = 0;
+                type = MissionType.Move;
                 description = "キャラ別ミッション (未定義)";
                 targetCount = 1;
             }
@@ -75,7 +93,7 @@ const Missions = {
         if (selectedBuff === 'high_risk') {
             const m1 = {
                 id: 'high_risk_1',
-                type: 1, // Push
+                type: MissionType.Push,
                 description: "8回突進を使う",
                 targetCount: 8,
                 currentCount: 0,
@@ -87,7 +105,7 @@ const Missions = {
             const isExcluded = (player.charaIndex === 4 || player.charaIndex === 5);
             const m2 = isExcluded ? {
                 id: 'high_risk_2_alt',
-                type: 7, // ChipsZero
+                type: MissionType.ChipsZero,
                 description: "所持チップを0にする",
                 targetCount: 1,
                 currentCount: 0,
@@ -97,7 +115,7 @@ const Missions = {
                 debuff: { type: 'actionCost', value: 20 }
             } : {
                 id: 'high_risk_2',
-                type: 3, // Skill
+                type: MissionType.Skill,
                 description: "4回スキルを発動する",
                 targetCount: 4,
                 currentCount: 0,
@@ -108,7 +126,7 @@ const Missions = {
             };
             const m3 = {
                 id: 'high_risk_3',
-                type: 2, // Defense
+                type: MissionType.Defense,
                 description: "7回防御する",
                 targetCount: 7,
                 currentCount: 0,
@@ -119,7 +137,7 @@ const Missions = {
             };
             const m4 = {
                 id: 'high_risk_4',
-                type: 6, // StaminaSelfZero
+                type: MissionType.StaminaSelfZero,
                 description: "自分のスタミナを0にする",
                 targetCount: 1,
                 currentCount: 0,
@@ -130,7 +148,7 @@ const Missions = {
             };
             const m5 = {
                 id: 'high_risk_5',
-                type: 7, // ChipsZero
+                type: MissionType.ChipsZero,
                 description: "所持チップを0にする",
                 targetCount: 1,
                 currentCount: 0,
@@ -146,7 +164,7 @@ const Missions = {
         } else {
             const m1 = {
                 id: 'low_risk_1',
-                type: 1, // Push
+                type: MissionType.Push,
                 description: "5回突進を使う",
                 targetCount: 5,
                 currentCount: 0,
@@ -157,7 +175,7 @@ const Missions = {
             const isExcluded = (player.charaIndex === 4 || player.charaIndex === 5);
             const m2 = isExcluded ? {
                 id: 'low_risk_2_alt',
-                type: 4, // GainChip
+                type: MissionType.GainChip,
                 description: "チップを5回拾う",
                 targetCount: 5,
                 currentCount: 0,
@@ -166,7 +184,7 @@ const Missions = {
                 isCleared: false
             } : {
                 id: 'low_risk_2',
-                type: 3, // Skill
+                type: MissionType.Skill,
                 description: "2回スキルを発動する",
                 targetCount: 2,
                 currentCount: 0,
@@ -176,7 +194,7 @@ const Missions = {
             };
             const m3 = {
                 id: 'low_risk_3',
-                type: 2, // Defense
+                type: MissionType.Defense,
                 description: "4回防御を発動する",
                 targetCount: 4,
                 currentCount: 0,
@@ -186,7 +204,7 @@ const Missions = {
             };
             const m4 = {
                 id: 'low_risk_4',
-                type: 5, // StaminaOpponentZero
+                type: MissionType.StaminaOpponentZero,
                 description: "相手のスタミナを0にする",
                 targetCount: 1,
                 currentCount: 0,
@@ -196,7 +214,7 @@ const Missions = {
             };
             const m5 = {
                 id: 'low_risk_5',
-                type: 4, // GainChip
+                type: MissionType.GainChip,
                 description: "チップを5回拾う",
                 targetCount: 5,
                 currentCount: 0,
@@ -214,12 +232,13 @@ const Missions = {
     updateProgress: (players, resultEvents, appendedEvents) => {
         if (!resultEvents) return;
         resultEvents.forEach(ev => {
-            if (ev.missionType && ev.targetId) {
-                const p = players[ev.targetId];
+            const playerId = ev.playerId || ev.targetId;
+            if (ev.missionType && playerId) {
+                const p = players[playerId];
                 if (p && p.mission && !p.mission.isCleared) {
                     let targetType = mTypeMap[ev.missionType];
-                    if (ev.missionType === 'GainChip' && p.mission.type === 15) {
-                        targetType = 15;
+                    if (ev.missionType === 'GainChip' && p.mission.type === MissionType.CharaDebtor) {
+                        targetType = MissionType.CharaDebtor;
                     }
 
                     if (targetType !== undefined && p.mission.type === targetType) {
@@ -279,14 +298,14 @@ const Missions = {
             const p = players[id];
             const opponent = Object.values(players).find(pl => pl.id !== id);
             if (p && p.mission && !p.mission.isCleared) {
-                if (p.mission.type === 5 && opponent && opponent.stamina === 0) {
+                if (p.mission.type === MissionType.StaminaOpponentZero && opponent && opponent.stamina === 0) {
                     p.mission.currentCount = 1;
                     p.mission.isCleared = true;
                     p.chips += p.mission.rewardValue || 0;
                     console.log(`[Mission CLEARED] ${p.role} reduced opponent stamina to 0. Reward: Chips x${p.mission.rewardValue}`);
                     appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                 }
-                if (p.mission.type === 6 && p.stamina === 0) {
+                if (p.mission.type === MissionType.StaminaSelfZero && p.stamina === 0) {
                     p.mission.currentCount = 1;
                     p.mission.isCleared = true;
                     
@@ -305,7 +324,7 @@ const Missions = {
                     console.log(`[Mission CLEARED] ${p.role} reduced self stamina to 0. Reward: ${rType} x${rVal}`);
                     appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                 }
-                if (p.mission.type === 7 && p.chips === 0) {
+                if (p.mission.type === MissionType.ChipsZero && p.chips === 0) {
                     p.mission.currentCount = 1;
                     p.mission.isCleared = true;
                     
