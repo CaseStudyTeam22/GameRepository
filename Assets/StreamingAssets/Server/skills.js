@@ -91,9 +91,11 @@ const Skills = {
             const pushCost = (config.CHIP_COST_BY_POWER && config.CHIP_COST_BY_POWER['push']) ? config.CHIP_COST_BY_POWER['push'][power - 1] : 3;
             const consumedChips = pushCost * 2;
 
-            // 隣接判定 (初期位置で隣接していたか)
-            const startDist = Math.abs(opponent.prevX - player.prevX) + Math.abs(opponent.prevY - player.prevY);
-            if (startDist === 1) {
+            // 押し出し判定 (初期位置で隣接しているか、または突進衝突したか)
+            const col = getPushCollision(player, opponent, intent);
+            const isPushHit = (startDist === 1) || (col !== null);
+            if (isPushHit) {
+                const dCol = (startDist === 1) ? 0 : col.d_col;
                 const pushBonus = (player.modifiers && player.modifiers.pushPowerBonus) || 0;
                 let finalDist = power + 1 + pushBonus; // 強化pushなので base: power + 1
 
@@ -133,6 +135,17 @@ const Skills = {
                     events.push({ type: 'pushed', targetId: opponent.id, dir: intent.dir, dist: finalDist });
                     events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "SUPER PUSH!" });
                 }
+
+                // 突進したプレイヤーの座標を、実際に相手を押し出した距離（finalDist）と衝突までの歩数（dCol）に合わせて制限する
+                const actualDist = Math.min(power, dCol + finalDist);
+                let dx = 0, dy = 0;
+                if (intent.dir === 'up') dy = -1;
+                else if (intent.dir === 'down') dy = 1;
+                else if (intent.dir === 'left') dx = -1;
+                else if (intent.dir === 'right') dx = 1;
+
+                player.x = player.prevX + dx * actualDist;
+                player.y = player.prevY + dy * actualDist;
             }
 
             // 消費したチップのばらまき処理 (items に追加)
@@ -247,5 +260,30 @@ const Skills = {
         }
     }
 };
+
+function getPushCollision(p, target, intent) {
+    if (intent.type !== 'push' && !(intent.type === 'skill' && (p.charaIndex === 2 || p.charaName === 'NouveauRiche'))) {
+        return null;
+    }
+    const power = Math.max(1, Math.min(3, intent.power || 1));
+    let dx = 0, dy = 0;
+    if (intent.dir === 'up') dy = -1;
+    else if (intent.dir === 'down') dy = 1;
+    else if (intent.dir === 'left') dx = -1;
+    else if (intent.dir === 'right') dx = 1;
+
+    for (let k = 1; k <= power; k++) {
+        const tx = p.prevX + dx * k;
+        const ty = p.prevY + dy * k;
+        if (tx === target.prevX && ty === target.prevY) {
+            return {
+                d_col: k - 1,
+                dx,
+                dy
+            };
+        }
+    }
+    return null;
+}
 
 module.exports = Skills;

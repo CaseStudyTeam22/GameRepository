@@ -17,7 +17,8 @@ namespace GamblingAction.Bootstrap
 		{
 			// Bootstrap から正規に起動した場合は何もしない（正式フロー）。
 			// 直前のデバッグ直起動で static が残っていても正式フローを汚さないよう復位する。
-			if (SceneManager.GetActiveScene().name == k_BootstrapSceneName)
+			string activeScene = SceneManager.GetActiveScene().name;
+			if (activeScene == k_BootstrapSceneName || activeScene == "LobbyScene" || activeScene == "TitleScene")
 			{
 				GameInstaller.DebugAutoAIReady = false;
 				return;

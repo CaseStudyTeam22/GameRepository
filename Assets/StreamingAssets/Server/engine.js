@@ -72,8 +72,8 @@ const Engine = {
 
         [p1, p2].forEach(p => {
             const intent = intents[p.id] || { type: 'none' };
-            // push の場合は、開始時点で隣接していない（startDist > 1）時のみ衝突判定を行う
-            const isPushMove = (intent.type === 'push' && startDist > 1);
+            // push の場合は強制停止しない（衝突判定は後で行う）
+            const isPushMove = false;
             if (intent.type !== 'move' && !isPushMove) return;
 
             const other = p.id === p1Id ? p2 : p1;
@@ -120,38 +120,128 @@ const Engine = {
             return power + basePush + pushBonus + nextBonus;
         };
 
-        if (isTargetConflict) {
-            const p1Moved = (p1.targetX !== p1.prevX || p1.targetY !== p1.prevY);
-            const p2Moved = (p2.targetX !== p2.prevX || p2.targetY !== p2.prevY);
+        // --- 3. 核心冲突判定逻辑 ---
+        const col1 = getPushCollision(p1, p2, i1);
+        const col2 = getPushCollision(p2, p1, i2);
+        const isHeadOnPush = (col1 !== null && col2 !== null && isOppositeDirection(i1.dir, i2.dir));
 
-            if (p1Moved && p2Moved) {
-                const pf1 = getPF(p1, i1);
-                const pf2 = getPF(p2, i2);
+        if (isHeadOnPush) {
+            // 正面衝突：進んだ先で密着する
+            const dist = Math.abs(p2.prevX - p1.prevX) + Math.abs(p2.prevY - p1.prevY);
+            const totalWalk = dist - 1;
+            const pf1 = getPF(p1, i1);
+            const pf2 = getPF(p2, i2);
 
-                if (pf1 > 0 && pf2 > 0) {
-                    if (pf1 === pf2 && Math.abs(p1.priority - p2.priority) <= 1) {
+            let w1 = 0, w2 = 0;
+            if (totalWalk > 0) {
+                if (pf1 === pf2) {
+                    w1 = Math.floor(totalWalk / 2);
+                    w2 = totalWalk - w1;
+                    if (totalWalk % 2 !== 0) {
+                        if (p1.priority < p2.priority) {
+                            w2 = Math.ceil(totalWalk / 2);
+                            w1 = totalWalk - w2;
+                        } else {
+                            w1 = Math.ceil(totalWalk / 2);
+                            w2 = totalWalk - w1;
+                        }
+                    }
+                } else {
+                    w1 = Math.round(totalWalk * (pf1 / (pf1 + pf2)));
+                    w2 = totalWalk - w1;
+                }
+            }
+
+            p1.x = p1.prevX + col1.dx * w1;
+            p1.y = p1.prevY + col1.dy * w1;
+            p2.x = p2.prevX + col2.dx * w2;
+            p2.y = p2.prevY + col2.dy * w2;
+
+            const p1Bonus = p1.nextPushBonus || 0;
+            const p2Bonus = p2.nextPushBonus || 0;
+            if (p1Bonus > 0) p1.nextPushBonus = 0;
+            if (p2Bonus > 0) p2.nextPushBonus = 0;
+
+            const p1Dmg = (p2.currentPushPower || 0) + p2Bonus;
+            const p2Dmg = (p1.currentPushPower || 0) + p1Bonus;
+
+            p1.stamina = Math.max(0, p1.stamina - p1Dmg);
+            p2.stamina = Math.max(0, p2.stamina - p2Dmg);
+
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+            events.push({ type: 'clash_explosion', x: midX, y: midY });
+            generateExplosionItems(items, midX, midY);
+            events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p1.id, dir: i1.dir, x: p1.x, y: p1.y });
+            events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p2.id, dir: i2.dir, x: p2.x, y: p2.y });
+
+            p1.pushResolved = true;
+            p2.pushResolved = true;
+        }
+        else if (col1 !== null) {
+            // p1 が p2 に一方的衝突
+            p1.x = p1.targetX; p1.y = p1.targetY;
+            p2.x = p2.prevX; p2.y = p2.prevY;
+        }
+        else if (col2 !== null) {
+            // p2 が p1 に一方的衝突
+            p1.x = p1.prevX; p1.y = p1.prevY;
+            p2.x = p2.targetX; p2.y = p2.targetY;
+        }
+        else {
+            const isTargetConflict = (p1.targetX === p2.targetX && p1.targetY === p2.targetY);
+            const isHeadOn = (p1.targetX === p2.prevX && p1.targetY === p2.prevY && p2.targetX === p1.prevX && p2.targetY === p1.prevY);
+
+            if (isTargetConflict) {
+                const p1Moved = (p1.targetX !== p1.prevX || p1.targetY !== p1.prevY);
+                const p2Moved = (p2.targetX !== p2.prevX || p2.targetY !== p2.prevY);
+
+                if (p1Moved && p2Moved) {
+                    const pf1 = getPF(p1, i1);
+                    const pf2 = getPF(p2, i2);
+
+                    if (pf1 > 0 && pf2 > 0) {
+                        if (pf1 === pf2 && Math.abs(p1.priority - p2.priority) <= 1) {
+                            p1.x = p1.prevX; p1.y = p1.prevY;
+                            p2.x = p2.prevX; p2.y = p2.prevY;
+                            const midX = p1.targetX, midY = p1.targetY;
+                            events.push({ type: 'clash_explosion', x: midX, y: midY });
+                            generateExplosionItems(items, midX, midY);
+                            events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p1.id, dir: i1.dir, x: p1.x, y: p1.y });
+                            events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p2.id, dir: i2.dir, x: p2.x, y: p2.y });
+                        } else {
+                            const winner = pf1 > pf2 ? p1 : (pf2 > pf1 ? p2 : (p1.priority > p2.priority ? p1 : p2));
+                            const loser = winner === p1 ? p2 : p1;
+                            const winIntent = winner === p1 ? i1 : i2;
+                            winner.x = winner.targetX; winner.y = winner.targetY;
+                            loser.x = loser.prevX; loser.y = loser.prevY;
+                            const diff = Math.abs(pf1 - pf2);
+                            if (winIntent.dir === 'up') loser.y -= diff;
+                            else if (winIntent.dir === 'down') loser.y += diff;
+                            else if (winIntent.dir === 'left') loser.x -= diff;
+                            else if (winIntent.dir === 'right') loser.x += diff;
+                            events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "PUSHED!" });
+                            events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: winner.id, dir: winIntent.dir, x: winner.prevX, y: winner.prevY });
+                        }
+                    } else if (Math.abs(p1.priority - p2.priority) <= 1) {
+                        events.push({ type: 'clash_moment', players: [p1Id, p2Id], x: p1.targetX, y: p1.targetY });
                         p1.x = p1.prevX; p1.y = p1.prevY;
                         p2.x = p2.prevX; p2.y = p2.prevY;
-                        const midX = p1.targetX, midY = p1.targetY;
-                        events.push({ type: 'clash_explosion', x: midX, y: midY });
-                        generateExplosionItems(items, midX, midY);
-                        events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p1.id, dir: i1.dir, x: p1.x, y: p1.y });
-                        events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p2.id, dir: i2.dir, x: p2.x, y: p2.y });
                     } else {
-                        const winner = pf1 > pf2 ? p1 : (pf2 > pf1 ? p2 : (p1.priority > p2.priority ? p1 : p2));
-                        const loser = winner === p1 ? p2 : p1;
-                        const winIntent = winner === p1 ? i1 : i2;
+                        const winner = p1.priority > p2.priority ? p1 : p2;
+                        const loser = p1.priority > p2.priority ? p2 : p1;
                         winner.x = winner.targetX; winner.y = winner.targetY;
                         loser.x = loser.prevX; loser.y = loser.prevY;
-                        const diff = Math.abs(pf1 - pf2);
-                        if (winIntent.dir === 'up') loser.y -= diff;
-                        else if (winIntent.dir === 'down') loser.y += diff;
-                        else if (winIntent.dir === 'left') loser.x -= diff;
-                        else if (winIntent.dir === 'right') loser.x += diff;
-                        events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "PUSHED!" });
-                        events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: winner.id, dir: winIntent.dir, x: winner.prevX, y: winner.prevY });
+                        events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "BLOCKED" });
                     }
-                } else if (Math.abs(p1.priority - p2.priority) <= 1) {
+                } else if (p1Moved || p2Moved) {
+                    const mover = p1Moved ? p1 : p2;
+                    mover.x = mover.prevX; mover.y = mover.prevY;
+                    events.push({ type: 'vfx', vfxType: 'bump', targetId: mover.id, text: "BLOCKED" });
+                }
+            }
+            else if (isHeadOn) {
+                if (Math.abs(p1.priority - p2.priority) <= 1) {
                     events.push({ type: 'clash_moment', players: [p1Id, p2Id], x: p1.targetX, y: p1.targetY });
                     p1.x = p1.prevX; p1.y = p1.prevY;
                     p2.x = p2.prevX; p2.y = p2.prevY;
@@ -160,59 +250,18 @@ const Engine = {
                     const loser = p1.priority > p2.priority ? p2 : p1;
                     winner.x = winner.targetX; winner.y = winner.targetY;
                     loser.x = loser.prevX; loser.y = loser.prevY;
-                    events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "BLOCKED" });
+                    const winIntent = intents[winner.id];
+                    if (winIntent.dir === 'up') loser.y--;
+                    else if (winIntent.dir === 'down') loser.y++;
+                    else if (winIntent.dir === 'left') loser.x--;
+                    else if (winIntent.dir === 'right') loser.x++;
+                    events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "KICKED!" });
                 }
-            } else if (p1Moved || p2Moved) {
-                const mover = p1Moved ? p1 : p2;
-                mover.x = mover.prevX; mover.y = mover.prevY;
-                events.push({ type: 'vfx', vfxType: 'bump', targetId: mover.id, text: "BLOCKED" });
             }
-        }
-        else if (isHeadOn) {
-            const pf1 = getPF(p1, i1);
-            const pf2 = getPF(p2, i2);
-
-            if (pf1 > 0 && pf2 > 0) {
-                // お互いに相手の突進力 (PushPower + nextBonus) 分だけスタミナを減らす
-                const p1Bonus = p1.nextPushBonus || 0;
-                const p2Bonus = p2.nextPushBonus || 0;
-                if (p1Bonus > 0) p1.nextPushBonus = 0;
-                if (p2Bonus > 0) p2.nextPushBonus = 0;
-
-                const p1Dmg = (p2.currentPushPower || 0) + p2Bonus;
-                const p2Dmg = (p1.currentPushPower || 0) + p1Bonus;
-
-                p1.stamina = Math.max(0, p1.stamina - p1Dmg);
-                p2.stamina = Math.max(0, p2.stamina - p2Dmg);
-
-                p1.x = p1.prevX; p1.y = p1.prevY;
-                p2.x = p2.prevX; p2.y = p2.prevY;
-                const midX = (p1.prevX + p2.prevX) / 2, midY = (p1.prevY + p2.prevY) / 2;
-                events.push({ type: 'clash_explosion', x: midX, y: midY });
-                generateExplosionItems(items, midX, midY);
-                events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p1.id, dir: i1.dir, x: p1.x, y: p1.y });
-                events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p2.id, dir: i2.dir, x: p2.x, y: p2.y });
-            } else if (Math.abs(p1.priority - p2.priority) <= 1) {
-                events.push({ type: 'clash_moment', players: [p1Id, p2Id], x: p1.targetX, y: p1.targetY });
-                p1.x = p1.prevX; p1.y = p1.prevY;
-                p2.x = p2.prevX; p2.y = p2.prevY;
-            } else {
-                const winner = p1.priority > p2.priority ? p1 : p2;
-                const loser = p1.priority > p2.priority ? p2 : p1;
-                winner.x = winner.targetX; winner.y = winner.targetY;
-                loser.x = loser.prevX; loser.y = loser.prevY;
-                const winIntent = intents[winner.id];
-                if (winIntent.dir === 'up') loser.y--;
-                else if (winIntent.dir === 'down') loser.y++;
-                else if (winIntent.dir === 'left') loser.x--;
-                else if (winIntent.dir === 'right') loser.x++;
-                events.push({ type: 'vfx', vfxType: 'bump', targetId: loser.id, text: "KICKED!" });
+            else {
+                p1.x = p1.targetX; p1.y = p1.targetY;
+                p2.x = p2.targetX; p2.y = p2.targetY;
             }
-        }
-        else {
-            // 无冲突移动
-            p1.x = p1.targetX; p1.y = p1.targetY;
-            p2.x = p2.targetX; p2.y = p2.targetY;
         }
 
         // 记录 Section 3 移动冲突解决后的位置 (用于后续物品路径拾取)
@@ -231,14 +280,16 @@ const Engine = {
             const target = p.id === p1Id ? p2 : p1;
             const power = Math.max(1, Math.min(3, intent.power || 1));
 
-            // 严格邻位判定：只有起始相邻，动作才生效
-            if (intent.type === 'push' && startDist === 1) {
+            // 押し出し判定 (初期位置で隣接しているか、または突進衝突したか)
+            const col = getPushCollision(p, target, intent);
+            const isPushHit = (startDist === 1) || (col !== null);
+            if (intent.type === 'push' && isPushHit && !p.pushResolved) {
                 events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p.id, dir: intent.dir, power: intent.power, x: p.prevX, y: p.prevY });
                 
                 const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
                 if (nextBonus > 0) p.nextPushBonus = 0; // 使用後リセット
 
-                // 攻撃側の最終プッシュ力を算出 (キャラ固有のPushPower + modifiers.pushPowerBonus + nextBonus)
+                // 攻撃側の最終プッシュ力を算出 (キャラ固有 of PushPower + modifiers.pushPowerBonus + nextBonus)
                 const attackPushPower = (p.currentPushPower || 0) + nextBonus;
 
                 let finalDist = 0;
@@ -280,17 +331,18 @@ const Engine = {
                 else if (intent.dir === 'left') target.x -= finalDist;
                 else if (intent.dir === 'right') target.x += finalDist;
 
-                // 突進したプレイヤーの座標を、実際に相手を押し出した距離（finalDist）に合わせて制限する
+                // 突進したプレイヤーの座標を、実際に相手を押し出した距離（finalDist）と衝突までの歩数（dCol）に合わせて制限する
                 if (movedSelf[p.id]) {
-                    const finalPushDist = power;
+                    const dCol = (startDist === 1) ? 0 : col.d_col;
+                    const actualDist = Math.min(power, dCol + finalDist);
                     let dx = 0, dy = 0;
                     if (intent.dir === 'up') dy = -1;
                     else if (intent.dir === 'down') dy = 1;
                     else if (intent.dir === 'left') dx = -1;
                     else if (intent.dir === 'right') dx = 1;
 
-                    p.x -= dx * Math.max(0, finalPushDist - finalDist);
-                    p.y -= dy * Math.max(0, finalPushDist - finalDist);
+                    p.x = p.prevX + dx * actualDist;
+                    p.y = p.prevY + dy * actualDist;
                 }
 
                 if (finalDist > 0) events.push({ type: 'pushed', targetId: target.id, dir: intent.dir, dist: finalDist });
@@ -435,6 +487,45 @@ function isGuardianBlocking(player, intents) {
     if (!player || !intents) return false;
     const intent = intents[player.id] || {};
     return intent.type === 'skill' && player.skillData?.id === 'guardian_skill';
+}
+
+/**
+ * 突進（pushまたは成金スキル）により相手に衝突するか判定する
+ */
+function getPushCollision(p, target, intent) {
+    if (intent.type !== 'push' && !(intent.type === 'skill' && (p.charaIndex === 2 || p.charaName === 'NouveauRiche'))) {
+        return null;
+    }
+    const power = Math.max(1, Math.min(3, intent.power || 1));
+    let dx = 0, dy = 0;
+    if (intent.dir === 'up') dy = -1;
+    else if (intent.dir === 'down') dy = 1;
+    else if (intent.dir === 'left') dx = -1;
+    else if (intent.dir === 'right') dx = 1;
+
+    for (let k = 1; k <= power; k++) {
+        const tx = p.prevX + dx * k;
+        const ty = p.prevY + dy * k;
+        if (tx === target.prevX && ty === target.prevY) {
+            return {
+                d_col: k - 1, // 衝突するまでに進んだマスカウント
+                dx,
+                dy
+            };
+        }
+    }
+    return null;
+}
+
+/**
+ * 2つの方向が逆向きか判定する
+ */
+function isOppositeDirection(dir1, dir2) {
+    if (dir1 === 'up' && dir2 === 'down') return true;
+    if (dir1 === 'down' && dir2 === 'up') return true;
+    if (dir1 === 'left' && dir2 === 'right') return true;
+    if (dir1 === 'right' && dir2 === 'left') return true;
+    return false;
 }
 
 module.exports = Engine;

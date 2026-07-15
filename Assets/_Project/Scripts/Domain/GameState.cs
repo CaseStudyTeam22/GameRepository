@@ -57,7 +57,7 @@ namespace GamblingAction.Domain
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
 		public bool SuddenDeathAlreadyStarted { get; private set; }
-		public bool IsReady { get; private set; }
+		public bool IsReady => Me != null && Me.Ready;
 
 		public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
@@ -114,8 +114,6 @@ namespace GamblingAction.Domain
 
 		public void SubmitReady(bool isAI)
 		{
-			IsReady = true;
-
 			if (m_SelectedCharaData == null)
 			{
 				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
@@ -296,8 +294,6 @@ namespace GamblingAction.Domain
 
         public void SubmitUnready()
         {
-            IsReady = false;
-
             m_Net.Emit(ClientEvents.PlayerUnready, new { });
         }
         public void SubmitEnterLobby()
