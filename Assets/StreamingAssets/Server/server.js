@@ -409,7 +409,8 @@ setInterval(() => {
                     winner.score = Config.MAX_WINS;
                     handleRoundConcluded(
                         winner.id,
-                        Object.keys(players).find(id => id !== winner.id)
+                        Object.keys(players).find(id => id !== winner.id),
+                        intents
                     );
                 } else {
                     // サドンデス：勝敗つかず時間切れ。引き分けで次ラウンドへ。
@@ -500,6 +501,10 @@ setInterval(() => {
                     p.falling = true;
                     io.emit('sync_state', { players });
 
+                    // ミッション判定に使うため、このターンの intents を保存しておく
+                    // （100ms 後に intent がクリアされるため、1500ms 後の判定時には参照できなくなる）
+                    const savedIntents = JSON.parse(JSON.stringify(intents));
+
                     // 1500ms 後の判定判定時にプレイヤーがまだ存在するか再確認する（防御的プログラミング）
                     setTimeout(() => {
                         if (!players[id]) return; // 判定前に切断された場合は処理を中断
@@ -510,7 +515,7 @@ setInterval(() => {
 
                         if (winnerId && players[winnerId]) {
                             players[winnerId].score++;
-                            handleRoundConcluded(winnerId, loserId);
+                            handleRoundConcluded(winnerId, loserId, savedIntents);
                             io.emit('sync_state', { players });
                         }
                     }, 1500);
@@ -1377,7 +1382,7 @@ function startLanBroadcast() {
 // 1 ラウンドの決着がついた直後に呼ばれる。
 // ファイナルレイズ進行中なら即 game_over。
 // 通常ラウンドで2-1または1-2になった瞬間に提案フェーズへ入り、それ以外は次ラウンドへ。
-function handleRoundConcluded(winnerId, loserId) {
+function handleRoundConcluded(winnerId, loserId, intents) {
     const winner = players[winnerId];
     const loser = players[loserId];
 
@@ -1394,8 +1399,9 @@ function handleRoundConcluded(winnerId, loserId) {
                 console.log(`[Server] Doctor Unique Mission Cleared!`);
             }
             // キャラ別ミッションの達成チェック (NouveauRiche: スキル使用して相手を落として勝利)
+            // intents を優先参照する（落下判定の 1500ms 遅延中に p.intent がクリアされるため）
             if (p.mission.type === 14 && winnerId === p.id) {
-                const intent = p.intent || {};
+                const intent = (intents && intents[p.id]) || p.intent || {};
                 if (intent.type === 'skill') {
                     p.mission.isCleared = true;
                     p.modifiers.charaUniqueBuff = true;

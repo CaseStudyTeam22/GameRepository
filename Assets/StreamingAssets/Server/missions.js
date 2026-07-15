@@ -13,8 +13,9 @@ const mTypeMap = {
 
 const Missions = {
     generateMissions: (player, selectedBuff) => {
-        // もしハイリスク2回達成していれば、キャラ別ミッションを強制提示する。
-        if (player.highRiskMissionsCleared >= 2) {
+        // ハイリスク2回達成かつキャラミッション未達成であれば、キャラ別ミッションを強制提示する。
+        // キャラミッション達成済み（charaUniqueBuff === true）の場合は通常のミッション選択に進む。
+        if (player.highRiskMissionsCleared >= 2 && !(player.modifiers && player.modifiers.charaUniqueBuff)) {
             let type = 0;
             let description = "";
             let targetCount = 1;
