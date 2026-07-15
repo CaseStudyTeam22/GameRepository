@@ -1126,15 +1126,10 @@ function autoBuffTimedOut() {
     for (let id in players) {
         const p = players[id];
         if (p.buffReady || p.isAI) continue;
-        // 両替後の予定チップで購入可否を判定し、ここでは記録のみ。
-        // チップの増減は精算でまとめて行う。
-        const expectedChips = p.chips + (p.pendingExchange || 0);
-        let pick = null;
-        if (expectedChips >= 15 && Math.random() < 0.5) pick = 'high_risk';
-        else if (expectedChips >= 5) pick = 'low_risk';
-        if (pick) p.selectedBuff = pick;
+
+        // Skip ボタン廃止に伴い、未選択時は自動で low_risk を選択する
+        p.selectedBuff = 'low_risk';
         p.buffReady = true;
-        // リスク決定時にミッションを生成する
         p.availableMissions = generateMissions(p, p.selectedBuff);
         changed = true;
     }

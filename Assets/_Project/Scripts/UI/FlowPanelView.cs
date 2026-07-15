@@ -129,7 +129,6 @@ namespace GamblingAction.UI
 		private Button m_ExchangeConfirmButton;
 		private Button m_HighRiskButton;
 		private Button m_LowRiskButton;
-		private Button m_SkipBuffButton;
 
 		private TMP_Text m_MissionText;
 		private TMP_Text m_MissionRewardText;
@@ -232,7 +231,7 @@ namespace GamblingAction.UI
 			InitializeCommandButtonsCache();
 
 			// FindFlowControls でボタン参照が揃ってから配列を構築する
-			m_BuffButtons = new[] { m_HighRiskButton, m_LowRiskButton, m_SkipBuffButton };
+			m_BuffButtons = new[] { m_HighRiskButton, m_LowRiskButton };
 
 			m_State.OnPhaseChanged   += HandlePhase;
 			m_State.OnPlayersChanged += HandlePlayersChanged;
@@ -615,7 +614,6 @@ namespace GamblingAction.UI
 
 			m_HighRiskButton        = FindIn<Button>(m_BuffPanel, "HighRiskButton");
 			m_LowRiskButton         = FindIn<Button>(m_BuffPanel, "LowRiskButton");
-			m_SkipBuffButton        = FindIn<Button>(m_BuffPanel, "SkipBuffButton");
 
 			m_PrepareTimebar  = FindIn<Image>(m_PreparingCountdownPanel, "Timebar");
 			m_PrepareTimeText = FindIn<TMP_Text>(m_PreparingCountdownPanel, "TimeText");
@@ -745,7 +743,6 @@ namespace GamblingAction.UI
 
 			if (m_HighRiskButton != null) m_HighRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.HighRisk));
 			if (m_LowRiskButton != null)  m_LowRiskButton.onClick.AddListener(() => SubmitBuff(BuffIds.LowRisk));
-			if (m_SkipBuffButton != null) m_SkipBuffButton.onClick.AddListener(() => SubmitBuff(null));
 
 			if (m_MissionOptionButtons != null)
 			{
@@ -790,7 +787,6 @@ namespace GamblingAction.UI
 			m_State.SubmitBuff(id);
 			if (m_HighRiskButton != null) m_HighRiskButton.interactable = false;
 			if (m_LowRiskButton != null)  m_LowRiskButton.interactable = false;
-			if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = false;
 		}
 
 		private void HandlePhase(EGamePhase phase)
@@ -855,7 +851,6 @@ namespace GamblingAction.UI
 				int chips = (m_State.Me?.Chips ?? 0) + (m_State.Me?.PendingExchange ?? 0);
 				if (m_HighRiskButton != null) m_HighRiskButton.interactable = chips >= 15;
 				if (m_LowRiskButton != null)  m_LowRiskButton.interactable  = chips >= 5;
-				if (m_SkipBuffButton != null) m_SkipBuffButton.interactable = true;
 
 				// バフ/ミッションパネル表示の更新
 				UpdateBuffPanelUI();
