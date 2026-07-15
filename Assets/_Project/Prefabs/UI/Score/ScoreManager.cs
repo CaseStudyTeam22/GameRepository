@@ -27,9 +27,6 @@ namespace GamblingAction.UI
         [SerializeField, Tooltip("P2 を判定する role 名")]
         private string m_P2Role = "P2";
 
-        [SerializeField, Tooltip("対象プレイヤーがいない場合に表示する文字列")]
-        private string m_MissingPlayerText = "-";
-
         [Header("Score Positions")]
         [SerializeField] private Vector2 m_LeftPosition;
         [SerializeField] private Vector2 m_RightPosition;

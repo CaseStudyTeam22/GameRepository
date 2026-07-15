@@ -1,4 +1,3 @@
-﻿using Codice.CM.SEIDInfo;
 using DG.Tweening;
 using GamblingAction.Core.Dto;
 using GamblingAction.Domain;
@@ -64,6 +63,12 @@ namespace GamblingAction.UI
 		private Button m_DefenseButton;
 		[SerializeField, Tooltip("スキルコマンド選択ボタン")]
 		private Button m_SkillButton;
+
+		[SerializeField, Tooltip("スキルアイコンデータベース（スキルID → Sprite のマッピング）")]
+		private GamblingAction.Core.SkillDatabase m_SkillDatabase;
+
+		// スキルボタン配下の Image（FindStageControls で取得）
+		private Image m_SkillIconImage;
 
 		[SerializeField, Tooltip("コマンド選択時の背景ハイライト色 (Power 1: 黄)")]
 		private Color m_SelectedColorPower1 = new Color(0.9f, 0.9f, 0.1f);
@@ -717,6 +722,17 @@ namespace GamblingAction.UI
 			m_DefenseButton = FindChild<Button>(m_MainGameStage.transform, "Defense");
 			m_SkillButton   = FindChild<Button>(m_MainGameStage.transform, "Skill");
 
+			// スキルボタンの子 "Image" オブジェクトをアイコン表示用に取得する。
+			// GetComponentInChildren だと Button 自身の Image が先に返るため、名前で直接取得する。
+			if (m_SkillButton != null)
+			{
+				var iconTransform = m_SkillButton.transform.Find("Image");
+				if (iconTransform != null)
+					m_SkillIconImage = iconTransform.GetComponent<Image>();
+				else
+					Debug.LogWarning("[FlowPanel] Skill/Image が見つかりません。Prefab の子オブジェクト名を確認してください。");
+			}
+
 			if (m_ExecuteText != null) m_ExecuteText.gameObject.SetActive(false);
 		}
 
@@ -955,6 +971,7 @@ namespace GamblingAction.UI
 			UpdateMissionUI();
 			UpdateBuffPanelUI();
 			UpdateMissionSelectionUI();
+			UpdateSkillButtonIcon();
 
 			// チップ交換フェーズ中、すでに両替済みの場合は両替パネルを非表示にする
 			if (m_State.Phase == EGamePhase.Exchange)
@@ -962,6 +979,22 @@ namespace GamblingAction.UI
 				bool showExchange = me == null || !me.Exchanged;
 				SetActive(m_ExchangePanel, showExchange);
 			}
+		}
+
+		/// <summary>
+		/// 自分のキャラに応じたスキルアイコンをスキルボタンに適用する。
+		/// SkillDatabase 未設定またはスキルアイコン未登録の場合は乕もしない。
+		/// </summary>
+		private void UpdateSkillButtonIcon()
+		{
+			if (m_SkillDatabase == null || m_SkillIconImage == null) return;
+			var me = m_State?.Me;
+			if (me == null) return;
+			var charaData = m_State.GetCharaData(me.CharaIndex);
+			if (charaData?.Skills == null) return;
+			var icon = m_SkillDatabase.GetIcon(charaData.Skills.Id);
+			if (icon != null)
+				m_SkillIconImage.sprite = icon;
 		}
 
 		private void UpdateMissionUI()

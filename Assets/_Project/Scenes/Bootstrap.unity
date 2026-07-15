@@ -345,11 +345,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1704433038449769733, guid: c78116498f495ac4d9ac876d999c673e, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 3340974049553702699, guid: c78116498f495ac4d9ac876d999c673e, type: 3}
       propertyPath: m_Name
       value: GameInstaller
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 342389140997936196, guid: c78116498f495ac4d9ac876d999c673e, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:

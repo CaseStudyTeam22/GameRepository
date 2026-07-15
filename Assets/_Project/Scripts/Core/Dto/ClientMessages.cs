@@ -27,6 +27,10 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("restCost")] public int[] RestCost;
 
 		[JsonProperty("skills")] public CharaSkillDataMessage Skills;
+
+		/// スキル効果説明テキスト（スプレッドシートの「スキル内容」から読み取る）。
+		/// JsonProperty なし = クライアント内部専用。サーバーへの送信データには含まれない。
+		public string SkillDescription;
 	}
 
 	public class PlayerReadyMessage

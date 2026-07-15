@@ -56,8 +56,6 @@ namespace GamblingAction.UI
         private Color m_OutlineColor = new Color(0.15f, 0.05f, 0.0f, 1f); // 濃い茶（見やすいアウトライン）
         [SerializeField, Tooltip("アウトラインの太さ（0〜1）。小さいほど細い。0 で非表示。")]
         [Range(0f, 1f)] private float m_OutlineWidth = 0.06f;
-        [SerializeField, Tooltip("背景フラッシュの最大アルファ")]
-        [Range(0f, 1f)] private float m_FlashMaxAlpha = 0.35f;
 
         private CanvasGroup m_CanvasGroup;
         private RectTransform m_LabelRect;
