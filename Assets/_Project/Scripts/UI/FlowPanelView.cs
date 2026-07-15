@@ -112,7 +112,7 @@ namespace GamblingAction.UI
 		// ─────────────────────────────────────────────────────────────
 
 		/// <summary>スティック入力のデッドゾーン（これ未満は無入力と見なす）</summary>
-		private const float m_StickDeadZone = 0.3f;
+		private const float m_StickDeadZone = 0.6f;
 
 		/// <summary>ボタン選択移動のクールダウン（秒）。連続入力チカチカ防止用</summary>
 		private const float m_NavCooldown = 0.2f;
