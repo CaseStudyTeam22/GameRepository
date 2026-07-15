@@ -44,6 +44,19 @@ namespace GamblingAction.Gameplay
 		[SerializeField, Tooltip("bump時 punch の振動回数")]
 		private int m_BumpPunchVibrato = 8;
 
+
+		[SerializeField, Tooltip("キャラ別スキルエフェクトの prefab。配列の添字 = charaIndex（0=Normal〜6=Debtor）。空欄の枠はエフェクト無し")]
+		private GameObject[] m_SkillEffects = new GameObject[7];
+
+		[SerializeField, Tooltip("スキルエフェクトを出す高さオフセット（足元が0。少し浮かせたい場合に使う）")]
+		private float m_SkillEffectYOffset = 0f;
+
+		[SerializeField, Tooltip("生成したエフェクトを自動で破棄するまでの秒数。ParticleSystem の再生が終わる長さより少し長めに")]
+		private float m_SkillEffectLifetime = 3f;
+
+		[SerializeField, Tooltip("方向を持つスキルエフェクト（格闘家など）で、prefab の正面が実際の向きとずれる場合の補正角度（Y軸まわり・度）")]
+		private float m_SkillEffectYawOffset = 0f;
+
 		private Tween m_SpriteFxTween;
 		private Vector3 m_SpriteRootBaseLocalPos;
 		private bool m_Initialized;
@@ -145,6 +158,50 @@ namespace GamblingAction.Gameplay
 			if (m_SpriteFxTween != null && m_SpriteFxTween.IsActive())
 				m_SpriteFxTween.Complete();
 			m_SpriteRoot.localPosition = m_SpriteRootBaseLocalPos;
+		}
+
+		// スキル発動時。charaIndex に対応した prefab を足元に生成して再生する。
+		// dir（"up"/"down"/"left"/"right"）が指定されていれば、その向きにエフェクトを回転させる。
+		// 方向が不要なキャラは dir を null のまま呼べばよい（回転なし）。
+		// prefab が未設定（空欄）のキャラは何も出さない。
+		public void PlaySkill(int charaIndex, string dir = null)
+		{
+			// 配列の範囲外や未設定は安全に無視する
+			if (m_SkillEffects == null) return;
+			if (charaIndex < 0 || charaIndex >= m_SkillEffects.Length) return;
+
+			var prefab = m_SkillEffects[charaIndex];
+			if (prefab == null) return;
+
+			// 発動プレイヤーの足元位置を求める（この controller は Player 配下に付く想定）
+			var pos = transform.position;
+			pos.y += m_SkillEffectYOffset;
+
+			// dir が指定されていれば、その方向を向く回転を作る（+ Yaw 補正）。
+			Quaternion rot = Quaternion.identity;
+			if (!string.IsNullOrEmpty(dir))
+			{
+				var worldDir = DirToWorldOffset(dir);
+				if (worldDir != Vector3.zero)
+				{
+					rot = Quaternion.LookRotation(worldDir, Vector3.up)
+						* Quaternion.Euler(0f, m_SkillEffectYawOffset, 0f);
+				}
+			}
+
+			// prefab を生成。Hovl のエフェクトは子に複数 ParticleSystem を持つため、
+			// ルートごと生成して丸ごと再生 → 一定時間後に丸ごと破棄する。
+			var instance = Instantiate(prefab, pos, rot);
+
+			// 生成直後は勝手に再生されるが、念のため全 ParticleSystem を Play しておく
+			var systems = instance.GetComponentsInChildren<ParticleSystem>();
+			for (int i = 0; i < systems.Length; i++)
+			{
+				systems[i].Play();
+			}
+
+			// 再生し終わったら破棄（出しっぱなしでメモリに残さないため）
+			Destroy(instance, m_SkillEffectLifetime);
 		}
 
 		// EventDto.Dir を世界空間方向に変換。
