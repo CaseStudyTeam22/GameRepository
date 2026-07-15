@@ -254,6 +254,10 @@ const Missions = {
                                 p.modifiers.skillCostBonus = (p.modifiers.skillCostBonus || 0) + rVal;
                             } else if (rType === 'CharaUnique') {
                                 p.modifiers.charaUniqueBuff = true;
+                                // Scammer: ミッション達成時に即座に scammerActive を有効化する
+                                if (p.charaIndex === 5 || p.charaName === 'Scammer') {
+                                    p.scammerActive = true;
+                                }
                                 console.log(`[Server] [Chara Unique Buff] Player ${p.role} activated character unique buff!`);
                             }
 
