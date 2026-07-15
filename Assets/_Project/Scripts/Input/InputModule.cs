@@ -527,22 +527,41 @@ namespace GamblingAction.Input
 			return ResolveStickDir() ?? ResolveMouseDir();
 		}
 
-		// Move Action（左スティック）の傾きから4方向文字列を解決する。
-		// デッドゾーン以下なら null。
-		private string ResolveStickDir()
-		{
-			if (m_MoveAction == null) return null;
-			Vector2 stick = m_MoveAction.ReadValue<Vector2>();
-			if (stick.magnitude < m_StickDeadZone) return null;
+        // Move Action（左スティック）の傾きから4方向文字列を解決する。
+        // デッドゾーン以下なら null。
+        private string ResolveStickDir()
+        {
+            if (m_MoveAction == null) return null;
 
-			return Mathf.Abs(stick.x) > Mathf.Abs(stick.y)
-				? (stick.x > 0 ? Directions.Right : Directions.Left)
-				: (stick.y > 0 ? Directions.Up    : Directions.Down);
-		}
+            Vector2 stick = m_MoveAction.ReadValue<Vector2>();
+            if (stick.magnitude < m_StickDeadZone)
+                return null;
 
-		// Point Action（マウス位置）をワールド座標に投影し、
-		// プレイヤー基準の4方向文字列を解決する。
-		private string ResolveMouseDir()
+            // カメラ基準の右・前
+            Vector3 right = m_WorldCamera.transform.right;
+            right.y = 0f;
+            right.Normalize();
+
+            Vector3 forward = m_WorldCamera.transform.forward;
+            forward.y = 0f;
+            forward.Normalize();
+
+            // スティック入力をワールド方向へ変換
+            Vector3 move = right * stick.x + forward * stick.y;
+
+            if (Mathf.Abs(move.x) > Mathf.Abs(move.z))
+            {
+                return move.x > 0 ? Directions.Right : Directions.Left;
+            }
+            else
+            {
+                return move.z > 0 ? Directions.Up : Directions.Down;
+            }
+        }
+
+        // Point Action（マウス位置）をワールド座標に投影し、
+        // プレイヤー基準の4方向文字列を解決する。
+        private string ResolveMouseDir()
 		{
 			if (m_WorldCamera == null || m_Board == null) return null;
 			if (m_PointAction == null) return null;
@@ -594,6 +613,16 @@ namespace GamblingAction.Input
 			Vector2 nav = m_MoveAction != null ? m_MoveAction.ReadValue<Vector2>() : Vector2.zero;
 			bool hasGamepadInput = nav.magnitude > 0.5f;
 
+			Vector3 right = m_WorldCamera.transform.right;
+			right.y = 0f;
+			right.Normalize();
+
+			Vector3 forward = m_WorldCamera.transform.forward;
+			forward.y = 0f;
+			forward.Normalize();
+
+			Vector3 move = right * nav.x + forward * nav.y;
+
 			if (m_GamepadNavCooldown > 0f)
 			{
 				m_GamepadNavCooldown -= Time.deltaTime;
@@ -607,15 +636,15 @@ namespace GamblingAction.Input
 					m_GamepadHoverY = me.Y;
 				}
 
-				if (Mathf.Abs(nav.x) > Mathf.Abs(nav.y))
-				{
-					m_GamepadHoverX = Mathf.Clamp(m_GamepadHoverX + (nav.x > 0 ? 1 : -1), 0, m_Board.GridSize - 1);
-				}
-				else
-				{
-					m_GamepadHoverY = Mathf.Clamp(m_GamepadHoverY + (nav.y > 0 ? 1 : -1), 0, m_Board.GridSize - 1);
-				}
-
+                if (Mathf.Abs(move.x) > Mathf.Abs(move.z))
+                {
+                    m_GamepadHoverX += move.x > 0 ? 1 : -1;
+                }
+                else
+                {
+                    m_GamepadHoverY += move.z > 0 ? -1 : 1;
+                }
+                
 				m_GamepadNavCooldown = k_GamepadNavCooldownTime;
 			}
 
