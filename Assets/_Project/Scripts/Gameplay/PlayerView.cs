@@ -39,6 +39,10 @@ namespace GamblingAction.Gameplay
 		[SerializeField, Range(0f, 1f), Tooltip("移動のこの進行度までで土煙を止める。0.6 なら移動の60%地点までしか出さない（到着マス被り防止）")]
 		private float m_DustEmitUntil = 0.6f;
 
+		[Header("Narikin skill trail (gold)")]
+		[SerializeField, Tooltip("成金スキル時に線を引く Trail Renderer（Player 直下の GoldTrail）。普段は emitting=false")]
+		private TrailRenderer m_GoldTrail;
+
 		[Header("Movement")]
 		[FormerlySerializedAs("moveDuration")]
 		[SerializeField] private float m_MoveDuration = 0.22f;
@@ -62,6 +66,9 @@ namespace GamblingAction.Gameplay
 		private Tween m_MoveTween;
 		// 土煙はマス移動のたびに生成せず、1個を使い回す
 		private ParticleSystem m_DustInstance;
+
+		// 次の移動を金色トレイルにするフラグ（成金スキルVFX受信で立つ）
+		private bool m_NarikinTrailPending;
 
 		private bool m_IsFalling;
 		private float m_FallVelocity;
@@ -107,6 +114,13 @@ namespace GamblingAction.Gameplay
 
 			// 登場ディゾルブを再生（m_Fx 未設定なら何もしない）
 			m_Fx?.PlayAppear();
+
+			// 金色トレイルは普段オフ（スキル移動時だけオンにする）
+			if (m_GoldTrail != null)
+			{
+				m_GoldTrail.emitting = false;
+				m_GoldTrail.Clear();
+			}
 		}
 
 		private void OnDestroy()
@@ -177,8 +191,25 @@ namespace GamblingAction.Gameplay
 				var target = m_Board.GridToWorld(dto.X, dto.Y);
 				target.y = m_BaseY;
 				m_MoveTween?.Kill();
+
+				// 成金スキル発動直後の移動なら、金色トレイルの線引きを開始する
+				bool goldTrail = m_NarikinTrailPending;
+				if (goldTrail && m_GoldTrail != null)
+				{
+					m_GoldTrail.Clear();          // 前回の線が残っていたら消してから
+					m_GoldTrail.emitting = true;  // 線を引き始める
+				}
+
 				m_MoveTween = transform.DOMove(target, m_MoveDuration).SetEase(m_MoveEase)
-					.OnUpdate(EmitDustTrail);   // 移動中ずっと足元で土煙を出す
+					.OnUpdate(EmitDustTrail)      // 通常の土煙は従来どおり
+					.OnComplete(() =>
+					{
+						if (goldTrail && m_GoldTrail != null)
+						{
+							m_GoldTrail.emitting = false;  // 線引き終了（既存の線は time 秒かけて消える）
+						}
+						m_NarikinTrailPending = false;
+					});
 			}
 
 			m_PrevFalling = dto.Falling;
@@ -233,6 +264,13 @@ namespace GamblingAction.Gameplay
 			transform.position = pos;
 			m_LastX = dto.X;
 			m_LastY = dto.Y;
+
+			// 位置を瞬間移動させるときは、線が飛んで繋がるのを防ぐためクリアする
+			if (m_GoldTrail != null)
+			{
+				m_GoldTrail.emitting = false;
+				m_GoldTrail.Clear();
+			}
 		}
 
 
@@ -309,13 +347,20 @@ namespace GamblingAction.Gameplay
 					 ev.VfxType == VfxTypes.AttackVfx ||
 					 ev.VfxType == VfxTypes.DefenseVfx))
 				{
-					// スキル起因の VFX を検知したら、このプレイヤーのスキルに応じたエフェクトを出す。
-					// charaIndex は sync_state で 0 に戻るため使わず、skillData.id で判定する。
+					// スキル起因の VFX を検知したら、スキルに応じたエフェクトを出す。
 					if (m_State.Players.TryGetValue(m_PlayerId, out var dto))
 					{
 						int idx = SkillIdToIndex(dto.SkillData != null ? dto.SkillData.Id : null);
-						Debug.Log($"[SkillVfx] id={dto.Id} MyId={m_State.MyId} isMe={m_PlayerId == m_State.MyId} skillId={(dto.SkillData != null ? dto.SkillData.Id : "null")} idx={idx}");
-						m_Fx.PlaySkill(idx);
+						if (idx == 2)
+						{
+							// 成金スキル：一発エフェクトは出さず、次の移動で金色トレイルを引く
+							m_NarikinTrailPending = true;
+						}
+						else
+						{
+							// 格闘家含め、スキルは向きを持たない（3x3全方位攻撃）ため dir は渡さない
+							m_Fx.PlaySkill(idx);
+						}
 					}
 				}
 			}
@@ -327,13 +372,14 @@ namespace GamblingAction.Gameplay
 		{
 			switch (skillId)
 			{
-				case "heal_instant":   return 1; // 医師
-				case "nouveau_skill":  return 2; // 成金
-				case "fighter_skill":  return 3; // 格闘家
-				case "guardian_skill": return 4; // ガーディアン
-				case "scammer_skill":  return 5; // イカサマ
-				case "debtor_skill":   return 6; // 債務者
-				default:               return 0; // 不明 = エフェクト無し
+				case "heal_instant":      return 1; // 医師
+				case "nouveau_skill":     return 2; // 成金（サーバー実装によってはこちら）
+				case "double_cost_power": return 2; // 成金（クライアント設定はこちら）
+				case "fighter_skill":     return 3; // 格闘家
+				case "guardian_skill":    return 4; // ガーディアン
+				case "scammer_skill":     return 5; // イカサマ
+				case "debtor_skill":      return 6; // 債務者
+				default:                  return 0; // 不明 = エフェクト無し
 			}
 		}
 

@@ -121,6 +121,7 @@ namespace GamblingAction.Domain
 				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
 			}
 
+			
 			m_Net.Emit(ClientEvents.PlayerReady,
 				new PlayerReadyMessage
 				{
