@@ -73,7 +73,10 @@ const Skills = {
         // スキルID（推奨）またはインデックスによる分岐
         if (skillId === 'heal_instant' || charaIndex === 1 || player.charaName === 'Doctor') {
             // 医師: 定力回復
-            const healAmount = (player.skillData && player.skillData.staminaRec) || 2;
+            let healAmount = (player.skillData && player.skillData.staminaRec) || 2;
+            if (player.modifiers && player.modifiers.charaUniqueBuff) {
+                healAmount += 10;
+            }
             const baseMax = player.maxStamina || config.MAX_STAMINA;
             const maxStamina = player.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
 
@@ -97,7 +100,7 @@ const Skills = {
             if (isPushHit) {
                 const dCol = (startDist === 1) ? 0 : col.d_col;
                 const pushBonus = (player.modifiers && player.modifiers.pushPowerBonus) || 0;
-                let finalDist = power + 1 + pushBonus; // 強化pushなので base: power + 1
+                let finalDist = power + 2 + pushBonus; // 強化pushなので base: power + 2
 
                 // 高リスク攻撃：power=3 push +1
                 if (player.selectedBuff === 'high_risk' && power === 3) {
@@ -173,17 +176,28 @@ const Skills = {
             }
         }
         else if (skillId === 'fighter_skill' || charaIndex === 3 || player.charaName === 'Fighter') {
-            // 格闘家キャラ: 自身を中心として3x3範囲へ、相手のスタミナを大きく削る攻撃
-            const dir = intent.dir;
+            // 格闘家キャラ: 自身の一歩前方を中心とした3x3範囲へ、相手のスタミナを大きく削る攻撃
+            const dir = intent.dir || (player.role === 'P2' ? 'down' : 'up');
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: dir, power: 2, x: player.prevX, y: player.prevY });
 
-            const dx = opponent.x - player.x;
-            const dy = opponent.y - player.y;
+            // 一歩前方の座標
+            let cx = player.x;
+            let cy = player.y;
+            if (dir === 'up') cy -= 1;
+            else if (dir === 'down') cy += 1;
+            else if (dir === 'left') cx -= 1;
+            else if (dir === 'right') cx += 1;
 
-            // 相手が自身を中心とした3x3範囲内（自身を含まない）にいるか判定
-            if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0)) {
-                // 相手が範囲内にいる場合、スタミナを大きく削る(固定値3)
-                const dmg = 3;
+            const dx = opponent.x - cx;
+            const dy = opponent.y - cy;
+
+            // 相手がその一歩前方を中心とした3x3範囲内（かつ自分自身ではない）にいるか判定
+            if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (opponent.x !== player.x || opponent.y !== player.y)) {
+                // 相手が範囲内にいる場合、スタミナを大きく削る(固定値3、バフ時は13)
+                let dmg = 3;
+                if (player.modifiers && player.modifiers.charaUniqueBuff) {
+                    dmg += 10;
+                }
                 const oppIntent = opponent.intent || { type: 'none' };
                 let finalDmg = dmg;
 

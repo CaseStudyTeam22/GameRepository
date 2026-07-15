@@ -5,7 +5,7 @@ const Skills = require('./skills');
  * 核心引擎 - Proto V10 三档 power 版
  */
 const Engine = {
-    resolveActions: (players, intents, items) => {
+    resolveActions: (players, intents, items, isFinalDuel) => {
         const events = [];
         const nextPlayers = JSON.parse(JSON.stringify(players));
         const ids = Object.keys(nextPlayers);
@@ -286,8 +286,12 @@ const Engine = {
             if (intent.type === 'push' && isPushHit && !p.pushResolved) {
                 events.push({ type: 'vfx', vfxType: 'push_vfx', targetId: p.id, dir: intent.dir, power: intent.power, x: p.prevX, y: p.prevY });
                 
-                const nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
-                if (nextBonus > 0) p.nextPushBonus = 0; // 使用後リセット
+                let nextBonus = (p.nextPushBonus || 0); // 債務者の次回突進強化
+                const isDebtorUniqueFR = isFinalDuel && p.modifiers && p.modifiers.charaUniqueBuff && (p.charaIndex === 6 || p.charaName === 'Debtor');
+                if (isDebtorUniqueFR) {
+                    nextBonus = 2;
+                }
+                if (nextBonus > 0 && !isDebtorUniqueFR) p.nextPushBonus = 0; // 使用後リセット
 
                 // 攻撃側の最終プッシュ力を算出 (キャラ固有 of PushPower + modifiers.pushPowerBonus + nextBonus)
                 const attackPushPower = (p.currentPushPower || 0) + nextBonus;
@@ -297,6 +301,10 @@ const Engine = {
 
                 if (isGuardianBlocking(target, intents)) {
                     finalDist = 0;
+                    if (target.modifiers && target.modifiers.charaUniqueBuff) {
+                        p.stamina = Math.max(0, p.stamina - 3);
+                        events.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "COUNTER!" });
+                    }
                 } else if (tIntent.type === 'defense') {
                     // knockback軽減 (現在のスタミナ依存で先に計算)
                     const rawKnockback = Math.max(1, 2 + Math.floor((10 - target.stamina) / 2));
@@ -361,7 +369,13 @@ const Engine = {
                     dmg = Math.floor(dmg * (1 - reduction));
                 }
                 // ガーディアン: スキル中はダメージ無効
-                if (isGuardianBlocking(target, intents)) dmg = 0;
+                if (isGuardianBlocking(target, intents)) {
+                    dmg = 0;
+                    if (target.modifiers && target.modifiers.charaUniqueBuff) {
+                        p.stamina = Math.max(0, p.stamina - 3);
+                        events.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "COUNTER!" });
+                    }
+                }
                 // 高风险被击方：30% 概率伤害 +1
                 if (dmg > 0 && target.selectedBuff === 'high_risk' && Math.random() < 0.3) dmg += 1;
                 if (dmg > 0) {
@@ -379,6 +393,7 @@ const Engine = {
             // スキル（固有アクション）の実行
             if (intent.type === 'skill') {
                 Skills.onResolve(p, target, intent, events, Config, items);
+                events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Skill', amount: 1 });
             }
         });
 
@@ -444,12 +459,7 @@ const Engine = {
                     events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Move', amount: dist });
                 }
             } else if (intent.type === 'push') {
-                const target = p.id === p1Id ? p2 : p1;
-                const pushDist = Math.abs(target.x - target.prevX) + Math.abs(target.y - target.prevY);
-                // 相手が実際に動いた（ノックバックした）場合のみカウント
-                if (pushDist > 0) {
-                    events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Push', amount: 1 });
-                }
+                events.push({ type: 'mission_progress', playerId: p.id, missionType: 'Push', amount: 1 });
             }
         });
 

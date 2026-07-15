@@ -288,9 +288,15 @@ namespace GamblingAction.Input
 
 			if (mode == IntentTypes.Skill)
 			{
-				m_LastSentDir = null;
-				m_State.SubmitIntent(IntentTypes.Skill, null, m_Power);
-				LocalIntentBus.Set(IntentTypes.Skill, null, m_Power, -1, -1, -1, -1, true);
+				var me = m_State.Me;
+				string skillDir = ResolveDir();
+				if (string.IsNullOrEmpty(skillDir))
+				{
+					skillDir = (me != null && me.Role == Roles.P2) ? Directions.Down : Directions.Up;
+				}
+				m_LastSentDir = skillDir;
+				m_State.SubmitIntent(IntentTypes.Skill, skillDir, 1);
+				LocalIntentBus.Set(IntentTypes.Skill, skillDir, 1, -1, -1, -1, -1, true);
 				return;
 			}
 
@@ -298,8 +304,17 @@ namespace GamblingAction.Input
 			{
 				// 防御は方向なしでも有効
 				m_LastSentDir = null;
-				m_State.SubmitIntent(IntentTypes.Defense, null, m_Power);
-				LocalIntentBus.Set(IntentTypes.Defense, null, m_Power, -1, -1, -1, -1, true);
+				m_State.SubmitIntent(IntentTypes.Defense, null, 1);
+				LocalIntentBus.Set(IntentTypes.Defense, null, 1, -1, -1, -1, -1, true);
+				return;
+			}
+
+			if (mode == IntentTypes.Rest)
+			{
+				// 休息も方向なしで有効
+				m_LastSentDir = null;
+				m_State.SubmitIntent(IntentTypes.Rest, null, 1);
+				LocalIntentBus.Set(IntentTypes.Rest, null, 1, -1, -1, -1, -1, true);
 				return;
 			}
 
@@ -468,7 +483,8 @@ namespace GamblingAction.Input
 				m_LastSentDir = mouseDir;
 			}
 
-			m_State.SubmitIntent(m_ActiveMode, m_LastSentDir, m_Power);
+			int powerToSend = (m_ActiveMode == IntentTypes.Rest || m_ActiveMode == IntentTypes.Defense || m_ActiveMode == IntentTypes.Skill) ? 1 : m_Power;
+			m_State.SubmitIntent(m_ActiveMode, m_LastSentDir, powerToSend);
 			PublishLocal();
 		}
 
@@ -478,9 +494,9 @@ namespace GamblingAction.Input
 
 		private bool HasIntentToCharge()
 		{
-			if (!string.IsNullOrEmpty(m_ActiveMode) && m_ActiveMode != IntentTypes.None) return true;
-			if (!string.IsNullOrEmpty(m_LastSentDir)) return true;
-			return false;
+			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode == IntentTypes.None) return false;
+			if (m_ActiveMode == IntentTypes.Defense || m_ActiveMode == IntentTypes.Skill || m_ActiveMode == IntentTypes.Rest) return false;
+			return true;
 		}
 
 		private void SetPowerAndResend(int newPower)
@@ -490,9 +506,10 @@ namespace GamblingAction.Input
 				? m_ActiveMode
 				: IntentTypes.Move;
 			bool needsDir = type != IntentTypes.Rest && type != IntentTypes.Defense && type != IntentTypes.Skill;
+			int powerToSend = (type == IntentTypes.Rest || type == IntentTypes.Defense || type == IntentTypes.Skill) ? 1 : m_Power;
 			if (!needsDir || !string.IsNullOrEmpty(m_LastSentDir))
 			{
-				m_State.SubmitIntent(type, m_LastSentDir, m_Power);
+				m_State.SubmitIntent(type, m_LastSentDir, powerToSend);
 				PublishLocal();
 			}
 		}
