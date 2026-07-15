@@ -289,15 +289,27 @@ namespace GamblingAction.Input
 			if (mode == IntentTypes.Skill)
 			{
 				var me = m_State.Me;
-				string skillDir = ResolveDir();
-				if (string.IsNullOrEmpty(skillDir))
+				if (me != null && me.CharaIndex == 3)
 				{
-					skillDir = (me != null && me.Role == Roles.P2) ? Directions.Down : Directions.Up;
+					// 格闘家のスキルの場合、Pushと同様に方向選択モードに入り、即決定はしない
+					m_LastSentDir = null;
+					m_GamepadHoverX = -1;
+					m_GamepadHoverY = -1;
+					LocalIntentBus.Set(IntentTypes.Skill, null, 1, -1, -1, -1, -1, false);
+					return;
 				}
-				m_LastSentDir = skillDir;
-				m_State.SubmitIntent(IntentTypes.Skill, skillDir, 1);
-				LocalIntentBus.Set(IntentTypes.Skill, skillDir, 1, -1, -1, -1, -1, true);
-				return;
+				else
+				{
+					string skillDir = ResolveDir();
+					if (string.IsNullOrEmpty(skillDir))
+					{
+						skillDir = (me != null && me.Role == Roles.P2) ? Directions.Down : Directions.Up;
+					}
+					m_LastSentDir = skillDir;
+					m_State.SubmitIntent(IntentTypes.Skill, skillDir, 1);
+					LocalIntentBus.Set(IntentTypes.Skill, skillDir, 1, -1, -1, -1, -1, true);
+					return;
+				}
 			}
 
 			if (mode == IntentTypes.Defense)
@@ -362,59 +374,73 @@ namespace GamblingAction.Input
 		{
 			if (!CanAcceptInput()) return;
 
-			// develop/0611 の仕様に基づき、Pushモード以外のときは決定処理を行わない（即リターン）
-			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
-			if (LocalIntentBus.Current.IsConfirmed) return;
-
 			var me = m_State.Me;
 			if (me == null) return;
 
-			int targetX = -1;
-			int targetY = -1;
+			bool isFighterSkill = (m_ActiveMode == IntentTypes.Skill && me.CharaIndex == 3);
+			if (string.IsNullOrEmpty(m_ActiveMode) || (m_ActiveMode != IntentTypes.Push && !isFighterSkill)) return;
+			if (LocalIntentBus.Current.IsConfirmed) return;
 
-			if (ctx.control.device is Mouse)
+			if (isFighterSkill)
 			{
-				if (ResolveMouseGrid(out int gx, out int gy))
+				string dir = ResolveDir();
+				if (string.IsNullOrEmpty(dir))
 				{
-					targetX = gx;
-					targetY = gy;
+					dir = (me.Role == Roles.P2) ? Directions.Down : Directions.Up;
 				}
+				m_LastSentDir = dir;
+				m_State.SubmitIntent(IntentTypes.Skill, dir, 1);
+				LocalIntentBus.Set(IntentTypes.Skill, dir, 1, -1, -1, -1, -1, true);
 			}
-			else
+			else if (m_ActiveMode == IntentTypes.Push)
 			{
-				if (m_GamepadHoverX >= 0 && m_GamepadHoverY >= 0)
+				int targetX = -1;
+				int targetY = -1;
+
+				if (ctx.control.device is Mouse)
 				{
-					targetX = m_GamepadHoverX;
-					targetY = m_GamepadHoverY;
+					if (ResolveMouseGrid(out int gx, out int gy))
+					{
+						targetX = gx;
+						targetY = gy;
+					}
 				}
-			}
-
-			if (targetX >= 0 && targetY >= 0)
-			{
-				ClampToReachable(me.X, me.Y, targetX, targetY, out int clampedX, out int clampedY);
-
-				int dx = clampedX - me.X;
-				int dy = clampedY - me.Y;
-				string dir = null;
-				int power = 1;
-
-				if (dx != 0)
+				else
 				{
-					dir = dx > 0 ? Directions.Right : Directions.Left;
-					power = Mathf.Abs(dx);
-				}
-				else if (dy != 0)
-				{
-					dir = dy > 0 ? Directions.Down : Directions.Up;
-					power = Mathf.Abs(dy);
+					if (m_GamepadHoverX >= 0 && m_GamepadHoverY >= 0)
+					{
+						targetX = m_GamepadHoverX;
+						targetY = m_GamepadHoverY;
+					}
 				}
 
-				if (dir != null)
+				if (targetX >= 0 && targetY >= 0)
 				{
-					m_LastSentDir = dir;
-					m_Power = power;
-					m_State.SubmitIntent(m_ActiveMode, dir, power);
-					LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
+					ClampToReachable(me.X, me.Y, targetX, targetY, out int clampedX, out int clampedY);
+
+					int dx = clampedX - me.X;
+					int dy = clampedY - me.Y;
+					string dir = null;
+					int power = 1;
+
+					if (dx != 0)
+					{
+						dir = dx > 0 ? Directions.Right : Directions.Left;
+						power = Mathf.Abs(dx);
+					}
+					else if (dy != 0)
+					{
+						dir = dy > 0 ? Directions.Down : Directions.Up;
+						power = Mathf.Abs(dy);
+					}
+
+					if (dir != null)
+					{
+						m_LastSentDir = dir;
+						m_Power = power;
+						m_State.SubmitIntent(m_ActiveMode, dir, power);
+						LocalIntentBus.Set(m_ActiveMode, dir, power, clampedX, clampedY, clampedX, clampedY, true);
+					}
 				}
 			}
 		}
@@ -465,6 +491,10 @@ namespace GamblingAction.Input
 			if (string.IsNullOrEmpty(m_ActiveMode)) return;
 			if (m_ActiveMode == IntentTypes.Rest) return;
 			if (m_ActiveMode == IntentTypes.Push) return; // Push時はグリッド選択を行うため除外
+
+			// 格闘家のスキルの場合も方向選択モードで処理するため除外
+			bool isFighterSkill = (m_ActiveMode == IntentTypes.Skill && m_State.Me != null && m_State.Me.CharaIndex == 3);
+			if (isFighterSkill) return;
 
 			string stickDir = ResolveStickDir();
 
@@ -601,11 +631,26 @@ namespace GamblingAction.Input
 
 		private void HandleHover()
 		{
-			if (string.IsNullOrEmpty(m_ActiveMode) || m_ActiveMode != IntentTypes.Push) return;
-			if (LocalIntentBus.Current.IsConfirmed) return;
+			if (string.IsNullOrEmpty(m_ActiveMode)) return;
 
 			var me = m_State.Me;
 			if (me == null) return;
+
+			bool isFighterSkill = (m_ActiveMode == IntentTypes.Skill && me.CharaIndex == 3);
+			if (isFighterSkill)
+			{
+				if (LocalIntentBus.Current.IsConfirmed) return;
+				string dir = ResolveDir();
+				if (dir != m_LastSentDir)
+				{
+					m_LastSentDir = dir;
+					LocalIntentBus.Set(IntentTypes.Skill, dir, 1, -1, -1, -1, -1, false);
+				}
+				return;
+			}
+
+			if (m_ActiveMode != IntentTypes.Push) return;
+			if (LocalIntentBus.Current.IsConfirmed) return;
 
 			// ゲームパッド入力を処理（m_MoveActionを使用）
 			Vector2 nav = m_MoveAction != null ? m_MoveAction.ReadValue<Vector2>() : Vector2.zero;
