@@ -90,7 +90,25 @@ namespace GamblingAction.Gameplay.SkillPreview
 			var color = ResolveColor(entry, me, intent.Power, useAlphaScale);
 
 			foreach (var (gx, gy) in pattern.ResolveCells(intent, me))
+			{
+				if (intent.Mode == IntentTypes.Push || (intent.Mode == IntentTypes.Skill && me.CharaIndex == 2))
+				{
+					// 自分自身の移動軌跡は GridCursorView が描画するため、
+					// SkillPreviewView では描画をスキップして重なりを防ぐ。
+					int dist = Mathf.Abs(gx - me.X) + Mathf.Abs(gy - me.Y);
+					if (dist <= intent.Power)
+					{
+						bool isDirMatch = false;
+						if (intent.Dir == "up" && gy < me.Y && gx == me.X) isDirMatch = true;
+						else if (intent.Dir == "down" && gy > me.Y && gx == me.X) isDirMatch = true;
+						else if (intent.Dir == "left" && gx < me.X && gy == me.Y) isDirMatch = true;
+						else if (intent.Dir == "right" && gx > me.X && gy == me.Y) isDirMatch = true;
+
+						if (isDirMatch) continue;
+					}
+				}
 				Show(gx, gy, color, cellPrefab);
+			}
 		}
 
 		private SkillDefinition ResolveSkillSet()

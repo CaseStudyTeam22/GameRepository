@@ -74,7 +74,7 @@ module.exports = {
 
     ITEM_SPAWN_INTERVAL: 2,
     MAX_ITEMS_ON_FIELD: 10,
-    CHIP_ITEM_VALUE: 50,
+    CHIP_ITEM_VALUE: 100,
     MONEY_ITEM_VALUE: 500,
 
     // 債務者（debtor_skill）スキルの発動可能チップ上限。
@@ -82,9 +82,9 @@ module.exports = {
     // チップのインフレ調整時はこの値も合わせて見直すこと。
     DEBTOR_CHIP_THRESHOLD: 200,
 
-    // 勝利条件：3点先取
+    // 勝利条件：1点先取（ゲーム終了演出の確認用）
     // ファイナルレイズは、お互いどちらかが2-1になったときに発動する
-    MAX_WINS: 3,
+    MAX_WINS: 1,
     FINAL_RAISE_TRIGGER_SCORE_WINNER: 2,
     FINAL_RAISE_TRIGGER_SCORE_LOSER: 1,
 

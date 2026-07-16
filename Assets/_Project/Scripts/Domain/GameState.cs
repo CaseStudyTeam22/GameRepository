@@ -57,7 +57,7 @@ namespace GamblingAction.Domain
 		public bool IsConnected { get; private set; }
 		public bool IsFinalDuel { get; private set; }
 		public bool SuddenDeathAlreadyStarted { get; private set; }
-		public bool IsReady { get; private set; }
+		public bool IsReady => Me != null && Me.Ready;
 
 		public PlayerDto Me =>
 			MyId != null && m_Players.TryGetValue(MyId, out var p) ? p : null;
@@ -114,13 +114,12 @@ namespace GamblingAction.Domain
 
 		public void SubmitReady(bool isAI)
 		{
-			IsReady = true;
-
 			if (m_SelectedCharaData == null)
 			{
 				m_SelectedCharaData = GetCharaData(m_SelectedCharaIndex);
 			}
 
+			
 			m_Net.Emit(ClientEvents.PlayerReady,
 				new PlayerReadyMessage
 				{
@@ -296,8 +295,6 @@ namespace GamblingAction.Domain
 
         public void SubmitUnready()
         {
-            IsReady = false;
-
             m_Net.Emit(ClientEvents.PlayerUnready, new { });
         }
         public void SubmitEnterLobby()
@@ -318,6 +315,11 @@ namespace GamblingAction.Domain
 		public void SubmitMission(string missionId)
 		{
 			m_Net.Emit(ClientEvents.MissionSelected, new MissionSelectedMessage { MissionId = missionId });
+		}
+
+		public void SubmitDebugClearMission()
+		{
+			m_Net.Emit("debug_clear_mission", new { });
 		}
 
 		public void SubmitRoundReady()
@@ -438,6 +440,8 @@ namespace GamblingAction.Domain
 
 		private void HandleSyncState(SyncStateMessage msg)
 		{
+			//ReplacePlayers(msg.Players);
+			//OnPlayersChanged?.Invoke();
 			ReplacePlayers(msg.Players);
 			OnPlayersChanged?.Invoke();
 		}

@@ -68,9 +68,11 @@ namespace GamblingAction.Gameplay.SkillPreview
 			if (me == null) return;
 
 			var intent = LocalIntentBus.Current;
-			Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}");
+			//Debug.Log($"[GridCursor] Refresh: active={intent.IsActive}, mode={intent.Mode}, hovered={intent.HoveredX},{intent.HoveredY}, confirmed={intent.IsConfirmed}, charaIndex={me.CharaIndex}");
 
-			if (!intent.IsActive || intent.Mode != IntentTypes.Push) return;
+			bool isFighterSkill = (intent.Mode == IntentTypes.Skill && me.CharaIndex == 3);
+			bool isDirectionalSkill = (intent.Mode == IntentTypes.Skill && (me.CharaIndex == 3 || me.CharaIndex == 2));
+			if (!intent.IsActive || (intent.Mode != IntentTypes.Push && !isDirectionalSkill)) return;
 
 			if (m_CellPrefab == null)
 			{
@@ -79,6 +81,41 @@ namespace GamblingAction.Gameplay.SkillPreview
 			}
 
 			Color baseColor = ParseColor(me.Color);
+
+			if (isFighterSkill)
+			{
+				float opacity = intent.IsConfirmed ? m_OpacityConfirmed : m_OpacityHover;
+				Color color = new Color(baseColor.r, baseColor.g, baseColor.b, opacity);
+				int myX = me.X;
+				int myY = me.Y;
+				string currentDir = intent.Dir;
+				if (string.IsNullOrEmpty(currentDir))
+				{
+					currentDir = (me.Role == "P2") ? "down" : "up";
+				}
+
+				int cx = myX;
+				int cy = myY;
+				switch (currentDir)
+				{
+					case "up":    cy -= 1; break;
+					case "down":  cy += 1; break;
+					case "left":  cx -= 1; break;
+					case "right": cx += 1; break;
+				}
+
+				for (int dx = -1; dx <= 1; dx++)
+				{
+					for (int dy = -1; dy <= 1; dy++)
+					{
+						int tx = cx + dx;
+						int ty = cy + dy;
+						if (tx == myX && ty == myY) continue; // 自分自身は除外
+						Show(tx, ty, color, m_CellPrefab);
+					}
+				}
+				return;
+			}
 
 			if (intent.IsConfirmed)
 			{

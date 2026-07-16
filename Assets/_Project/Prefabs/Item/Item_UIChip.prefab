@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8821031687457751996}
   - component: {fileID: 5078324501057035394}
   - component: {fileID: 7899950722349040376}
+  - component: {fileID: 2851710618634754749}
   m_Layer: 3
   m_Name: Item_UIChip
   m_TagString: Untagged
@@ -110,3 +111,16 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!114 &2851710618634754749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4641009502872144936}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94b0d2962df7e5a48b16008f096235c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  destroyY: -2000

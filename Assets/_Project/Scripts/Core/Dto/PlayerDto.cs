@@ -34,10 +34,19 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("maxStamina")]  public int MaxStamina; // GameConfigからこっちに移行かな
 		[JsonProperty("charaIndex")]  public int CharaIndex;
 
+		[JsonProperty("skillData")]  public SkillDataDto SkillData;
+
 		// --- サーバー側でバフや補正値を適用した後の最終的な現在能力値 ---
 		[JsonProperty("currentMaxStamina")]   public int CurrentMaxStamina;   // バフ・ボーナス適用後の最大スタミナ。UI等でメモリ数を決める際はこちらを直接参照してください。
 		[JsonProperty("currentPushPower")]    public int CurrentPushPower;    // バフ・ボーナス適用後の突進力。
 		[JsonProperty("currentDefensePower")] public int CurrentDefensePower; // バフ・ボーナス適用後の防御力。
+	}
+
+	public class SkillDataDto
+	{
+		[JsonProperty("id")]         public string Id;
+		[JsonProperty("staminaRec")] public int StaminaRec;
+		[JsonProperty("chipCost")]   public int ChipCost;
 	}
 
 	public class PlayerModifiersDto
@@ -85,13 +94,26 @@ namespace GamblingAction.Core.Dto
 
 	public enum EMissionType
 	{
-		Move,
-		Push,
-		//Attack,
-		Defend,
-		//Heal,
-		GainCoin,
-		GainChip
+		Move = 0,
+		Push = 1,
+		Defend = 2,
+		Skill = 3,
+		GainChip = 4,
+		StaminaOpponentZero = 5,
+		StaminaSelfZero = 6,
+		ChipsZero = 7,
+		CharaDoctor = 10,
+		CharaGuardian = 11,
+		CharaFighter = 12,
+		CharaScammer = 13,
+		CharaNouveauRiche = 14,
+		CharaDebtor = 15
+	}
+
+	public class MissionDebuffDto
+	{
+		[JsonProperty("type")]  public string Type;
+		[JsonProperty("value")] public float Value;
 	}
 
 	public class MissionDto
@@ -104,5 +126,7 @@ namespace GamblingAction.Core.Dto
 		[JsonProperty("rewardType")]   public string RewardType;
 		[JsonProperty("rewardValue")]  public int RewardValue;
 		[JsonProperty("isCleared")]    public bool IsCleared;
+		[JsonProperty("debuff")]       public MissionDebuffDto Debuff;
 	}
 }
+

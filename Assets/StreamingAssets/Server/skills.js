@@ -28,10 +28,11 @@ const Skills = {
         const isNarikin = skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche';
         if (isNarikin) {
             if (intent.type === 'skill') {
-                const Config = require('./config');
-                const power = Math.max(1, Math.min(3, intent.power || 1));
-                const pushCost = Config.CHIP_COST_BY_POWER['push'][power - 1] || 3;
-                return pushCost * 2;
+                 const Config = require('./config');
+                 const power = Math.max(1, Math.min(3, intent.power || 1));
+                 const pushCosts = (player.chipCosts && player.chipCosts.push) || (player.baseChipCosts && player.baseChipCosts.push) || Config.CHIP_COST_BY_POWER.push;
+                 const pushCost = pushCosts[power - 1] !== undefined ? pushCosts[power - 1] : 3;
+                 return pushCost * 2;
             }
         }
 
@@ -73,7 +74,10 @@ const Skills = {
         // スキルID（推奨）またはインデックスによる分岐
         if (skillId === 'heal_instant' || charaIndex === 1 || player.charaName === 'Doctor') {
             // 医師: 定力回復
-            const healAmount = (player.skillData && player.skillData.staminaRec) || 2;
+            let healAmount = (player.skillData && player.skillData.staminaRec) || 2;
+            if (player.modifiers && player.modifiers.charaUniqueBuff) {
+                healAmount += 10;
+            }
             const baseMax = player.maxStamina || config.MAX_STAMINA;
             const maxStamina = player.selectedBuff === 'high_risk' ? (baseMax - 1) : baseMax;
 
@@ -86,16 +90,18 @@ const Skills = {
         else if (skillId === 'nouveau_skill' || charaIndex === 2 || player.charaName === 'NouveauRiche') {
             // 成金: 本来のpushの行動の2倍のチップを消費して強化pushを出せる。また、消費したチップはフィールドにばらまかれる
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: intent.dir, power: 3, x: player.prevX, y: player.prevY });
-
+            const startDist = Math.abs(opponent.x - player.x) + Math.abs(opponent.y - player.y);
             const power = Math.max(1, Math.min(3, intent.power || 1));
             const pushCost = (config.CHIP_COST_BY_POWER && config.CHIP_COST_BY_POWER['push']) ? config.CHIP_COST_BY_POWER['push'][power - 1] : 3;
             const consumedChips = pushCost * 2;
 
-            // 隣接判定 (初期位置で隣接していたか)
-            const startDist = Math.abs(opponent.prevX - player.prevX) + Math.abs(opponent.prevY - player.prevY);
-            if (startDist === 1) {
+            // 押し出し判定 (初期位置で隣接しているか、または突進衝突したか)
+            const col = getPushCollision(player, opponent, intent);
+            const isPushHit = (startDist === 1) || (col !== null);
+            if (isPushHit) {
+                const dCol = (startDist === 1) ? 0 : col.d_col;
                 const pushBonus = (player.modifiers && player.modifiers.pushPowerBonus) || 0;
-                let finalDist = power + 1 + pushBonus; // 強化pushなので base: power + 1
+                let finalDist = power + 2 + pushBonus; // 強化pushなので base: power + 2
 
                 // 高リスク攻撃：power=3 push +1
                 if (player.selectedBuff === 'high_risk' && power === 3) {
@@ -117,6 +123,7 @@ const Skills = {
                 // ガーディアン: スキル中はノックバック無効
                 if (tIntent.type === 'skill' && opponent.skillData?.id === 'guardian_skill') {
                     finalDist = 0;
+                    events.push({ type: 'mission_progress', playerId: opponent.id, missionType: 'GuardianSkillDefense', amount: 1 });
                 }
 
                 // 高リスク被撃：30% 確率でpush_powerを+1
@@ -133,6 +140,17 @@ const Skills = {
                     events.push({ type: 'pushed', targetId: opponent.id, dir: intent.dir, dist: finalDist });
                     events.push({ type: 'vfx', vfxType: 'bump', targetId: opponent.id, text: "SUPER PUSH!" });
                 }
+
+                // 突進したプレイヤーの座標を、実際に相手を押し出した距離（finalDist）と衝突までの歩数（dCol）に合わせて制限する
+                const actualDist = Math.min(power, dCol + finalDist);
+                let dx = 0, dy = 0;
+                if (intent.dir === 'up') dy = -1;
+                else if (intent.dir === 'down') dy = 1;
+                else if (intent.dir === 'left') dx = -1;
+                else if (intent.dir === 'right') dx = 1;
+
+                player.x = player.prevX + dx * actualDist;
+                player.y = player.prevY + dy * actualDist;
             }
 
             // 消費したチップのばらまき処理 (items に追加)
@@ -160,17 +178,28 @@ const Skills = {
             }
         }
         else if (skillId === 'fighter_skill' || charaIndex === 3 || player.charaName === 'Fighter') {
-            // 格闘家キャラ: 自身を中心として3x3範囲へ、相手のスタミナを大きく削る攻撃
-            const dir = intent.dir;
+            // 格闘家キャラ: 自身の一歩前方を中心とした3x3範囲へ、相手のスタミナを大きく削る攻撃
+            const dir = intent.dir || (player.role === 'P2' ? 'down' : 'up');
             events.push({ type: 'vfx', vfxType: 'attack_vfx', targetId: player.id, dir: dir, power: 2, x: player.prevX, y: player.prevY });
 
-            const dx = opponent.x - player.x;
-            const dy = opponent.y - player.y;
+            // 一歩前方の座標
+            let cx = player.x;
+            let cy = player.y;
+            if (dir === 'up') cy -= 1;
+            else if (dir === 'down') cy += 1;
+            else if (dir === 'left') cx -= 1;
+            else if (dir === 'right') cx += 1;
 
-            // 相手が自身を中心とした3x3範囲内（自身を含まない）にいるか判定
-            if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0)) {
-                // 相手が範囲内にいる場合、スタミナを大きく削る(固定値3)
-                const dmg = 3;
+            const dx = opponent.x - cx;
+            const dy = opponent.y - cy;
+
+            // 相手がその一歩前方を中心とした3x3範囲内（かつ自分自身ではない）にいるか判定
+            if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && (opponent.x !== player.x || opponent.y !== player.y)) {
+                // 相手が範囲内にいる場合、スタミナを大きく削る(固定値3、バフ時は13)
+                let dmg = 3;
+                if (player.modifiers && player.modifiers.charaUniqueBuff) {
+                    dmg += 10;
+                }
                 const oppIntent = opponent.intent || { type: 'none' };
                 let finalDmg = dmg;
 
@@ -181,6 +210,7 @@ const Skills = {
                 // ガーディアン: スキル中はダメージ無効
                 if (oppIntent.type === 'skill' && opponent.skillData?.id === 'guardian_skill') {
                     finalDmg = 0;
+                    events.push({ type: 'mission_progress', playerId: opponent.id, missionType: 'GuardianSkillDefense', amount: 1 });
                 }
 
                 if (finalDmg > 0) {
@@ -215,13 +245,24 @@ const Skills = {
             if (items) {
                 const chipValue = config.CHIP_ITEM_VALUE || 50;
                 const moneyValue = config.MONEY_ITEM_VALUE || 500;
+                let collectedChipsCount = 0;
                 for (let i = items.length - 1; i >= 0; i--) {
                     if (items[i].type === 'chips') {
                         chipsGained += chipValue;
+                        collectedChipsCount++;
                     } else {
                         moneyGained += moneyValue;
                     }
                     items.splice(i, 1);
+                }
+
+                for (let i = 0; i < collectedChipsCount; i++) {
+                    events.push({
+                        type: 'mission_progress',
+                        playerId: player.id,
+                        missionType: 'GainChip',
+                        amount: 1
+                    });
                 }
             }
 
@@ -247,5 +288,30 @@ const Skills = {
         }
     }
 };
+
+function getPushCollision(p, target, intent) {
+    if (intent.type !== 'push' && !(intent.type === 'skill' && (p.charaIndex === 2 || p.charaName === 'NouveauRiche'))) {
+        return null;
+    }
+    const power = Math.max(1, Math.min(3, intent.power || 1));
+    let dx = 0, dy = 0;
+    if (intent.dir === 'up') dy = -1;
+    else if (intent.dir === 'down') dy = 1;
+    else if (intent.dir === 'left') dx = -1;
+    else if (intent.dir === 'right') dx = 1;
+
+    for (let k = 1; k <= power; k++) {
+        const tx = p.prevX + dx * k;
+        const ty = p.prevY + dy * k;
+        if (tx === target.prevX && ty === target.prevY) {
+            return {
+                d_col: k - 1,
+                dx,
+                dy
+            };
+        }
+    }
+    return null;
+}
 
 module.exports = Skills;

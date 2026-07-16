@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using GamblingAction.Core.Dto;
 
@@ -42,6 +42,7 @@ namespace GamblingAction.Domain
 		void SubmitExchange(int amount);
 		void SubmitBuff(string buffId);
 		void SubmitMission(string missionId);
+		void SubmitDebugClearMission();
 		void SubmitRoundReady();
 		void SubmitSelectChara(int index);
 		CharaDataMessage GetCharaData(int index);

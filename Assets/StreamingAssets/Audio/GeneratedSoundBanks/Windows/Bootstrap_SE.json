@@ -11,7 +11,7 @@
     "GUID": "{60A31E10-5905-4CE2-A205-B395B76523C5}",
     "Color": "19",
     "Language": "SFX",
-    "Hash": "{8A18378C-ADE6-6AB2-C0B0-8A0A6962C1F8}",
+    "Hash": "{480375B5-C4ED-807E-A867-0462315C4E91}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\SE\\Bootstrap_SE",
     "ShortName": "Bootstrap_SE",
     "Path": "Bootstrap_SE.bnk",
@@ -33,8 +33,8 @@
       "GUID": "{C2663EBE-5A32-4BCF-9CE6-C5B696F00A38}",
       "Color": "19",
       "DurationType": "OneShot",
-      "DurationMin": "0.8157823",
-      "DurationMax": "0.8157823",
+      "DurationMin": "0.830042",
+      "DurationMax": "0.830042",
       "MediaRefs": [
        {
         "Id": "378225411"
@@ -44,6 +44,6 @@
     ]
    }
   ],
-  "FileHash": "{BC5135B3-A280-D0DE-67A2-7881E562B04D}"
+  "FileHash": "{8A878959-40B9-091D-8429-FF709A910771}"
  }
 }
