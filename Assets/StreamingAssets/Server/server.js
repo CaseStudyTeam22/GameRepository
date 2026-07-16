@@ -1094,6 +1094,9 @@ io.on('connection', (socket) => {
             console.log(`[Debug Command] Incrementing highRiskMissionsCleared: ${p.highRiskMissionsCleared}`);
         }
 
+        p.clearedMissionIds = p.clearedMissionIds || [];
+        p.clearedMissionIds.push(p.mission.id);
+
         const rType = p.mission.rewardType || 'Chips';
         const rVal = p.mission.rewardValue || 0;
 
@@ -1703,6 +1706,7 @@ function resetMatchState(isMatchStart = false) {
 
         p.mission = null;
         p.highRiskMissionsCleared = 0;
+        p.clearedMissionIds = [];
         p.activeDebuffs = {};
         p.exchanged = false; p.selectedBuff = null; p.buffReady = false;
         p.roundReady = false; p.intent = null;

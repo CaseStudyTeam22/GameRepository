@@ -159,7 +159,19 @@ const Missions = {
             };
 
             const list = [m1, m2, m3, m4, m5];
-            const shuffled = list.sort(() => 0.5 - Math.random());
+            const clearedIds = player.clearedMissionIds || [];
+            let availableList = list.filter(m => !clearedIds.includes(m.id));
+
+            // 候補が足りない場合は、クリア済みのものを追加して3つ以上にする
+            if (availableList.length < 3) {
+                const clearedList = list.filter(m => clearedIds.includes(m.id));
+                const shuffledCleared = clearedList.sort(() => 0.5 - Math.random());
+                while (availableList.length < 3 && shuffledCleared.length > 0) {
+                    availableList.push(shuffledCleared.pop());
+                }
+            }
+
+            const shuffled = availableList.sort(() => 0.5 - Math.random());
             return shuffled.slice(0, 3);
         } else {
             const m1 = {
@@ -284,6 +296,9 @@ const Missions = {
                                 p.highRiskMissionsCleared = (p.highRiskMissionsCleared || 0) + 1;
                             }
 
+                            p.clearedMissionIds = p.clearedMissionIds || [];
+                            p.clearedMissionIds.push(p.mission.id);
+
                             console.log(`[Mission CLEARED] ${p.role} completed mission. Reward: ${rType} x${rVal}`);
                             appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                         }
@@ -302,6 +317,8 @@ const Missions = {
                     p.mission.currentCount = 1;
                     p.mission.isCleared = true;
                     p.chips += p.mission.rewardValue || 0;
+                    p.clearedMissionIds = p.clearedMissionIds || [];
+                    p.clearedMissionIds.push(p.mission.id);
                     console.log(`[Mission CLEARED] ${p.role} reduced opponent stamina to 0. Reward: Chips x${p.mission.rewardValue}`);
                     appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                 }
@@ -321,6 +338,8 @@ const Missions = {
                         p.stamina += rVal;
                     }
                     p.highRiskMissionsCleared = (p.highRiskMissionsCleared || 0) + 1;
+                    p.clearedMissionIds = p.clearedMissionIds || [];
+                    p.clearedMissionIds.push(p.mission.id);
                     console.log(`[Mission CLEARED] ${p.role} reduced self stamina to 0. Reward: ${rType} x${rVal}`);
                     appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                 }
@@ -339,6 +358,8 @@ const Missions = {
                         p.modifiers.actionCostBonus = (p.modifiers.actionCostBonus || 0) + rVal;
                     }
                     p.highRiskMissionsCleared = (p.highRiskMissionsCleared || 0) + 1;
+                    p.clearedMissionIds = p.clearedMissionIds || [];
+                    p.clearedMissionIds.push(p.mission.id);
                     console.log(`[Mission CLEARED] ${p.role} reduced chips to 0. Reward: ${rType} x${rVal}`);
                     appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                 }
