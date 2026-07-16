@@ -301,7 +301,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_FirstSelected: {fileID: 0}
+  m_FirstSelected: {fileID: 1714572452}
   m_sendNavigationEvents: 1
   m_DragThreshold: 10
 --- !u!4 &478196534
@@ -773,8 +773,57 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1995031443882506122, guid: 434d86d69eeee984bb63f048ffefa6b9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1714572454}
+    - targetCorrespondingSourceObject: {fileID: 1995031443882506122, guid: 434d86d69eeee984bb63f048ffefa6b9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1714572453}
   m_SourcePrefab: {fileID: 100100000, guid: 434d86d69eeee984bb63f048ffefa6b9, type: 3}
+--- !u!1 &1714572452 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1995031443882506122, guid: 434d86d69eeee984bb63f048ffefa6b9, type: 3}
+  m_PrefabInstance: {fileID: 1714572451}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1714572453
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1714572452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97311d1c71e91274795c5aafb71a0058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RippleColor: {r: 0, g: 1, b: 0.99020815, a: 1}
+  m_RippleSprite: {fileID: 0}
+  m_GeneratedRingThickness: 0.06
+  m_MaxSizeMultiplier: 1.4
+  m_ExpandDuration: 0.4
+  m_FadeDuration: 0.4
+  m_StartAlpha: 0.4
+  m_AlwaysFromCenter: 0
+  m_Overflow: 1
+--- !u!114 &1714572454
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1714572452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b50c3e93dc289148a1d0a5c3124d43b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SelectedScale: 1.1
+  m_ScaleSpeed: 12
+  m_GlowColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  m_GlowDistance: {x: 4, y: 4}
+  m_PulseSpeed: 4
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
