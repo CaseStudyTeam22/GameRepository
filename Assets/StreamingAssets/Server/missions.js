@@ -324,7 +324,7 @@ const Missions = {
                     console.log(`[Mission CLEARED] ${p.role} reduced self stamina to 0. Reward: ${rType} x${rVal}`);
                     appendedEvents.push({ type: 'vfx', vfxType: 'bump', targetId: p.id, text: "MISSION CLEAR!" });
                 }
-                if (p.mission.type === MissionType.ChipsZero && p.chips === 0) {
+                if (p.mission.type === MissionType.ChipsZero && (p.chips === 0 || p.minChips === 0)) {
                     p.mission.currentCount = 1;
                     p.mission.isCleared = true;
                     

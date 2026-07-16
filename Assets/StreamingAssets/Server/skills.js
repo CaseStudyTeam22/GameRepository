@@ -47,9 +47,26 @@ const Skills = {
             }
         }
 
-        // その他のキャラでスキル発動時は、C#クライアント（スプシ）から送られてきた設定コストを適用
+        // その他のキャラでスキル発動時は、C#クライアント（スプシ）から送られてきた設定コストを適用しつつ、バフ・デバフを適用
         if (intent.type === 'skill' && player.skillData) {
-            return player.skillData.chipCost !== undefined ? player.skillData.chipCost : baseCost;
+            if (player.skillData.chipCost !== undefined) {
+                const activeDebuffs = player.activeDebuffs || {};
+                const modifiers = player.modifiers || {};
+
+                // 行動時チップ消費量補正
+                const actionCostDebuff = activeDebuffs.actionCost || 0;
+                const actionCostBuff = modifiers.actionCostBonus || 0;
+                const totalActionCostMod = actionCostDebuff + actionCostBuff;
+
+                // スキルチップ消費量補正
+                const skillCostDebuff = activeDebuffs.skillCost || 0;
+                const skillCostBuff = modifiers.skillCostBonus || 0;
+                const totalSkillCostMod = skillCostDebuff + skillCostBuff;
+
+                // 基本コストにスキル軽減補正と行動軽減補正を加算する（下限は0）
+                return Math.max(0, player.skillData.chipCost + totalSkillCostMod + totalActionCostMod);
+            }
+            return baseCost;
         }
 
         return baseCost;

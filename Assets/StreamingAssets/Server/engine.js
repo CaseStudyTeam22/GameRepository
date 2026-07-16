@@ -31,6 +31,8 @@ const Engine = {
             if (p.chips < chipCost) intent.type = 'none';
             else p.chips -= chipCost;
 
+            p.minChips = p.chips;
+
             const baseMax = p.maxStamina || 5;
             // Buff: 高风险降低定力上限到 4；低风险 rest 额外 +1
             // さらに将来的なステータス補正 maxStaminaBonus を適用

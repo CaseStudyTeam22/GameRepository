@@ -375,6 +375,32 @@ setInterval(() => {
         // カウントのリセット
         cycleCount = 0;
 
+        // タイムアップ時のミッション最終判定および永続デバフ化処理
+        for (let id in players) {
+            const p = players[id];
+            if (p.mission) {
+                if (p.mission.isCleared) {
+                    // クリア成功：デバフ解除
+                    p.activeDebuffs = {};
+                    if (p.mission.isCharaUnique) {
+                        p.highRiskMissionsCleared = 0; // 完了したのでリセット
+                    }
+                } else {
+                    // クリア失敗：デバフを永続化（modifiers に蓄積）
+                    if (p.mission.debuff) {
+                        const db = p.mission.debuff;
+                        if (db.type === 'maxStamina') p.modifiers.maxStaminaBonus = (p.modifiers.maxStaminaBonus || 0) + db.value;
+                        else if (db.type === 'pushPower') p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + db.value;
+                        else if (db.type === 'defenseReduction') p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + db.value;
+                        else if (db.type === 'actionCost') p.modifiers.actionCostBonus = (p.modifiers.actionCostBonus || 0) + db.value;
+                        else if (db.type === 'skillCost') p.modifiers.skillCostBonus = (p.modifiers.skillCostBonus || 0) + db.value;
+                        console.log(`[Server] Mission FAILED on TIME UP. Debuff is now PERMANENT for ${p.role}: ${db.type} = ${db.value}`);
+                    }
+                    p.activeDebuffs = {};
+                }
+            }
+        }
+
         // ラウンド終了時、チップを持ち金に戻すキャッシュバック処理
         for (let id in players) {
             const p = players[id];
@@ -1056,6 +1082,12 @@ io.on('connection', (socket) => {
         p.mission.currentCount = p.mission.targetCount;
         p.mission.isCleared = true;
 
+        // デバフの即時解除
+        if (p.mission.debuff) {
+            delete p.activeDebuffs[p.mission.debuff.type];
+            console.log(`[Debug Command] Reverted debuff for ${p.role}: ${p.mission.debuff.type}`);
+        }
+
         // ハイリスクミッションクリアの場合はカウンタを増やす
         if (p.mission.id && p.mission.id.startsWith('high_risk')) {
             p.highRiskMissionsCleared = (p.highRiskMissionsCleared || 0) + 1;
@@ -1074,6 +1106,10 @@ io.on('connection', (socket) => {
             p.modifiers.pushPowerBonus = (p.modifiers.pushPowerBonus || 0) + rVal;
         } else if (rType === 'DefenseBonus') {
             p.modifiers.defenseReductionBonus = (p.modifiers.defenseReductionBonus || 0) + rVal * 0.1;
+        } else if (rType === 'ActionCostBonus') {
+            p.modifiers.actionCostBonus = (p.modifiers.actionCostBonus || 0) + rVal;
+        } else if (rType === 'SkillCostBonus') {
+            p.modifiers.skillCostBonus = (p.modifiers.skillCostBonus || 0) + rVal;
         }
 
         io.emit('sync_state', { players });
