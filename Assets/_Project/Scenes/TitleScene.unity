@@ -365,6 +365,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 247254685238815146, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      propertyPath: m_FirstSelected
+      value: 
+      objectReference: {fileID: 856591427}
     - target: {fileID: 630662677523072334, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 850
@@ -764,8 +768,106 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7357360941731687052, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 856591430}
+    - targetCorrespondingSourceObject: {fileID: 7357360941731687052, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 856591429}
+    - targetCorrespondingSourceObject: {fileID: 104202627973754783, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 856591432}
+    - targetCorrespondingSourceObject: {fileID: 104202627973754783, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 856591431}
   m_SourcePrefab: {fileID: 100100000, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+--- !u!1 &856591427 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7357360941731687052, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+  m_PrefabInstance: {fileID: 856591426}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &856591428 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 104202627973754783, guid: 276164c93ea6aef4ea19e2c8499fd7b4, type: 3}
+  m_PrefabInstance: {fileID: 856591426}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &856591429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 856591427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97311d1c71e91274795c5aafb71a0058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RippleColor: {r: 0, g: 1, b: 0.9800041, a: 1}
+  m_RippleSprite: {fileID: 0}
+  m_GeneratedRingThickness: 0.06
+  m_MaxSizeMultiplier: 1.4
+  m_ExpandDuration: 0.4
+  m_FadeDuration: 0.4
+  m_StartAlpha: 0.4
+  m_AlwaysFromCenter: 0
+  m_Overflow: 1
+--- !u!114 &856591430
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 856591427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b50c3e93dc289148a1d0a5c3124d43b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SelectedScale: 1.1
+  m_ScaleSpeed: 12
+  m_GlowColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  m_GlowDistance: {x: 4, y: 4}
+  m_PulseSpeed: 4
+--- !u!114 &856591431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 856591428}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97311d1c71e91274795c5aafb71a0058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RippleColor: {r: 0, g: 1, b: 0.9717827, a: 1}
+  m_RippleSprite: {fileID: 0}
+  m_GeneratedRingThickness: 0.06
+  m_MaxSizeMultiplier: 1.4
+  m_ExpandDuration: 0.4
+  m_FadeDuration: 0.4
+  m_StartAlpha: 0.4
+  m_AlwaysFromCenter: 0
+  m_Overflow: 1
+--- !u!114 &856591432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 856591428}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b50c3e93dc289148a1d0a5c3124d43b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SelectedScale: 1.1
+  m_ScaleSpeed: 12
+  m_GlowColor: {r: 1, g: 0.85, b: 0.2, a: 1}
+  m_GlowDistance: {x: 4, y: 4}
+  m_PulseSpeed: 4
 --- !u!1001 &1286136795
 PrefabInstance:
   m_ObjectHideFlags: 0
