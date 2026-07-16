@@ -1436,7 +1436,7 @@ namespace GamblingAction.UI
 
 		private void UpdateTurn()
 		{
-			m_TurnText.text = $"ターン{m_State.CycleCount}/20";
+			m_TurnText.text = $"ターン{m_State.CycleCount}/50";
 		}
 
 		/// <summary>
