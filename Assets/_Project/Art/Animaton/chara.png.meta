@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: dd4fa6e05580bb94aba242dd21f16a02
+guid: 69efa0e7e7bf4b04cb0a7f47a1df4b86
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -97,265 +97,265 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: pipo-charachip018_0
+      name: chara_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 96
-        width: 32
-        height: 32
+        x: 190
+        y: 926
+        width: 230
+        height: 320
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1ae1324e467c08f47abd0bd84725e5ff
-      internalID: 836767134
+      spriteID: e3d44828f814abf4293b6c8c39134e54
+      internalID: -1586807864
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_1
+      name: chara_1
       rect:
         serializedVersion: 2
-        x: 32
-        y: 96
-        width: 32
-        height: 32
+        x: 508
+        y: 925
+        width: 230
+        height: 320
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9845b8788eafc804391be3ca5ebd7f7c
-      internalID: -1132311289
+      spriteID: 1b9cf4fbbe97b1e43a562592053f8e47
+      internalID: -1525334327
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_2
+      name: chara_2
       rect:
         serializedVersion: 2
-        x: 64
-        y: 96
-        width: 32
-        height: 32
+        x: 828
+        y: 924
+        width: 230
+        height: 320
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9cecb1af68fa1ed46ac7ff97ea08ca0c
-      internalID: -2104286253
+      spriteID: 513c2d421ef695b41901a3e6ce8dd5bf
+      internalID: 406981825
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_3
+      name: chara_3
       rect:
         serializedVersion: 2
-        x: 0
-        y: 64
-        width: 32
-        height: 32
+        x: 178
+        y: 633
+        width: 230
+        height: 290
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ca72fbe35bb9a2f4b964039f837792fa
-      internalID: -850162514
+      spriteID: dc789a67592222d448ea6a639315ea17
+      internalID: -712412399
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_4
+      name: chara_4
       rect:
         serializedVersion: 2
-        x: 32
-        y: 64
-        width: 32
-        height: 32
+        x: 503
+        y: 632
+        width: 230
+        height: 290
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4280d0c1ce947754db17ca569b30617e
-      internalID: 1610325528
+      spriteID: 10cd7446b824a7441b5a22b5ea82dd84
+      internalID: 196028637
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_5
+      name: chara_5
       rect:
         serializedVersion: 2
-        x: 64
-        y: 64
-        width: 32
-        height: 32
+        x: 826
+        y: 627
+        width: 230
+        height: 293
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 393ee7430da45bc44997f37d2575a751
-      internalID: -1466923791
+      spriteID: 9e723c7b587721e4290aec455b6b1584
+      internalID: 841481903
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_6
+      name: chara_6
       rect:
         serializedVersion: 2
-        x: 0
-        y: 32
-        width: 32
-        height: 32
+        x: 189
+        y: 325
+        width: 230
+        height: 302
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 58f712e14abc75c4ca3210d9ae5e97b5
-      internalID: 622464323
+      spriteID: e3380e52fe8baf54bb5c6a1b1038b440
+      internalID: 1569094583
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_7
+      name: chara_7
       rect:
         serializedVersion: 2
-        x: 32
-        y: 32
-        width: 32
-        height: 32
+        x: 508
+        y: 328
+        width: 230
+        height: 298
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 5510d85890f32884d923e66948cd5308
-      internalID: 1924636453
+      spriteID: ba205ec9195b6f9488b408208531429f
+      internalID: -2049304306
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_8
+      name: chara_8
       rect:
         serializedVersion: 2
-        x: 64
-        y: 32
-        width: 32
-        height: 32
+        x: 836
+        y: 330
+        width: 230
+        height: 290
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7486a479de617d04794f70470f16c50f
-      internalID: -1163239515
+      spriteID: d497a1d69861ec54fa356845050a4d08
+      internalID: 1726994259
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_9
+      name: chara_9
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 32
-        height: 32
+        x: 180
+        y: 28
+        width: 230
+        height: 295
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 91b59c06417880d46b5397abba61c3f1
-      internalID: -1518031228
+      spriteID: 2113abc20645de240b2e740014483c00
+      internalID: 2132582475
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_10
+      name: chara_10
       rect:
         serializedVersion: 2
-        x: 32
-        y: 0
-        width: 32
-        height: 32
+        x: 508
+        y: 28
+        width: 230
+        height: 297
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 6617dea6baea94a4da48a0d505407b6a
-      internalID: -738236244
+      spriteID: facd8073bf453e64ca0dcc274a894125
+      internalID: 74382752
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: pipo-charachip018_11
+      name: chara_11
       rect:
         serializedVersion: 2
-        x: 64
-        y: 0
-        width: 32
-        height: 32
+        x: 834
+        y: 29
+        width: 230
+        height: 299
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 2b306f4718d3b75458b81ad8f623580f
-      internalID: -545695763
+      spriteID: e254c56521a72fa468d5754cfb9e5a5d
+      internalID: -19815179
       vertices: []
       indices: 
       edges: []
@@ -364,7 +364,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: eedfc49ea548d6248bc210a4cafd566d
+    spriteID: a9391ba58a9a44841a63e4eeee67e2dd
     internalID: 0
     vertices: []
     indices: 
@@ -374,18 +374,18 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      pipo-charachip018_0: 836767134
-      pipo-charachip018_1: -1132311289
-      pipo-charachip018_10: -738236244
-      pipo-charachip018_11: -545695763
-      pipo-charachip018_2: -2104286253
-      pipo-charachip018_3: -850162514
-      pipo-charachip018_4: 1610325528
-      pipo-charachip018_5: -1466923791
-      pipo-charachip018_6: 622464323
-      pipo-charachip018_7: 1924636453
-      pipo-charachip018_8: -1163239515
-      pipo-charachip018_9: -1518031228
+      chara_0: -1586807864
+      chara_1: -1525334327
+      chara_10: 74382752
+      chara_11: -19815179
+      chara_2: 406981825
+      chara_3: -712412399
+      chara_4: 196028637
+      chara_5: 841481903
+      chara_6: 1569094583
+      chara_7: -2049304306
+      chara_8: 1726994259
+      chara_9: 2132582475
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
